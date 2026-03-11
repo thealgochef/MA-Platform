@@ -1,0 +1,2 @@
+-- Seed data for Geneva Holdings
+-- Will be populated as needed during development

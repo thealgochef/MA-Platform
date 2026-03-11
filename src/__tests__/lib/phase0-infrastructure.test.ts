@@ -1,0 +1,290 @@
+import { describe, it, expect } from "vitest";
+import fs from "fs";
+import path from "path";
+
+const ROOT = path.resolve(__dirname, "../../../");
+const SRC = path.join(ROOT, "src");
+
+describe("Phase 0: Project Scaffolding & Infrastructure", () => {
+  describe("Project structure", () => {
+    it("should have src/app directory", () => {
+      expect(fs.existsSync(path.join(SRC, "app"))).toBe(true);
+    });
+
+    it("should have src/components directory with required subdirectories", () => {
+      const subdirs = ["ui", "layout", "broker", "buyer", "deals", "messages", "marketing"];
+      for (const dir of subdirs) {
+        expect(fs.existsSync(path.join(SRC, "components", dir))).toBe(true);
+      }
+    });
+
+    it("should have src/lib directory with required files", () => {
+      const files = ["constants.ts", "utils.ts", "validators.ts", "matching.ts", "notifications.ts"];
+      for (const file of files) {
+        expect(fs.existsSync(path.join(SRC, "lib", file))).toBe(true);
+      }
+    });
+
+    it("should have src/lib/supabase directory with client files", () => {
+      const files = ["client.ts", "server.ts", "admin.ts", "middleware.ts"];
+      for (const file of files) {
+        expect(fs.existsSync(path.join(SRC, "lib", "supabase", file))).toBe(true);
+      }
+    });
+
+    it("should have src/types directory", () => {
+      expect(fs.existsSync(path.join(SRC, "types"))).toBe(true);
+    });
+
+    it("should have src/hooks directory", () => {
+      expect(fs.existsSync(path.join(SRC, "hooks"))).toBe(true);
+    });
+
+    it("should have src/__tests__ directory with subdirectories", () => {
+      const subdirs = ["api", "e2e", "lib"];
+      for (const dir of subdirs) {
+        expect(fs.existsSync(path.join(SRC, "__tests__", dir))).toBe(true);
+      }
+    });
+
+    it("should have route group directories for public, auth, shared, admin", () => {
+      const groups = ["(public)", "(auth)", "(admin)"];
+      for (const group of groups) {
+        expect(fs.existsSync(path.join(SRC, "app", group))).toBe(true);
+      }
+    });
+
+    it("should have supabase/migrations directory", () => {
+      expect(fs.existsSync(path.join(ROOT, "supabase", "migrations"))).toBe(true);
+    });
+  });
+
+  describe("Configuration files", () => {
+    it("should have vitest.config.ts", () => {
+      expect(fs.existsSync(path.join(ROOT, "vitest.config.ts"))).toBe(true);
+    });
+
+    it("should have playwright.config.ts", () => {
+      expect(fs.existsSync(path.join(ROOT, "playwright.config.ts"))).toBe(true);
+    });
+
+    it("should have Dockerfile", () => {
+      expect(fs.existsSync(path.join(ROOT, "Dockerfile"))).toBe(true);
+    });
+
+    it("should have docker-compose.yml", () => {
+      expect(fs.existsSync(path.join(ROOT, "docker-compose.yml"))).toBe(true);
+    });
+
+    it("should have .env.local.example", () => {
+      expect(fs.existsSync(path.join(ROOT, ".env.local.example"))).toBe(true);
+    });
+
+    it("should have next.config.mjs with standalone output", () => {
+      const content = fs.readFileSync(path.join(ROOT, "next.config.mjs"), "utf-8");
+      expect(content).toContain("standalone");
+    });
+  });
+
+  describe("Tailwind theme", () => {
+    it("should have custom colors defined in tailwind.config.ts", () => {
+      const content = fs.readFileSync(path.join(ROOT, "tailwind.config.ts"), "utf-8");
+      expect(content).toContain("#1B2A4A"); // navy
+      expect(content).toContain("#3B5278"); // slate-blue
+      expect(content).toContain("#F7F8FA"); // light-gray
+      expect(content).toContain("#E5E7EB"); // border-gray
+      expect(content).toContain("#111827"); // text-primary
+      expect(content).toContain("#6B7280"); // text-secondary
+      expect(content).toContain("#10B981"); // success
+      expect(content).toContain("#EF4444"); // error
+      expect(content).toContain("#F59E0B"); // warning
+      expect(content).toContain("#3B82F6"); // info
+    });
+
+    it("should use Inter font variable in tailwind config", () => {
+      const content = fs.readFileSync(path.join(ROOT, "tailwind.config.ts"), "utf-8");
+      expect(content).toContain("--font-inter");
+    });
+  });
+
+  describe("Layout", () => {
+    it("should use Inter font from next/font/google in root layout", () => {
+      const content = fs.readFileSync(path.join(SRC, "app", "layout.tsx"), "utf-8");
+      expect(content).toContain("Inter");
+      expect(content).toContain("next/font/google");
+    });
+
+    it("should have Geneva Holdings in the metadata", () => {
+      const content = fs.readFileSync(path.join(SRC, "app", "layout.tsx"), "utf-8");
+      expect(content).toContain("Geneva Holdings");
+    });
+  });
+
+  describe("Test setup", () => {
+    it("should have test-setup.ts with jest-dom import", () => {
+      const content = fs.readFileSync(path.join(SRC, "test-setup.ts"), "utf-8");
+      expect(content).toContain("@testing-library/jest-dom");
+    });
+  });
+
+  describe("Package.json scripts", () => {
+    it("should have test scripts defined", () => {
+      const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8"));
+      expect(pkg.scripts.test).toBe("vitest run");
+      expect(pkg.scripts["test:watch"]).toBe("vitest");
+      expect(pkg.scripts["test:coverage"]).toBe("vitest run --coverage");
+      expect(pkg.scripts["test:e2e"]).toBe("playwright test");
+      expect(pkg.scripts["test:ui"]).toBe("vitest --ui");
+    });
+  });
+
+  describe("Constants", () => {
+    it("should export INDUSTRIES, REGIONS, US_STATES, BUYER_TYPES", async () => {
+      const constants = await import("@/lib/constants");
+      expect(constants.INDUSTRIES.length).toBeGreaterThan(0);
+      expect(constants.REGIONS.length).toBeGreaterThan(0);
+      expect(constants.US_STATES.length).toBe(50);
+      expect(constants.BUYER_TYPES.length).toBe(6);
+    });
+
+    it("should export DEAL_STATUSES with correct values", async () => {
+      const constants = await import("@/lib/constants");
+      expect(constants.DEAL_STATUSES).toContain("draft");
+      expect(constants.DEAL_STATUSES).toContain("accepting_iois");
+      expect(constants.DEAL_STATUSES).toContain("closed");
+      expect(constants.DEAL_STATUSES).toContain("terminated");
+    });
+
+    it("should export VALID_DEAL_TRANSITIONS", async () => {
+      const constants = await import("@/lib/constants");
+      expect(constants.VALID_DEAL_TRANSITIONS.draft).toEqual(["accepting_iois"]);
+      expect(constants.VALID_DEAL_TRANSITIONS.closed).toEqual([]);
+      expect(constants.VALID_DEAL_TRANSITIONS.terminated).toEqual([]);
+    });
+
+    it("should export FILE_CONSTRAINTS with 50MB limit and PDF only", async () => {
+      const constants = await import("@/lib/constants");
+      expect(constants.FILE_CONSTRAINTS.MAX_SIZE_BYTES).toBe(50 * 1024 * 1024);
+      expect(constants.FILE_CONSTRAINTS.ALLOWED_TYPES).toEqual(["application/pdf"]);
+    });
+
+    it("should export FEE_RATES (1.25% success fee, 0.25% broker incentive)", async () => {
+      const constants = await import("@/lib/constants");
+      expect(constants.FEE_RATES.SUCCESS_FEE).toBe(0.0125);
+      expect(constants.FEE_RATES.BROKER_INCENTIVE).toBe(0.0025);
+    });
+  });
+
+  describe("Validators", () => {
+    it("should validate broker signup data", async () => {
+      const { brokerSignupSchema } = await import("@/lib/validators");
+
+      const validData = {
+        fullName: "John Doe",
+        firmName: "Acme Advisors",
+        firmWebsite: "https://acme.com",
+        location: "New York",
+        licenseCredentials: "Series 79",
+        companyDescription: "M&A advisory firm",
+        dealTypes: "Lower middle market",
+        industryFocus: ["Technology"],
+        membershipAgreementSigned: true as const,
+      };
+
+      const result = brokerSignupSchema.safeParse(validData);
+      expect(result.success).toBe(true);
+    });
+
+    it("should reject broker signup with missing required fields", async () => {
+      const { brokerSignupSchema } = await import("@/lib/validators");
+
+      const result = brokerSignupSchema.safeParse({});
+      expect(result.success).toBe(false);
+    });
+
+    it("should validate buyer signup data", async () => {
+      const { buyerSignupSchema } = await import("@/lib/validators");
+
+      const validData = {
+        fullName: "Jane Smith",
+        companyName: "PE Partners",
+        companyWebsite: "https://pepartners.com",
+        location: "Chicago",
+        buyerType: "pe" as const,
+        companyDescription: "Private equity firm",
+        industryFocus: ["Healthcare"],
+        aum: "$500M",
+        membershipAgreementSigned: true as const,
+      };
+
+      const result = buyerSignupSchema.safeParse(validData);
+      expect(result.success).toBe(true);
+    });
+
+    it("should reject buyer signup without membership agreement", async () => {
+      const { buyerSignupSchema } = await import("@/lib/validators");
+
+      const result = buyerSignupSchema.safeParse({
+        fullName: "Jane Smith",
+        companyName: "PE Partners",
+        companyWebsite: "https://pepartners.com",
+        location: "Chicago",
+        buyerType: "pe",
+        companyDescription: "Private equity firm",
+        industryFocus: ["Healthcare"],
+        aum: "$500M",
+        membershipAgreementSigned: false,
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("Matching algorithm stub", () => {
+    it("should export matchDealsToProject function", async () => {
+      const { matchDealsToProject } = await import("@/lib/matching");
+      expect(typeof matchDealsToProject).toBe("function");
+    });
+
+    it("should filter deals by active status", async () => {
+      const { matchDealsToProject } = await import("@/lib/matching");
+
+      const deals = [
+        {
+          id: "1", industry: "Tech", status: "accepting_iois",
+          headline: "Tech company", description: "Description",
+        },
+        {
+          id: "2", industry: "Tech", status: "draft",
+          headline: "Draft deal", description: "Description",
+        },
+      ];
+
+      const result = matchDealsToProject(deals, {});
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("1");
+    });
+  });
+
+  describe("Utility functions", () => {
+    it("should format currency correctly", async () => {
+      const { formatCurrency } = await import("@/lib/utils");
+      expect(formatCurrency(1000000)).toBe("$1,000,000");
+      expect(formatCurrency(0)).toBe("$0");
+    });
+
+    it("should format numbers correctly", async () => {
+      const { formatNumber } = await import("@/lib/utils");
+      expect(formatNumber(1000000)).toBe("1,000,000");
+    });
+  });
+
+  describe("Notification placeholders", () => {
+    it("should export placeholder notification functions", async () => {
+      const notifications = await import("@/lib/notifications");
+      expect(typeof notifications.notifyAdmin).toBe("function");
+      expect(typeof notifications.notifyBroker).toBe("function");
+      expect(typeof notifications.notifyBuyer).toBe("function");
+      expect(typeof notifications.notifyBuyers).toBe("function");
+    });
+  });
+});
