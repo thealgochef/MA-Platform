@@ -220,7 +220,7 @@ export default function BrokerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, otherMembers: e.target.value })
                 }
-                placeholder="Names and email addresses, one per line"
+                placeholder="Email addresses, one per line"
                 className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
               />
             </div>
@@ -261,7 +261,7 @@ export default function BrokerSignupPage() {
                   className="mt-1"
                 />
                 <span className="text-sm text-text-primary">
-                  I have read and agree to the membership agreement *
+                  By submitting your application, you agree to our Terms of Service and Privacy Policy, and authorize Geneva Holdings to send you automated text messages. You can opt out at any time. *
                 </span>
               </label>
 

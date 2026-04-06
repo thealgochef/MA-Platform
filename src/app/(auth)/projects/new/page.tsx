@@ -97,46 +97,46 @@ export default function NewProjectPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Revenue Min</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Minimum Revenue (M)</label>
               <input
                 type="number"
                 value={formData.revenueMin ?? ""}
                 onChange={(e) => setFormData({ ...formData, revenueMin: e.target.value ? parseFloat(e.target.value) : null })}
                 className="w-full border border-border-gray rounded-md px-3 py-2 text-sm"
-                placeholder="0"
+                placeholder="5"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Revenue Max</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Maximum Revenue (M)</label>
               <input
                 type="number"
                 value={formData.revenueMax ?? ""}
                 onChange={(e) => setFormData({ ...formData, revenueMax: e.target.value ? parseFloat(e.target.value) : null })}
                 className="w-full border border-border-gray rounded-md px-3 py-2 text-sm"
-                placeholder="No max"
+                placeholder="50"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">EBITDA Min</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Minimum EBITDA (M)</label>
               <input
                 type="number"
                 value={formData.ebitdaMin ?? ""}
                 onChange={(e) => setFormData({ ...formData, ebitdaMin: e.target.value ? parseFloat(e.target.value) : null })}
                 className="w-full border border-border-gray rounded-md px-3 py-2 text-sm"
-                placeholder="0"
+                placeholder="0.5"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">EBITDA Max</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Maximum EBITDA (M)</label>
               <input
                 type="number"
                 value={formData.ebitdaMax ?? ""}
                 onChange={(e) => setFormData({ ...formData, ebitdaMax: e.target.value ? parseFloat(e.target.value) : null })}
                 className="w-full border border-border-gray rounded-md px-3 py-2 text-sm"
-                placeholder="No max"
+                placeholder="5"
               />
             </div>
           </div>
