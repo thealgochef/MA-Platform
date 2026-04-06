@@ -1,4 +1,5 @@
 import Link from "next/link";
+import FeeStructureTable from "@/components/buyer/FeeStructureTable";
 
 export default function ForBuyersPage() {
   return (
@@ -37,6 +38,7 @@ export default function ForBuyersPage() {
                 <p className="text-sm text-text-secondary">Flat 1.25% on total enterprise value. Simple, transparent, fair.</p>
               </div>
             </div>
+            <FeeStructureTable />
           </div>
 
           <h2 className="text-2xl font-bold text-navy mb-4">How It Works for Buyers</h2>
