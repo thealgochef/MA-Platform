@@ -23,8 +23,7 @@ export default function PendingApprovalPage() {
           Application Received
         </h1>
         <p className="text-text-secondary mb-6">
-          Thank you for applying. Our team reviews all applications and
-          you&apos;ll hear back within 24 hours.
+          All prospective buyers are carefully reviewed to maintain deal confidentiality and the integrity of our network. You can expect a decision within 24 hours.
         </p>
         <p className="text-text-secondary text-sm mb-8">
           We&apos;ll send you an email once your application has been reviewed.

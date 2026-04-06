@@ -13,7 +13,7 @@ export default function SelectRolePage() {
             Welcome to Geneva Holdings
           </h1>
           <p className="text-text-secondary">
-            How would you like to use the platform?
+            What is your main objective?
           </p>
         </div>
 
@@ -23,10 +23,10 @@ export default function SelectRolePage() {
             className="w-full text-left p-4 border border-border-gray rounded-lg hover:border-navy hover:bg-navy/5 transition-colors group"
           >
             <h3 className="text-lg font-semibold text-navy group-hover:text-slate-blue">
-              I&apos;m a Broker / Banker
+              Sell a Business
             </h3>
             <p className="text-sm text-text-secondary mt-1">
-              I represent sellers and want to list deals on the platform.
+              List confidentially. Reach serious, vetted buyers. Close faster.
             </p>
           </button>
 
@@ -35,10 +35,10 @@ export default function SelectRolePage() {
             className="w-full text-left p-4 border border-border-gray rounded-lg hover:border-navy hover:bg-navy/5 transition-colors group"
           >
             <h3 className="text-lg font-semibold text-navy group-hover:text-slate-blue">
-              I&apos;m a Buyer
+              Buy a Business
             </h3>
             <p className="text-sm text-text-secondary mt-1">
-              I&apos;m looking to acquire businesses (PE, family office, search fund, etc.)
+              Set your criteria and get matched to live deals.
             </p>
           </button>
         </div>
