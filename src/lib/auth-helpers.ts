@@ -9,6 +9,13 @@ const PUBLIC_ROUTES = [
   "/login",
   "/pending-approval",
   "/api/auth/callback",
+  "/for-buyers",
+  "/for-brokers",
+  "/about",
+  "/how-it-works",
+  "/contact",
+  "/privacy",
+  "/terms",
 ];
 
 const PUBLIC_PREFIXES = ["/shared/", "/api/auth/"];
