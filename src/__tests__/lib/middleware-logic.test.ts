@@ -32,6 +32,13 @@ describe("Phase 2: Middleware Auth Logic", () => {
     it("should NOT mark public routes as protected", () => {
       expect(isProtectedRoute("/login")).toBe(false);
       expect(isProtectedRoute("/pending-approval")).toBe(false);
+      expect(isProtectedRoute("/for-buyers")).toBe(false);
+      expect(isProtectedRoute("/for-brokers")).toBe(false);
+      expect(isProtectedRoute("/about")).toBe(false);
+      expect(isProtectedRoute("/how-it-works")).toBe(false);
+      expect(isProtectedRoute("/contact")).toBe(false);
+      expect(isProtectedRoute("/privacy")).toBe(false);
+      expect(isProtectedRoute("/terms")).toBe(false);
     });
 
     it("should mark signup routes as protected (require auth)", () => {
