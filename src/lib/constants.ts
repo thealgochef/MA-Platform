@@ -57,11 +57,14 @@ export const US_STATES = [
 ] as const;
 
 export const BUYER_TYPES = [
-  { value: "pe", label: "Private Equity" },
-  { value: "independent_sponsor", label: "Independent Sponsor" },
   { value: "family_office", label: "Family Office" },
+  { value: "pe", label: "Private Equity" },
+  { value: "vc", label: "Venture Capital" },
   { value: "search_fund", label: "Search Fund" },
-  { value: "private_investor", label: "Private Investor" },
+  { value: "independent_sponsor", label: "Independent Sponsor" },
+  { value: "holding_company", label: "Holding Company / Corporate M&A" },
+  { value: "ma_advisor", label: "M&A Advisor" },
+  { value: "individual_investor", label: "Individual Investor" },
   { value: "other", label: "Other" },
 ] as const;
 
