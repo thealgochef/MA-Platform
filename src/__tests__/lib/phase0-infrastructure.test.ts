@@ -144,7 +144,7 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
       expect(constants.INDUSTRIES.length).toBeGreaterThan(0);
       expect(constants.REGIONS.length).toBeGreaterThan(0);
       expect(constants.US_STATES.length).toBe(50);
-      expect(constants.BUYER_TYPES.length).toBe(6);
+      expect(constants.BUYER_TYPES.length).toBe(9);
     });
 
     it("should export DEAL_STATUSES with correct values", async () => {
