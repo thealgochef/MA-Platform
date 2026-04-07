@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       .insert({
         name: data.firmName,
         website: data.firmWebsite,
-        description: data.companyDescription,
+        description: data.firmDescription,
         location: data.location,
         industry_focus: data.industryFocus,
         firm_type: "broker",
