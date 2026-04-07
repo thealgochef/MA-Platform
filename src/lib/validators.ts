@@ -7,7 +7,8 @@ export const fileValidation = z.object({
 });
 
 export const brokerSignupSchema = z.object({
-  fullName: z.string().min(1, "Full name is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
   firmName: z.string().min(1, "Firm name is required"),
   firmWebsite: z.string().url("Valid URL is required"),
   location: z.string().min(1, "Location is required"),

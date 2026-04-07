@@ -180,7 +180,8 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
       const { brokerSignupSchema } = await import("@/lib/validators");
 
       const validData = {
-        fullName: "John Doe",
+        firstName: "John",
+        lastName: "Doe",
         firmName: "Acme Advisors",
         firmWebsite: "https://acme.com",
         location: "New York",
