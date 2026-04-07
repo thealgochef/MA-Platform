@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     const { error: userError } = await adminClient
       .from("users")
       .update({
-        full_name: data.fullName,
+        full_name: `${data.firstName} ${data.lastName}`,
         firm_id: firm.id,
         role: "buyer",
         status: "approved", // ⚠️ DEV-ONLY: change back to "pending" for production

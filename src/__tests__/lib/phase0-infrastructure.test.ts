@@ -180,7 +180,8 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
       const { brokerSignupSchema } = await import("@/lib/validators");
 
       const validData = {
-        fullName: "John Doe",
+        firstName: "John",
+        lastName: "Doe",
         firmName: "Acme Advisors",
         firmWebsite: "https://acme.com",
         location: "New York",
@@ -206,7 +207,8 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
       const { buyerSignupSchema } = await import("@/lib/validators");
 
       const validData = {
-        fullName: "Jane Smith",
+        firstName: "Jane",
+        lastName: "Smith",
         companyName: "PE Partners",
         companyWebsite: "https://pepartners.com",
         location: "Chicago",
@@ -225,7 +227,8 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
       const { buyerSignupSchema } = await import("@/lib/validators");
 
       const result = buyerSignupSchema.safeParse({
-        fullName: "Jane Smith",
+        firstName: "Jane",
+        lastName: "Smith",
         companyName: "PE Partners",
         companyWebsite: "https://pepartners.com",
         location: "Chicago",
