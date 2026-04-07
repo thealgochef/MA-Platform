@@ -11,7 +11,8 @@ export default function BuyerSignupPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     companyName: "",
     companyWebsite: "",
     location: "",
@@ -126,14 +127,29 @@ export default function BuyerSignupPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Full Name *
+                First Name *
               </label>
               <input
                 type="text"
                 required
-                value={formData.fullName}
+                value={formData.firstName}
                 onChange={(e) =>
-                  setFormData({ ...formData, fullName: e.target.value })
+                  setFormData({ ...formData, firstName: e.target.value })
+                }
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Last Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.lastName}
+                onChange={(e) =>
+                  setFormData({ ...formData, lastName: e.target.value })
                 }
                 className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
               />

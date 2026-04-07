@@ -22,7 +22,8 @@ export const brokerSignupSchema = z.object({
 });
 
 export const buyerSignupSchema = z.object({
-  fullName: z.string().min(1, "Full name is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
   companyName: z.string().min(1, "Company name is required"),
   companyWebsite: z.string().url("Valid URL is required"),
   location: z.string().min(1, "Location is required"),

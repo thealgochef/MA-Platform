@@ -206,7 +206,8 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
       const { buyerSignupSchema } = await import("@/lib/validators");
 
       const validData = {
-        fullName: "Jane Smith",
+        firstName: "Jane",
+        lastName: "Smith",
         companyName: "PE Partners",
         companyWebsite: "https://pepartners.com",
         location: "Chicago",
@@ -225,7 +226,8 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
       const { buyerSignupSchema } = await import("@/lib/validators");
 
       const result = buyerSignupSchema.safeParse({
-        fullName: "Jane Smith",
+        firstName: "Jane",
+        lastName: "Smith",
         companyName: "PE Partners",
         companyWebsite: "https://pepartners.com",
         location: "Chicago",
