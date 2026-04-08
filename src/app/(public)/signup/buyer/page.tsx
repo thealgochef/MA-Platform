@@ -227,7 +227,7 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Firm Website *
+                Website *
               </label>
               <input
                 type="url"

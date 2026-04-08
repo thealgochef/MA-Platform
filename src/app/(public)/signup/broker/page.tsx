@@ -163,7 +163,7 @@ export default function BrokerSignupPage() {
             </p>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Name *
+                Firm Name *
               </label>
               <input
                 type="text"
