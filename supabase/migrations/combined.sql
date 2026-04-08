@@ -138,6 +138,8 @@ CREATE TABLE users (
   role text NOT NULL CHECK (role IN ('broker', 'buyer', 'admin')),
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'suspended', 'banned')),
   title text,
+  phone text,
+  linkedin text,
   location text,
   buyer_type text CHECK (buyer_type IN ('pe', 'independent_sponsor', 'family_office', 'search_fund', 'private_investor', 'other')),
   aum text,

@@ -12,6 +12,9 @@ export default function BrokerSignupPage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    title: "",
+    phoneNumber: "",
+    linkedIn: "",
     firmName: "",
     firmWebsite: "",
     location: "",
@@ -109,12 +112,58 @@ export default function BrokerSignupPage() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Title *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Phone Number *
+              </label>
+              <input
+                type="tel"
+                required
+                value={formData.phoneNumber}
+                onChange={(e) =>
+                  setFormData({ ...formData, phoneNumber: e.target.value })
+                }
+                placeholder="e.g., (555) 123-4567"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                LinkedIn Profile
+              </label>
+              <input
+                type="url"
+                value={formData.linkedIn}
+                onChange={(e) =>
+                  setFormData({ ...formData, linkedIn: e.target.value })
+                }
+                placeholder="https://www.linkedin.com/in/your-profile"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
               Firm
             </p>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Firm Name *
+                Name *
               </label>
               <input
                 type="text"
@@ -129,7 +178,7 @@ export default function BrokerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Firm Website *
+                Website *
               </label>
               <input
                 type="url"
@@ -160,7 +209,7 @@ export default function BrokerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Firm Description *
+                Description *
               </label>
               <textarea
                 required

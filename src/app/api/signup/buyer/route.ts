@@ -38,8 +38,8 @@ export async function POST(request: Request) {
     const { data: firm, error: firmError } = await adminClient
       .from("firms")
       .insert({
-        name: data.companyName,
-        website: data.companyWebsite,
+        name: data.firmName,
+        website: data.firmWebsite,
         description: data.firmDescription,
         location: data.location,
         industry_focus: data.industryFocus,
@@ -62,11 +62,14 @@ export async function POST(request: Request) {
       .from("users")
       .update({
         full_name: `${data.firstName} ${data.lastName}`,
+        title: data.title,
+        phone: data.phoneNumber,
+        linkedin: data.linkedIn,
         firm_id: firm.id,
         role: "buyer",
         status: "approved", // ⚠️ DEV-ONLY: change back to "pending" for production
         location: data.location,
-        buyer_type: data.buyerType,
+        buyer_type: data.firmType,
         aum: data.aum,
         industry_focus: data.industryFocus,
         membership_agreement_signed: true,
