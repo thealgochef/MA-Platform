@@ -13,11 +13,14 @@ export default function BuyerSignupPage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    companyName: "",
-    companyWebsite: "",
+    title: "",
+    phoneNumber: "",
+    linkedIn: "",
+    firmName: "",
+    firmWebsite: "",
     location: "",
-    buyerType: "",
-    companyDescription: "",
+    firmType: "",
+    firmDescription: "",
     industryFocus: [] as string[],
     aum: "",
     otherMembers: "",
@@ -28,8 +31,8 @@ export default function BuyerSignupPage() {
   const [documents, setDocuments] = useState<File[]>([]);
 
   const showDocumentUpload =
-    formData.buyerType === "search_fund" ||
-    formData.buyerType === "private_investor";
+    formData.firmType === "search_fund" ||
+    formData.firmType === "private_investor";
 
   const handleIndustryToggle = (industry: string) => {
     setFormData((prev) => ({
@@ -125,6 +128,9 @@ export default function BuyerSignupPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Personal
+            </p>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
                 First Name *
@@ -157,14 +163,14 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Company Name *
+                Title *
               </label>
               <input
                 type="text"
                 required
-                value={formData.companyName}
+                value={formData.title}
                 onChange={(e) =>
-                  setFormData({ ...formData, companyName: e.target.value })
+                  setFormData({ ...formData, title: e.target.value })
                 }
                 className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
               />
@@ -172,16 +178,102 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Company Website *
+                Phone Number *
+              </label>
+              <input
+                type="tel"
+                required
+                value={formData.phoneNumber}
+                onChange={(e) =>
+                  setFormData({ ...formData, phoneNumber: e.target.value })
+                }
+                placeholder="e.g., (555) 123-4567"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                LinkedIn Profile
+              </label>
+              <input
+                type="url"
+                value={formData.linkedIn}
+                onChange={(e) =>
+                  setFormData({ ...formData, linkedIn: e.target.value })
+                }
+                placeholder="https://www.linkedin.com/in/your-profile"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Firm
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Firm Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.firmName}
+                onChange={(e) =>
+                  setFormData({ ...formData, firmName: e.target.value })
+                }
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Website *
               </label>
               <input
                 type="url"
                 required
-                value={formData.companyWebsite}
+                value={formData.firmWebsite}
                 onChange={(e) =>
-                  setFormData({ ...formData, companyWebsite: e.target.value })
+                  setFormData({ ...formData, firmWebsite: e.target.value })
                 }
                 placeholder="https://"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Firm Type *
+              </label>
+              <select
+                required
+                value={formData.firmType}
+                onChange={(e) =>
+                  setFormData({ ...formData, firmType: e.target.value })
+                }
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              >
+                <option value="">Select firm type</option>
+                {BUYER_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Assets Under Management ($M) *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.aum}
+                onChange={(e) =>
+                  setFormData({ ...formData, aum: e.target.value })
+                }
+                placeholder="e.g., $50M"
                 className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
               />
             </div>
@@ -203,43 +295,29 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Company Type *
-              </label>
-              <select
-                required
-                value={formData.buyerType}
-                onChange={(e) =>
-                  setFormData({ ...formData, buyerType: e.target.value })
-                }
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
-              >
-                <option value="">Select company type</option>
-                {BUYER_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Company Description *
+                Description *
               </label>
               <textarea
                 required
                 rows={4}
-                value={formData.companyDescription}
+                value={formData.firmDescription}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    companyDescription: e.target.value,
+                    firmDescription: e.target.value,
                   })
                 }
                 className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
               />
             </div>
 
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Credentials & Accreditations
+            </p>
+
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Focus 
+            </p>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">
                 Industry Focus * (select all that apply)
@@ -260,22 +338,6 @@ export default function BuyerSignupPage() {
                   </button>
                 ))}
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Assets Under Management (AUM) *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.aum}
-                onChange={(e) =>
-                  setFormData({ ...formData, aum: e.target.value })
-                }
-                placeholder="e.g., $50M"
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
-              />
             </div>
 
             {showDocumentUpload && (
@@ -319,6 +381,9 @@ export default function BuyerSignupPage() {
               </div>
             )}
 
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Invite
+            </p>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
                 Other Firm Members Who Need Access
@@ -398,7 +463,7 @@ export default function BuyerSignupPage() {
                 loading ||
                 !formData.membershipAgreementSigned ||
                 formData.industryFocus.length === 0 ||
-                !formData.buyerType
+                !formData.firmType
               }
               className="w-full bg-navy text-white rounded-md py-3 font-medium hover:bg-slate-blue transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >

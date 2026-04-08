@@ -12,11 +12,14 @@ export default function BrokerSignupPage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    title: "",
+    phoneNumber: "",
+    linkedIn: "",
     firmName: "",
     firmWebsite: "",
     location: "",
     licenseCredentials: "",
-    companyDescription: "",
+    firmDescription: "",
     dealTypes: "",
     industryFocus: [] as string[],
     otherMembers: "",
@@ -76,6 +79,9 @@ export default function BrokerSignupPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Personal
+            </p>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
                 First Name *
@@ -108,6 +114,55 @@ export default function BrokerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
+                Title *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Phone Number *
+              </label>
+              <input
+                type="tel"
+                required
+                value={formData.phoneNumber}
+                onChange={(e) =>
+                  setFormData({ ...formData, phoneNumber: e.target.value })
+                }
+                placeholder="e.g., (555) 123-4567"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                LinkedIn Profile
+              </label>
+              <input
+                type="url"
+                value={formData.linkedIn}
+                onChange={(e) =>
+                  setFormData({ ...formData, linkedIn: e.target.value })
+                }
+                placeholder="https://www.linkedin.com/in/your-profile"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Firm
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
                 Firm Name *
               </label>
               <input
@@ -123,7 +178,7 @@ export default function BrokerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Firm Website *
+                Website *
               </label>
               <input
                 type="url"
@@ -154,6 +209,27 @@ export default function BrokerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
+                Description *
+              </label>
+              <textarea
+                required
+                rows={4}
+                value={formData.firmDescription}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    firmDescription: e.target.value,
+                  })
+                }
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+              />
+            </div>
+
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Credentials & Accreditations
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
                 License and Credentials *
               </label>
               <input
@@ -169,25 +245,11 @@ export default function BrokerSignupPage() {
                 className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
               />
             </div>
+            
 
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Company Description *
-              </label>
-              <textarea
-                required
-                rows={4}
-                value={formData.companyDescription}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    companyDescription: e.target.value,
-                  })
-                }
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
-              />
-            </div>
-
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Focus 
+            </p>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
                 Types of Deals Typically Represented *
@@ -225,7 +287,10 @@ export default function BrokerSignupPage() {
                 ))}
               </div>
             </div>
-
+            
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Invite
+            </p>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
                 Other Firm Members Who Need Access

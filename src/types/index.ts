@@ -1,6 +1,6 @@
 export type UserRole = "broker" | "buyer" | "admin";
 export type UserStatus = "pending" | "approved" | "rejected" | "suspended" | "banned";
-export type BuyerType = "pe" | "independent_sponsor" | "family_office" | "search_fund" | "private_investor" | "other";
+export type BuyerType = "family_office" | "pe" | "vc" | "search_fund" | "independent_sponsor" | "holding_company" | "ma_advisor" | "individual_investor" | "other";
 export type FirmType = "broker" | "buyer";
 
 export type DealStatus = "draft" | "accepting_iois" | "accepting_lois" | "under_loi" | "paused" | "closed" | "terminated";

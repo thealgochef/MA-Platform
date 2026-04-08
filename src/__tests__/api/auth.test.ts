@@ -96,7 +96,7 @@ describe("Phase 2: Authentication & Onboarding Files", () => {
         path.join(SRC, "app", "(public)", "signup", "buyer", "page.tsx"),
         "utf-8"
       );
-      expect(content).toContain("buyerType");
+      expect(content).toContain("firmType");
     });
 
     it("buyer signup form should conditionally show document upload for search_fund/private_investor", () => {
