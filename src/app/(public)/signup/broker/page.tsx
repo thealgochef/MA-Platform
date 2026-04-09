@@ -178,11 +178,10 @@ export default function BrokerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1">
-                Website *
+                Website 
               </label>
               <input
                 type="url"
-                required
                 value={formData.firmWebsite}
                 onChange={(e) =>
                   setFormData({ ...formData, firmWebsite: e.target.value })
