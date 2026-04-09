@@ -81,7 +81,7 @@ export async function POST(
     deal_id: params.id,
     actor_id: user.id,
     action: "buyer_passed",
-    details: {
+    metadata: {
       engagement_id: engagement.id,
       pass_reason,
       pass_reason_detail: pass_reason_detail || null,

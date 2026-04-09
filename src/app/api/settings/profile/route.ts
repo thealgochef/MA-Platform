@@ -63,6 +63,8 @@ export async function PATCH(request: Request) {
   const userUpdate: Record<string, unknown> = {};
   if (body.fullName !== undefined) userUpdate.full_name = body.fullName;
   if (body.title !== undefined) userUpdate.title = body.title;
+  if (body.phone !== undefined) userUpdate.phone = body.phone;
+  if (body.linkedIn !== undefined) userUpdate.linkedin = body.linkedIn;
   if (body.location !== undefined) userUpdate.location = body.location;
   if (body.industryFocus !== undefined) userUpdate.industry_focus = body.industryFocus;
   if (body.licenseCredentials !== undefined) userUpdate.license_credentials = body.licenseCredentials;

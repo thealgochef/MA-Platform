@@ -24,6 +24,8 @@ export default function SettingsPage() {
   const [dealTypes, setDealTypes] = useState("");
   const [buyerType, setBuyerType] = useState("");
   const [aum, setAum] = useState("");
+  const [phone, setPhone] = useState("");
+  const [linkedIn, setLinkedIn] = useState("");
 
   // Firm state
   const [firmName, setFirmName] = useState("");
@@ -64,6 +66,8 @@ export default function SettingsPage() {
         setDealTypes(profile.deal_types || "");
         setBuyerType(profile.buyer_type || "");
         setAum(profile.aum || "");
+        setPhone(profile.phone || "");
+        setLinkedIn(profile.linkedin || "");
 
         if (firm) {
           setFirmName(firm.name || "");
@@ -90,6 +94,8 @@ export default function SettingsPage() {
       body: JSON.stringify({
         fullName,
         title,
+        phone,
+        linkedIn,
         location,
         industryFocus,
         licenseCredentials: credentials,
@@ -164,6 +170,44 @@ export default function SettingsPage() {
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                className="w-full border rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Title
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full border rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g., (555) 123-4567"
+                className="w-full border rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1">
+                LinkedIn Profile
+              </label>
+              <input
+                type="url"
+                value={linkedIn}
+                onChange={(e) => setLinkedIn(e.target.value)}
+                placeholder="https://www.linkedin.com/in/your-profile"
                 className="w-full border rounded-md px-3 py-2 text-sm"
               />
             </div>

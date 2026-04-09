@@ -38,8 +38,7 @@ export async function GET(
     .from("deal_engagements")
     .select(`
       *,
-      users:buyer_user_id (id, full_name, email, buyer_type),
-      firms:buyer_firm_id (id, name, website)
+      users:buyer_user_id (id, full_name, email, buyer_type, firms (id, name, website))
     `)
     .eq("deal_id", params.id)
     .order("created_at", { ascending: false });

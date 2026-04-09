@@ -73,14 +73,14 @@ export async function PATCH(
       deal_id: params.id,
       actor_id: user.id,
       action: "buyer_vetting_approved",
-      details: { engagement_id: engagementId, buyer_user_id: engagement.buyer_user_id },
+      metadata: { engagement_id: engagementId, buyer_user_id: engagement.buyer_user_id },
     });
 
     await supabase.from("deal_activity_log").insert({
       deal_id: params.id,
       actor_id: user.id,
       action: "nda_sent",
-      details: { buyer_user_id: engagement.buyer_user_id },
+      metadata: { buyer_user_id: engagement.buyer_user_id },
     });
 
     return NextResponse.json({ success: true, status: "approved" });
@@ -108,7 +108,7 @@ export async function PATCH(
       deal_id: params.id,
       actor_id: user.id,
       action: "buyer_vetting_rejected",
-      details: {
+      metadata: {
         engagement_id: engagementId,
         buyer_user_id: engagement.buyer_user_id,
         reason: vetting_rejection_reason,

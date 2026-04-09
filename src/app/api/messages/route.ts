@@ -38,7 +38,7 @@ export async function GET() {
           point_of_contact_id,
           users!deals_point_of_contact_id_fkey (
             full_name,
-            firms!inner ( name )
+            firms ( name )
           )
         )
       `)
@@ -60,7 +60,7 @@ export async function GET() {
         ),
         users!deal_engagements_buyer_user_id_fkey (
           full_name,
-          firms!inner ( name )
+          firms ( name )
         )
       `)
       .not("stage", "in", '("declined")')
@@ -76,7 +76,7 @@ export async function GET() {
         deal_id,
         buyer_user_id,
         deals!inner ( id, headline, point_of_contact_id ),
-        users!deal_engagements_buyer_user_id_fkey ( full_name, firms!inner ( name ) )
+        users!deal_engagements_buyer_user_id_fkey ( full_name, firms ( name ) )
       `)
       .not("stage", "in", '("declined")');
     engagements = data;
