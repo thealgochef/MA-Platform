@@ -3,9 +3,10 @@ import Link from "next/link";
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-white">
+
       {/* Navigation */}
       <nav className="bg-navy text-white">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
           <Link href="/" className="text-xl font-bold">
             Geneva Holdings
           </Link>
@@ -22,10 +23,7 @@ export default function HomePage() {
             <Link href="/how-it-works" className="text-sm hover:text-white/80 transition-colors">
               How It Works
             </Link>
-            <Link
-              href="/login"
-              className="bg-white text-navy px-4 py-2 rounded-md text-sm font-medium hover:bg-light-gray transition-colors"
-            >
+            <Link href="/login" className="bg-white text-navy px-4 py-2 rounded-md text-sm font-medium hover:bg-light-gray transition-colors">
               Sign Up / Log In
             </Link>
           </div>
@@ -118,7 +116,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-navy text-white py-8">
+      <footer className="bg-navy text-white py-6">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex flex-wrap justify-between items-center">
             <div>
@@ -134,6 +132,7 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
     </main>
   );
 }
