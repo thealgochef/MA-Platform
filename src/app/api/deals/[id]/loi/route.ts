@@ -130,7 +130,7 @@ export async function POST(
     deal_id: params.id,
     actor_id: user.id,
     action: "loi_submitted",
-    details: { engagement_id: engagement.id, loi_id: loi.id },
+    metadata: { engagement_id: engagement.id, loi_id: loi.id },
   });
 
   notifyBroker("loi_submitted", params.id, engagement.id);

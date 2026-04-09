@@ -127,15 +127,12 @@ export default function BrokerDashboard() {
               </thead>
               <tbody>
                 {deals.map((deal) => (
-                  <tr key={deal.id} className="border-t border-border-gray hover:bg-light-gray">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/deals/${deal.id}`}
-                        className="font-medium text-navy hover:underline"
-                      >
-                        {deal.project_name}
-                      </Link>
-                    </td>
+                  <tr
+                    key={deal.id}
+                    className="border-t border-border-gray hover:bg-light-gray cursor-pointer"
+                    onClick={() => window.location.href = `/deals/${deal.id}`}
+                  >
+                    <td className="px-4 py-3 font-medium text-navy">{deal.project_name}</td>
                     <td className="px-4 py-3 text-text-secondary">{deal.headline}</td>
                     <td className="px-4 py-3 text-text-secondary">{deal.industry}</td>
                     <td className="px-4 py-3">

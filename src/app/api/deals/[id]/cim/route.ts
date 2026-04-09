@@ -57,7 +57,7 @@ export async function GET(
       deal_id: params.id,
       actor_id: user.id,
       action: "cim_downloaded",
-      details: { engagement_id: engagement.id },
+      metadata: { engagement_id: engagement.id },
     });
   } else {
     // Track view
@@ -72,7 +72,7 @@ export async function GET(
       deal_id: params.id,
       actor_id: user.id,
       action: "cim_viewed",
-      details: { engagement_id: engagement.id },
+      metadata: { engagement_id: engagement.id },
     });
   }
 
@@ -145,7 +145,7 @@ export async function PATCH(
     deal_id: params.id,
     actor_id: user.id,
     action: "cim_released",
-    details: { engagement_id: engagementId, manual: true },
+    metadata: { engagement_id: engagementId, manual: true },
   });
 
   return NextResponse.json({ success: true });

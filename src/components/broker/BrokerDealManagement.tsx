@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { DEAL_STATUS_LABELS, VALID_DEAL_TRANSITIONS } from "@/lib/constants";
+import { DEAL_STATUS_LABELS, VALID_DEAL_TRANSITIONS, BUYER_TYPES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 
 type Tab = "Overview" | "Pipeline" | "Offers" | "Documents" | "Messaging" | "Analytics" | "Timeline";
@@ -49,8 +49,8 @@ interface Engagement {
   cim_released: boolean;
   cim_viewed_at: string | null;
   cim_downloaded_at: string | null;
-  users: { id: string; full_name: string; email: string; buyer_type: string | null };
-  firms: { id: string; name: string };
+  users: { id: string; full_name: string; email: string; buyer_type: string | null; firms: { id: string; name: string; website: string } | null };
+  firms?: { id: string; name: string } | null;
 }
 
 interface Activity {
@@ -348,8 +348,8 @@ export default function BrokerDealManagement() {
                         {engagements.map((eng) => (
                           <tr key={eng.id} className="border-t border-border-gray">
                             <td className="px-3 py-2">{eng.users?.full_name || "—"}</td>
-                            <td className="px-3 py-2">{eng.firms?.name || "—"}</td>
-                            <td className="px-3 py-2">{eng.users?.buyer_type || "—"}</td>
+                            <td className="px-3 py-2">{eng.users?.firms?.name || eng.firms?.name || "—"}</td>
+                            <td className="px-3 py-2">{BUYER_TYPES.find(bt => bt.value === eng.users?.buyer_type)?.label || eng.users?.buyer_type || "—"}</td>
                             <td className="px-3 py-2">
                               <span className="px-2 py-0.5 rounded text-xs bg-info/10 text-info">{eng.stage}</span>
                             </td>

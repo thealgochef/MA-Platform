@@ -82,7 +82,7 @@ export async function POST(
       deal_id: params.id,
       actor_id: user.id,
       action: "nda_declined",
-      details: { engagement_id: engagement.id },
+      metadata: { engagement_id: engagement.id },
     });
 
     return NextResponse.json({ success: true, status: "declined" });
@@ -144,7 +144,7 @@ export async function POST(
     deal_id: params.id,
     actor_id: user.id,
     action: "nda_signed",
-    details: {
+    metadata: {
       engagement_id: engagement.id,
       cim_released: deal?.cim_sharing_preference === "auto",
     },

@@ -109,7 +109,7 @@ export async function POST(
     deal_id: params.id,
     actor_id: user.id,
     action: "deal_closed",
-    details: { engagement_id: engagement.id, enterprise_value: enterpriseValue },
+    metadata: { engagement_id: engagement.id, enterprise_value: enterpriseValue },
   });
 
   notifyBroker("deal_closure_buyer_reported", params.id, engagement.id);
@@ -197,7 +197,7 @@ export async function PATCH(
       deal_id: params.id,
       actor_id: user.id,
       action: "deal_closed",
-      details: {
+      metadata: {
         broker_confirmed: true,
         success_fee: successFee,
         broker_incentive: brokerIncentive,
@@ -229,7 +229,7 @@ export async function PATCH(
       deal_id: params.id,
       actor_id: user.id,
       action: "deal_closure_disputed",
-      details: { closure_id: closure.id },
+      metadata: { closure_id: closure.id },
     });
 
     return NextResponse.json({ success: true, disputed: true });

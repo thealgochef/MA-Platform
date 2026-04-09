@@ -78,7 +78,7 @@ export async function GET(
     // Buyer sees the broker POC
     const { data: poc } = await supabase
       .from("users")
-      .select("full_name, firms!inner ( name )")
+      .select("full_name, firms ( name )")
       .eq("id", deal.point_of_contact_id as string)
       .single();
     otherParty = poc;
@@ -86,7 +86,7 @@ export async function GET(
     // Broker/admin sees the buyer
     const { data: buyer } = await supabase
       .from("users")
-      .select("full_name, firms!inner ( name )")
+      .select("full_name, firms ( name )")
       .eq("id", engagement.buyer_user_id)
       .single();
     otherParty = buyer;

@@ -91,7 +91,7 @@ export async function POST(
       deal_id: params.id,
       actor_id: user.id,
       action: "buyer_pursued",
-      details: { buyer_firm_id: profile.firm_id, re_engagement: true },
+      metadata: { buyer_firm_id: profile.firm_id, re_engagement: true },
     });
 
     return NextResponse.json({ engagement });
@@ -121,7 +121,7 @@ export async function POST(
     deal_id: params.id,
     actor_id: user.id,
     action: "buyer_pursued",
-    details: { buyer_firm_id: profile.firm_id },
+    metadata: { buyer_firm_id: profile.firm_id },
   });
 
   if (deal.nda_vetting_preference === "auto") {
@@ -129,7 +129,7 @@ export async function POST(
       deal_id: params.id,
       actor_id: user.id,
       action: "nda_sent",
-      details: { buyer_user_id: user.id },
+      metadata: { buyer_user_id: user.id },
     });
   }
 

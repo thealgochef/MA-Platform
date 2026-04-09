@@ -134,7 +134,7 @@ export async function POST(
     deal_id: params.id,
     actor_id: user.id,
     action: "ioi_submitted",
-    details: { engagement_id: engagement.id, ioi_id: ioi.id },
+    metadata: { engagement_id: engagement.id, ioi_id: ioi.id },
   });
 
   notifyBroker("ioi_submitted", params.id, engagement.id);
