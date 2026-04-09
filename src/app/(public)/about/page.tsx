@@ -84,7 +84,7 @@ export default function AboutPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-navy text-white py-8">
+      <footer className="bg-navy text-white py-6">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex flex-wrap justify-between items-center">
             <div>
