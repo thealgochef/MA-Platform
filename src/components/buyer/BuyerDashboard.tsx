@@ -80,7 +80,7 @@ export default function BuyerDashboard() {
           <h1 className="text-2xl font-bold text-navy">Dashboard</h1>
           <a
             href="/projects/new"
-            className="px-4 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue"
+            className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover"
           >
             New Project
           </a>
@@ -200,7 +200,7 @@ export default function BuyerDashboard() {
             <p className="text-text-secondary mb-4">Create your first acquisition project</p>
             <a
               href="/projects/new"
-              className="px-6 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue"
+              className="px-6 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover"
             >
               Create Project
             </a>

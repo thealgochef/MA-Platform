@@ -218,7 +218,7 @@ export default function BrokerDealManagement() {
               )}
               <a
                 href={`/deals/${dealId}/edit`}
-                className="px-3 py-1 bg-slate-blue text-white rounded-md text-sm hover:bg-navy transition-colors"
+                className="px-3 py-1 bg-primary text-white rounded-md text-sm hover:bg-btn-hover transition-colors"
               >
                 Edit
               </a>
