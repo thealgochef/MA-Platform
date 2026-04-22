@@ -2,7 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Primary color palette */
+  --color-text: #2a2420;
+  --color-primary: #2d6a4f;
+  --color-secondary: #8b9d83;
+  --color-background: #ffffff;
+  --color-surface: #f8f6f3;
+
+  /* Supplementary colors for borders, accents, etc. */
+  --color-subtle: rgba(45, 106, 79, 0.15);
+  --color-faint: rgba(45, 106, 79, 0.05);
+  --color-btn-hover: #348d65;
+}
+
 body {
-  color: #111827;
-  background: #F7F8FA;
+  box-sizing: border-box;
+}
+
+@layer components {
+  .btn-primary {
+    @apply relative inline-flex items-center justify-center overflow-hidden bg-primary text-bg;
+  }
+
+  .btn-primary::before {
+    content: "";
+    @apply pointer-events-none absolute inset-y-0 left-[-100%] w-1/2 bg-btn-shimmer;
+    transition: left 0.5s ease;
+  }
+
+  .btn-primary:hover::before {
+    @apply left-[100%];
+  }
+}
+
+@layer utilities {
+  .gradient-text {
+    @apply bg-gradient-text bg-clip-text text-transparent;
+  }
 }
