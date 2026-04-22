@@ -276,10 +276,11 @@ export default function BrokerSignupPage() {
                     key={industry}
                     type="button"
                     onClick={() => handleIndustryToggle(industry)}
-                    className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${formData.industryFocus.includes(industry)
-                      ? "bg-primary text-bg border-primary"
-                      : "bg-bg text-[#757280] border-subtle hover:border-primary"
-                      }`}
+                    className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${
+                      formData.industryFocus.includes(industry)
+                        ? "bg-primary text-bg border-primary"
+                        : "bg-bg text-[#757280] border-subtle hover:border-primary"
+                    }`}
                   >
                     {industry}
                   </button>

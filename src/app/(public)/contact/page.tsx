@@ -48,7 +48,7 @@ export default function ContactPage() {
           <p className="text-text mb-8">
             Have questions about Geneva Holdings? We would love to hear from you.
           </p>
-          <div className="bg-surface bg-light-gray rounded-lg p-6">
+          <div className="bg-surface rounded-lg p-6">
             <p className="text-sm text-text-secondary">
               Contact information will be available when the platform launches publicly.
             </p>
