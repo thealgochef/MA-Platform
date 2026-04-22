@@ -62,13 +62,14 @@ export default function BrokerSignupPage() {
   };
 
   return (
-    <main className="min-h-screen bg-light-gray py-12">
+    <main className="min-h-screen bg-surface py-12 text-text">
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h1 className="text-2xl font-bold text-navy mb-2">
+
+        <div className="bg-bg rounded-xl shadow-md p-8">
+          <h1 className="text-3xl font-bold font-display text-primary mb-2">
             Broker Application
           </h1>
-          <p className="text-text-secondary mb-8">
+          <p className="mb-8">
             Complete your profile to join Geneva Holdings as a broker.
           </p>
 
@@ -83,7 +84,7 @@ export default function BrokerSignupPage() {
               Personal
             </p>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium mb-1">
                 First Name *
               </label>
               <input
@@ -93,12 +94,12 @@ export default function BrokerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, firstName: e.target.value })
                 }
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium mb-1">
                 Last Name *
               </label>
               <input
@@ -108,12 +109,12 @@ export default function BrokerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, lastName: e.target.value })
                 }
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium mb-1">
                 Title *
               </label>
               <input
@@ -123,12 +124,12 @@ export default function BrokerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium mb-1">
                 Phone Number *
               </label>
               <input
@@ -139,12 +140,12 @@ export default function BrokerSignupPage() {
                   setFormData({ ...formData, phoneNumber: e.target.value })
                 }
                 placeholder="e.g., (555) 123-4567"
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium mb-1">
                 LinkedIn Profile
               </label>
               <input
@@ -154,7 +155,7 @@ export default function BrokerSignupPage() {
                   setFormData({ ...formData, linkedIn: e.target.value })
                 }
                 placeholder="https://www.linkedin.com/in/your-profile"
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -162,7 +163,7 @@ export default function BrokerSignupPage() {
               Firm
             </p>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium mb-1">
                 Firm Name *
               </label>
               <input
@@ -172,13 +173,13 @@ export default function BrokerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, firmName: e.target.value })
                 }
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
-                Website 
+              <label className="block text-sm font-medium mb-1">
+                Website
               </label>
               <input
                 type="url"
@@ -187,12 +188,12 @@ export default function BrokerSignupPage() {
                   setFormData({ ...formData, firmWebsite: e.target.value })
                 }
                 placeholder="https://"
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium mb-1">
                 Location *
               </label>
               <input
@@ -202,12 +203,12 @@ export default function BrokerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, location: e.target.value })
                 }
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium mb-1">
                 Description *
               </label>
               <textarea
@@ -220,7 +221,7 @@ export default function BrokerSignupPage() {
                     firmDescription: e.target.value,
                   })
                 }
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -228,7 +229,7 @@ export default function BrokerSignupPage() {
               Credentials & Accreditations
             </p>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium mb-1">
                 License and Credentials *
               </label>
               <input
@@ -241,16 +242,16 @@ export default function BrokerSignupPage() {
                     licenseCredentials: e.target.value,
                   })
                 }
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
-            
+
 
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
-              Focus 
+              Focus
             </p>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium mb-1">
                 Types of Deals Typically Represented *
               </label>
               <input
@@ -261,12 +262,12 @@ export default function BrokerSignupPage() {
                   setFormData({ ...formData, dealTypes: e.target.value })
                 }
                 placeholder="e.g., Lower middle market, $5M-$50M revenue"
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
+              <label className="block text-sm font-medium mb-2">
                 Industry Focus * (select all that apply)
               </label>
               <div className="flex flex-wrap gap-2">
@@ -275,23 +276,22 @@ export default function BrokerSignupPage() {
                     key={industry}
                     type="button"
                     onClick={() => handleIndustryToggle(industry)}
-                    className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${
-                      formData.industryFocus.includes(industry)
-                        ? "bg-navy text-white border-navy"
-                        : "bg-white text-text-secondary border-border-gray hover:border-slate-blue"
-                    }`}
+                    className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${formData.industryFocus.includes(industry)
+                      ? "bg-primary text-bg border-primary"
+                      : "bg-bg text-[#757280] border-subtle hover:border-primary"
+                      }`}
                   >
                     {industry}
                   </button>
                 ))}
               </div>
             </div>
-            
+
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
               Invite
             </p>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium mb-1">
                 Other Firm Members Who Need Access
               </label>
               <textarea
@@ -301,30 +301,25 @@ export default function BrokerSignupPage() {
                   setFormData({ ...formData, otherMembers: e.target.value })
                 }
                 placeholder="Email addresses, one per line"
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
-            <div className="border-t border-border-gray pt-6">
-              <h3 className="text-lg font-semibold text-navy mb-4">
+            <div className="border-t border-subtle pt-6">
+              <h3 className="text-xl font-semibold text-primary mb-4">
                 Membership Agreement
               </h3>
-              <div className="bg-light-gray rounded-md p-4 mb-4 text-sm text-text-secondary max-h-48 overflow-y-auto">
+              <div className="bg-surface rounded-md p-4 mb-4 text-sm max-h-48 overflow-y-auto">
                 <p className="mb-2">
                   By signing this membership agreement, you agree to the terms
                   and conditions of the Geneva Holdings platform, including but
                   not limited to:
                 </p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Maintaining confidentiality of all deal information</li>
-                  <li>
-                    Adhering to platform guidelines for professional conduct
-                  </li>
-                  <li>
-                    Acknowledging the fee structure (0.25% broker incentive on
-                    closed deals)
-                  </li>
+                  <li>Honoring all signed NDAs</li>
                   <li>Providing accurate and truthful information</li>
+                  <li>Adhering to platform guidelines for professional conduct</li>
+                  <li>Acknowledging the fee structure (0.25% broker incentive on closed deals)</li>
                 </ul>
               </div>
 
@@ -340,13 +335,13 @@ export default function BrokerSignupPage() {
                   }
                   className="mt-1"
                 />
-                <span className="text-sm text-text-primary">
-                  By submitting your application, you agree to our Terms of Service and Privacy Policy, and authorize Geneva Holdings to send you automated text messages. You can opt out at any time. *
+                <span className="text-sm">
+                  By submitting your application, you agree to our Terms of Service, Privacy Policy, and authorize Geneva Holdings to send you automated text messages. You can opt out at any time. *
                 </span>
               </label>
 
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1">
+                <label className="block text-md font-medium text-primary mb-1">
                   Electronic Signature *
                 </label>
                 <input
@@ -357,7 +352,7 @@ export default function BrokerSignupPage() {
                     setFormData({ ...formData, signature: e.target.value })
                   }
                   placeholder="Type your full name as signature"
-                  className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 focus:border-slate-blue"
+                  className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
                 />
               </div>
             </div>
@@ -369,7 +364,7 @@ export default function BrokerSignupPage() {
                 !formData.membershipAgreementSigned ||
                 formData.industryFocus.length === 0
               }
-              className="w-full bg-navy text-white rounded-md py-3 font-medium hover:bg-slate-blue transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 btn-primary rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Submitting..." : "Submit Application"}
             </button>

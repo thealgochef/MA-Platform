@@ -16,27 +16,27 @@ export default function SharedDealPage() {
   };
 
   return (
-    <main className="min-h-screen bg-light-gray py-12">
+    <main className="min-h-screen bg-surface py-12 text-text">
       <div className="max-w-2xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <h1 className="text-2xl font-bold text-navy mb-4">
+        <div className="bg-bg rounded-lg shadow-md p-8 text-center">
+          <h1 className="text-2xl font-display font-bold text-primary mb-4">
             Someone has shared a deal with you on Geneva Holdings
           </h1>
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-text-primary mb-2">
+            <h2 className="text-lg font-display font-semibold text-primary mb-2">
               About the Platform
             </h2>
-            <p className="text-text-secondary text-sm">
+            <p className="text-sm">
               Geneva Holdings is a professional, confidential M&amp;A
               marketplace for the middle market. We connect vetted brokers with
               qualified buyers for seamless deal execution.
             </p>
           </div>
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-text-primary mb-2">
+            <h2 className="text-lg font-display font-semibold text-primary mb-2">
               How It Works
             </h2>
-            <ol className="text-sm text-text-secondary text-left space-y-2 max-w-sm mx-auto">
+            <ol className="text-sm text-left space-y-2 max-w-sm mx-auto">
               <li>1. Create your profile</li>
               <li>2. Sign the membership agreement</li>
               <li>3. Profile reviewed and approved</li>
@@ -45,13 +45,13 @@ export default function SharedDealPage() {
           </div>
           <Link
             href="/login"
-            className="inline-block bg-navy text-white rounded-md py-3 px-8 font-medium hover:bg-slate-blue transition-colors mb-8"
+            className="inline-block bg-primary text-white rounded-md py-3 px-8 font-medium hover:bg-btn-hover transition-colors mb-8"
           >
             Sign Up to View This Deal
           </Link>
 
           <div className="border-t pt-8">
-            <h2 className="text-lg font-semibold text-text-primary mb-4">
+            <h2 className="text-lg font-display font-semibold text-primary mb-4">
               Have Questions? Get in Touch
             </h2>
             {submitted ? (
@@ -70,7 +70,7 @@ export default function SharedDealPage() {
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
                     required
-                    className="w-full border rounded-md px-3 py-2 text-sm"
+                    className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
                   />
                 </div>
                 <div>
@@ -83,7 +83,7 @@ export default function SharedDealPage() {
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
                     required
-                    className="w-full border rounded-md px-3 py-2 text-sm"
+                    className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
                   />
                 </div>
                 <div>
@@ -96,12 +96,12 @@ export default function SharedDealPage() {
                     onChange={(e) => setContactMessage(e.target.value)}
                     required
                     rows={4}
-                    className="w-full border rounded-md px-3 py-2 text-sm"
+                    className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-navy text-white rounded-md py-2 font-medium hover:bg-slate-blue transition-colors"
+                  className="w-full bg-primary text-white rounded-md py-2 font-medium hover:bg-btn-hover transition-colors"
                 >
                   Send Message
                 </button>

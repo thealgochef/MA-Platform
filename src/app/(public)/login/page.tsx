@@ -19,11 +19,12 @@ function LoginContent() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-light-gray">
-      <div className="bg-white rounded-lg shadow-md p-8 w-full max-w-md">
+    <main className="min-h-screen flex items-center justify-center bg-surface">
+      <div className="bg-bg rounded-xl shadow-md p-8 w-full max-w-md">
+
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-navy mb-2">Geneva Holdings</h1>
-          <p className="text-text-secondary">
+          <h1 className="text-4xl font-display font-bold text-text mb-2">Geneva Holdings</h1>
+          <p className="text-secondary">
             Professional M&amp;A Marketplace
           </p>
         </div>
@@ -54,7 +55,7 @@ function LoginContent() {
 
         <button
           onClick={handleGoogleLogin}
-          className="w-full flex items-center justify-center gap-3 bg-navy text-white rounded-md py-3 px-4 font-medium hover:bg-slate-blue transition-colors"
+          className="w-full flex items-center justify-center gap-3 bg-primary text-body text-bg rounded-md py-3 px-4 font-medium hover:bg-btn-hover transition-colors"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -77,9 +78,10 @@ function LoginContent() {
           Continue with Google
         </button>
 
-        <p className="mt-6 text-text-secondary text-xs text-center">
+        <p className="mt-6 text-text text-xs text-center">
           New to Geneva Holdings? Click above to sign in with Google and start your application.
         </p>
+
       </div>
     </main>
   );
