@@ -174,7 +174,7 @@ export default function ProjectDealFeedPage() {
                           <button
                             onClick={() => handlePursue(deal.id)}
                             disabled={actionLoading === deal.id}
-                            className="px-3 py-1 bg-navy text-white rounded text-xs font-medium hover:bg-slate-blue disabled:opacity-50"
+                            className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
                           >
                             Pursue
                           </button>
@@ -191,7 +191,7 @@ export default function ProjectDealFeedPage() {
                         <button
                           onClick={() => handlePursue(deal.id)}
                           disabled={actionLoading === deal.id}
-                          className="px-3 py-1 bg-navy text-white rounded text-xs font-medium hover:bg-slate-blue disabled:opacity-50"
+                          className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
                         >
                           Pursue
                         </button>

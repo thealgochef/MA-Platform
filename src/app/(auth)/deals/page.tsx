@@ -63,7 +63,7 @@ export default function DealsPage() {
           <h1 className="text-2xl font-bold text-navy">My Deals</h1>
           <Link
             href="/deals/new"
-            className="px-4 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue transition-colors"
+            className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
           >
             New Deal
           </Link>
@@ -82,7 +82,7 @@ export default function DealsPage() {
               onClick={() => setFilter("all")}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 filter === "all"
-                  ? "bg-navy text-white"
+                  ? "bg-primary text-white"
                   : "bg-white text-text-secondary border border-border-gray hover:bg-light-gray"
               }`}
             >
@@ -94,7 +94,7 @@ export default function DealsPage() {
                 onClick={() => setFilter(s)}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                   filter === s
-                    ? "bg-navy text-white"
+                    ? "bg-primary text-white"
                     : "bg-white text-text-secondary border border-border-gray hover:bg-light-gray"
                 }`}
               >
@@ -109,7 +109,7 @@ export default function DealsPage() {
             <p className="text-text-secondary mb-4">You haven&apos;t created any deals yet.</p>
             <Link
               href="/deals/new"
-              className="inline-block px-6 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue transition-colors"
+              className="inline-block px-6 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
             >
               Create Your First Deal
             </Link>

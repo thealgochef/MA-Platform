@@ -262,7 +262,7 @@ export default function ThreadPage() {
           <button
             onClick={handleSend}
             disabled={sending || (!newMessage.trim() && !attachment)}
-            className="px-4 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
           >
             Send
           </button>

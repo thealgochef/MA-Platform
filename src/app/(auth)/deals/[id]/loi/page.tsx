@@ -287,7 +287,7 @@ export default function LOISubmissionPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-navy text-white rounded-md py-3 font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+            className="w-full bg-primary text-white rounded-md py-3 font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
           >
             {submitting ? "Submitting..." : "Submit LOI"}
           </button>

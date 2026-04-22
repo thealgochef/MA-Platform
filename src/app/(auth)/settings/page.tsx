@@ -348,7 +348,7 @@ export default function SettingsPage() {
               <button
                 onClick={handleProfileSave}
                 disabled={profileSaving}
-                className="bg-navy text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+                className="bg-primary text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
               >
                 {profileSaving ? "Saving..." : "Save Profile"}
               </button>
@@ -420,7 +420,7 @@ export default function SettingsPage() {
             <button
               onClick={handleNotifSave}
               disabled={notifSaving}
-              className="bg-navy text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+              className="bg-primary text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
             >
               {notifSaving ? "Saving..." : "Save Preferences"}
             </button>

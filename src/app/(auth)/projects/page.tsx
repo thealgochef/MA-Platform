@@ -55,7 +55,7 @@ export default function ProjectsPage() {
           <h1 className="text-2xl font-bold text-navy">My Projects</h1>
           <Link
             href="/projects/new"
-            className="px-4 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue transition-colors"
+            className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
           >
             New Project
           </Link>
@@ -74,7 +74,7 @@ export default function ProjectsPage() {
             </p>
             <Link
               href="/projects/new"
-              className="inline-block px-6 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue transition-colors"
+              className="inline-block px-6 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
             >
               Create Project
             </Link>

@@ -97,8 +97,8 @@ export default function DealClosurePage() {
                   {closure.broker_disputed
                     ? "Disputed"
                     : closure.broker_confirmed
-                    ? "Yes"
-                    : "Pending"}
+                      ? "Yes"
+                      : "Pending"}
                 </p>
               </div>
             </div>
@@ -158,7 +158,7 @@ export default function DealClosurePage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-navy text-white rounded-md py-3 font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+            className="w-full bg-primary text-white rounded-md py-3 font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
           >
             {submitting ? "Submitting..." : "Report Enterprise Value"}
           </button>

@@ -199,7 +199,7 @@ export default function NewProjectPage() {
             <button
               onClick={handleSubmit}
               disabled={saving}
-              className="w-full bg-navy text-white rounded-md py-3 font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+              className="w-full bg-primary text-white rounded-md py-3 font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
             >
               {saving ? "Creating..." : "Create Project"}
             </button>

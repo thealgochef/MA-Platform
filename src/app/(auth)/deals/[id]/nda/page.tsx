@@ -224,7 +224,7 @@ export default function NDASigningPage() {
           <button
             onClick={handleSign}
             disabled={submitting}
-            className="flex-1 bg-navy text-white rounded-md py-3 font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+            className="flex-1 bg-primary text-white rounded-md py-3 font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
           >
             {submitting ? "Signing..." : "Sign NDA"}
           </button>

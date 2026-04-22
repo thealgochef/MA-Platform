@@ -100,7 +100,7 @@ export default function DealPreviewPage() {
               <button
                 onClick={handlePublish}
                 disabled={publishing}
-                className="px-4 py-1 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue disabled:opacity-50"
+                className="px-4 py-1 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover disabled:opacity-50"
               >
                 {publishing ? "Publishing..." : "Publish"}
               </button>
