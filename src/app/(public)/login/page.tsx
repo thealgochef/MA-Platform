@@ -19,11 +19,11 @@ function LoginContent() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-surface">
+    <main className="min-h-screen flex items-center justify-center bg-surface text-text">
       <div className="bg-bg rounded-xl shadow-md p-8 w-full max-w-md">
 
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-display font-bold text-text mb-2">Geneva Holdings</h1>
+          <h1 className="text-4xl font-display font-bold mb-2">Geneva Holdings</h1>
           <p className="text-secondary">
             Professional M&amp;A Marketplace
           </p>
@@ -78,7 +78,7 @@ function LoginContent() {
           Continue with Google
         </button>
 
-        <p className="mt-6 text-text text-xs text-center">
+        <p className="mt-6 text-xs text-center">
           New to Geneva Holdings? Click above to sign in with Google and start your application.
         </p>
 

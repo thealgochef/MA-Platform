@@ -45,10 +45,10 @@ export default function TermsPage() {
       <section className="py-16">
         <div className="max-w-4xl mx-auto px-4">
           <h1 className="text-4xl font-display font-bold text-primary mb-6">Terms of Service</h1>
-          <p className="text-text mb-8">
+          <p className="mb-8">
             Last updated: March 2026
           </p>
-          <div className="prose prose-sm text-text-secondary space-y-4">
+          <div className="prose prose-sm space-y-4">
             <p>
               These Terms of Service govern your use of the Geneva Holdings platform.
               By accessing or using our services, you agree to be bound by these terms.

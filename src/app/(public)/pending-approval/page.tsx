@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function PendingApprovalPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-surface">
+    <main className="min-h-screen flex items-center justify-center bg-surface text-text">
       <div className="bg-bg rounded-xl shadow-md p-8 w-full max-w-lg text-center">
 
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -25,10 +25,10 @@ export default function PendingApprovalPage() {
           Application Received
         </h1>
 
-        <p className="text-text mb-6">
+        <p className="mb-6">
           All prospective buyers are carefully reviewed to maintain deal confidentiality and the integrity of our network. You can expect a decision within 24 hours.
         </p>
-        <p className="text-sm text-text mb-8">
+        <p className="text-sm mb-8">
           We&apos;ll send you an email once a decision has been made.
         </p>
 

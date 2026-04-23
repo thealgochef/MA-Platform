@@ -48,7 +48,7 @@ export default function AboutPage() {
           <div className="space-y-8">
             <div>
               <h2 className="text-2xl font-display font-semibold text-primary mb-3">Our Mission</h2>
-              <p className="text-text leading-relaxed">
+              <p className="leading-relaxed">
                 Geneva Holdings was founded with a clear mission: to create a more transparent,
                 efficient, and fair marketplace for middle market M&A transactions. We believe
                 that the best deals happen when quality participants are connected through a
@@ -61,19 +61,19 @@ export default function AboutPage() {
               <div className="grid md:grid-cols-3 gap-6">
                 <div>
                   <h3 className="font-medium text-primary mb-2">Confidentiality</h3>
-                  <p className="text-sm text-text-secondary">
+                  <p className="text-sm">
                     Every interaction on our platform is protected by NDAs and strict access controls.
                   </p>
                 </div>
                 <div>
                   <h3 className="font-medium text-primary mb-2">Transparency</h3>
-                  <p className="text-sm text-text-secondary">
+                  <p className="text-sm">
                     Simple, flat fees with no hidden costs. You always know what you are paying.
                   </p>
                 </div>
                 <div>
                   <h3 className="font-medium text-primary mb-2">Quality</h3>
-                  <p className="text-sm text-text-secondary">
+                  <p className="text-sm">
                     Every participant is vetted and approved before accessing the platform.
                   </p>
                 </div>
@@ -82,7 +82,7 @@ export default function AboutPage() {
 
             <div>
               <h2 className="text-2xl font-display font-semibold text-primary mb-3">Our Story</h2>
-              <p className="text-text leading-relaxed">
+              <p className="leading-relaxed">
                 Geneva Holdings was created by professionals who experienced firsthand the
                 inefficiencies of the traditional M&A process in the middle market. We saw
                 an opportunity to build a platform that combines the best of technology with

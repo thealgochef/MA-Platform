@@ -31,9 +31,9 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="bg-navy text-text py-20">
+      <section className="bg-navy py-20">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-text text-5xl font-display font-bold mb-6">
+          <h1 className="text-5xl font-display font-bold mb-6">
             The Professional M&A Marketplace for the Middle Market
           </h1>
           <p className="text-xl text-secondary mb-8 max-w-2xl mx-auto">
@@ -49,7 +49,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/how-it-works"
-              className="border border-secondary text-text px-8 py-3 rounded-md font-medium hover:bg-bg/10 transition-colors"
+              className="border border-secondary px-8 py-3 rounded-md font-medium hover:bg-bg/10 transition-colors"
             >
               Learn More
             </Link>
@@ -63,21 +63,21 @@ export default function HomePage() {
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-bg rounded-lg p-6 shadow-md">
               <h3 className="text-lg font-display font-semibold text-primary mb-3">Vetted Participants</h3>
-              <p className="text-sm text-text-secondary">
+              <p className="text-sm">
                 Every broker and buyer is reviewed and approved before accessing the platform,
                 ensuring quality and confidentiality.
               </p>
             </div>
             <div className="bg-bg rounded-lg p-6 shadow-md">
               <h3 className="text-lg font-display font-semibold text-primary mb-3">Simple, Transparent Fees</h3>
-              <p className="text-sm text-text-secondary">
+              <p className="text-sm">
                 1.25% flat success fee for buyers. No subscription fees, no hidden costs.
                 Brokers earn a 0.25% incentive on every closed deal.
               </p>
             </div>
             <div className="bg-bg rounded-lg p-6 shadow-md">
               <h3 className="text-lg font-display font-semibold text-primary mb-3">End-to-End Platform</h3>
-              <p className="text-sm text-text-secondary">
+              <p className="text-sm">
                 From deal discovery to NDA signing, CIM review, IOI/LOI submission,
                 and deal closure — all managed in one secure platform.
               </p>
@@ -93,7 +93,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 gap-6 text-left">
             <div className="bg-surface rounded-lg p-6">
               <h3 className="text-lg font-display font-semibold text-primary mb-2">For Buyers</h3>
-              <p className="text-sm text-text-secondary">
+              <p className="text-sm">
                 Create acquisition criteria projects, get matched with relevant deals,
                 and manage the entire pursuit process from NDA to close.
               </p>
@@ -103,7 +103,7 @@ export default function HomePage() {
             </div>
             <div className="bg-surface rounded-lg p-6">
               <h3 className="text-lg font-display font-semibold text-primary mb-2">For Brokers</h3>
-              <p className="text-sm text-text-secondary">
+              <p className="text-sm">
                 Post deals for free, reach vetted buyers, manage your pipeline,
                 and earn an incentive on every successful close.
               </p>
@@ -116,7 +116,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-navy text-text py-6">
+      <footer className="bg-navy py-6">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex flex-wrap justify-between items-center">
             <div>

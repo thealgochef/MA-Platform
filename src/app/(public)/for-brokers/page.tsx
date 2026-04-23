@@ -45,7 +45,7 @@ export default function ForBrokersPage() {
       <section className="py-16">
         <div className="max-w-4xl mx-auto px-4">
           <h1 className="text-4xl font-display font-bold text-primary mb-6">For Brokers</h1>
-          <p className="text-lg text-text mb-8">
+          <p className="text-lg mb-8">
             Reach a curated network of vetted buyers. Post deals for free and earn
             an incentive on every successful close.
           </p>
@@ -53,7 +53,7 @@ export default function ForBrokersPage() {
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             <div className="bg-surface rounded-lg p-6">
               <h3 className="text-xl font-display font-bold text-primary mb-3">Free to Post</h3>
-              <p className="text-sm text-text">
+              <p className="text-sm">
                 Unlike platforms like BizBuySell that charge listing fees,
                 Geneva Holdings lets you post deals completely free.
                 No subscriptions, no per-listing charges.
@@ -61,7 +61,7 @@ export default function ForBrokersPage() {
             </div>
             <div className="bg-surface rounded-lg p-6">
               <h3 className="text-xl font-display font-bold text-primary mb-3">0.25% Broker Incentive</h3>
-              <p className="text-sm text-text">
+              <p className="text-sm">
                 Unlike platforms like Axial that take fees without giving back,
                 Geneva Holdings pays you a 0.25% incentive on total enterprise value
                 for every deal that closes through our platform.
@@ -75,28 +75,28 @@ export default function ForBrokersPage() {
               <span className="bg-primary text-bg rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
               <div>
                 <p className="font-medium text-primary">Create your broker profile</p>
-                <p className="text-sm text-text-secondary">Sign up with your firm details, credentials, and industry focus.</p>
+                <p className="text-sm">Sign up with your firm details, credentials, and industry focus.</p>
               </div>
             </li>
             <li className="flex gap-4">
               <span className="bg-primary text-bg rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
               <div>
                 <p className="font-medium text-primary">Post your deals</p>
-                <p className="text-sm text-text-secondary">Create listings with teasers, set NDA preferences, and upload CIMs. Publish when ready.</p>
+                <p className="text-sm">Create listings with teasers, set NDA preferences, and upload CIMs. Publish when ready.</p>
               </div>
             </li>
             <li className="flex gap-4">
               <span className="bg-primary text-bg rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
               <div>
                 <p className="font-medium text-primary">Manage your pipeline</p>
-                <p className="text-sm text-text-secondary">Track buyer engagement, review IOIs and LOIs side-by-side, and communicate securely.</p>
+                <p className="text-sm">Track buyer engagement, review IOIs and LOIs side-by-side, and communicate securely.</p>
               </div>
             </li>
             <li className="flex gap-4">
               <span className="bg-primary text-bg rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold flex-shrink-0">4</span>
               <div>
                 <p className="font-medium text-primary">Close and earn</p>
-                <p className="text-sm text-text-secondary">When a deal closes, earn a 0.25% broker incentive in addition to your advisory fees.</p>
+                <p className="text-sm">When a deal closes, earn a 0.25% broker incentive in addition to your advisory fees.</p>
               </div>
             </li>
           </ol>

@@ -45,11 +45,11 @@ export default function ContactPage() {
       <section className="py-16">
         <div className="max-w-4xl mx-auto px-4">
           <h1 className="text-4xl font-display font-bold text-primary mb-6">Contact Us</h1>
-          <p className="text-text mb-8">
+          <p className="mb-8">
             Have questions about Geneva Holdings? We would love to hear from you.
           </p>
           <div className="bg-surface rounded-lg p-6">
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm">
               Contact information will be available when the platform launches publicly.
             </p>
           </div>

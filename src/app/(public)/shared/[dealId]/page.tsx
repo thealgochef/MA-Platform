@@ -61,7 +61,7 @@ export default function SharedDealPage() {
             ) : (
               <form onSubmit={handleContactSubmit} className="text-left space-y-4 max-w-md mx-auto">
                 <div>
-                  <label htmlFor="contactName" className="block text-sm font-medium text-text-primary mb-1">
+                  <label htmlFor="contactName" className="block text-sm font-medium mb-1">
                     Name
                   </label>
                   <input
@@ -74,7 +74,7 @@ export default function SharedDealPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="contactEmail" className="block text-sm font-medium text-text-primary mb-1">
+                  <label htmlFor="contactEmail" className="block text-sm font-medium mb-1">
                     Email
                   </label>
                   <input
@@ -87,7 +87,7 @@ export default function SharedDealPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="contactMessage" className="block text-sm font-medium text-text-primary mb-1">
+                  <label htmlFor="contactMessage" className="block text-sm font-medium mb-1">
                     Message
                   </label>
                   <textarea
