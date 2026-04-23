@@ -16,7 +16,7 @@ const config: Config = {
         'surface': 'var(--color-surface)',
 
         // legacy bg color for (auth) pages
-        'bg-light-gray': '#f7f8fa', 
+        'light-gray': '#f7f8fa', 
 
         // Supplementary colors for borders, accents, etc.
         'subtle': 'var(--color-subtle)', 
