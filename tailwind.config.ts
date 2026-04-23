@@ -8,26 +8,35 @@ const config: Config = {
     extend: {
       // --- Color palette from :root custom properties ---
       colors: {
-        // Core colors for text, primary actions, secondary elements, backgrounds, and surfaces
+        // Core colors 
+        'bg': 'var(--color-bg)', // bg color for /public
+        'bg-alt': 'var(--color-bg-alt)', // bg color for /auth and /dashboard, light colored btns 
+        'surface': 'var(--color-surface)', // card color for /public
+        'surface-alt': 'var(--color-surface-alt)', // card color for /auth and /dashboard
         'text': 'var(--color-text)',
-        'primary': 'var(--color-primary)',
-        'secondary': 'var(--color-secondary)',
-        'bg': 'var(--color-background)', // used in (public)
-        'surface': 'var(--color-surface)',
+        'primary': 'var(--color-primary)', 
+        'secondary': 'var(--color-secondary)', // accent color
 
-        // legacy bg color for (auth) pages
-        'light-gray': '#f7f8fa', 
+        // Supplementary colors 
+        'btn-hover': 'var(--color-btn-hover)', // hover state of primary colored btns
+        'btn-hover-gray': '#E5E7EB', // hover state of light colored btns
+        'border-color': 'var(--color-subtle)', // decorative border color (in /public)
+        'faint': 'var(--color-faint)', // area hover state (in /public/select-role)
 
-        // Supplementary colors for borders, accents, etc.
-        'subtle': 'var(--color-subtle)', 
-        'faint': 'var(--color-faint)', 
-        'btn-hover': 'var(--color-btn-hover)',
+        // Legacy colors still in use
+        "border-gray": "#E5E7EB", // generic border color for inputs, cards, etc.
+        "text-secondary": "#6B7280", // secondary text, e.g. in service cards and deal cards
+
+        // Legacy colors TO BE PHASED OUT, included here to avoid breaking changes in the interim
+        "navy": "#1B2A4A",
+        "slate-blue": "#3B5278",
+        "text-primary": "#111827",
 
         // Semantic colors for status indicators, alerts, etc.
-        'success': 'var(--color-success, #10B981)',
-        'error': 'var(--color-error, #EF4444)',
-        'warning': 'var(--color-warning, #F59E0B)',
-        'info': 'var(--color-info, #3B82F6)',
+        success: 'var(--color-success, #10B981)',
+        error: 'var(--color-error, #EF4444)',
+        warning: 'var(--color-warning, #F59E0B)',
+        info: 'var(--color-info, #3B82F6)',
       },
 
       // --- Font families ---

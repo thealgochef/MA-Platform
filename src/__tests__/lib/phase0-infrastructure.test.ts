@@ -89,14 +89,16 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
   describe("Tailwind theme", () => {
     it("should define theme color tokens in tailwind.config.ts", () => {
       const content = fs.readFileSync(path.join(ROOT, "tailwind.config.ts"), "utf-8");
+      expect(content).toContain("var(--color-bg)");
+      expect(content).toContain("var(--color-bg-alt)");
+      expect(content).toContain("var(--color-surface)");
+      expect(content).toContain("var(--color-surface-alt)");
       expect(content).toContain("var(--color-text)");
       expect(content).toContain("var(--color-primary)");
       expect(content).toContain("var(--color-secondary)");
-      expect(content).toContain("var(--color-background)");
-      expect(content).toContain("var(--color-surface)");
+      expect(content).toContain("var(--color-btn-hover)");
       expect(content).toContain("var(--color-subtle)");
       expect(content).toContain("var(--color-faint)");
-      expect(content).toContain("var(--color-btn-hover)");
       expect(content).toContain("#10B981"); // success fallback
       expect(content).toContain("#EF4444"); // error fallback
       expect(content).toContain("#F59E0B"); // warning fallback

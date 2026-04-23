@@ -12,7 +12,7 @@ export default function ForBuyersPage() {
       <nav
         className="fixed left-0 right-0 top-0 z-50 animate-fade-in"
         style={{
-          background: "rgba(255, 255, 255, 0.95)",
+          background: "var(--color-background)",
           backdropFilter: "blur(12px)",
           borderBottom: "1px solid rgba(45, 106, 79, 0.1)",
         }}
@@ -59,11 +59,11 @@ export default function ForBuyersPage() {
               paid only when a deal closes.
             </p>
             <div className="grid md:grid-cols-2 gap-4 mt-6">
-              <div className="bg-white rounded-md p-4 border border-subtle">
+              <div className="bg-bg rounded-md p-4 border border-border-color">
                 <p className="text-sm font-medium text-primary mb-1">Traditional Lehman Formula</p>
                 <p className="text-sm">5% of first $1M, 4% of second $1M, etc. Complex and expensive.</p>
               </div>
-              <div className="bg-white rounded-md p-4 border-2 border-secondary">
+              <div className="bg-bg rounded-md p-4 border-2 border-secondary">
                 <p className="text-sm font-medium text-primary mb-1">Geneva Holdings</p>
                 <p className="text-sm">Flat 1.25% on total enterprise value. Simple, transparent, fair.</p>
               </div>

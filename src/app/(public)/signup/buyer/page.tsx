@@ -142,7 +142,7 @@ export default function BuyerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, firstName: e.target.value })
                 }
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -157,7 +157,7 @@ export default function BuyerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, lastName: e.target.value })
                 }
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -172,7 +172,7 @@ export default function BuyerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -188,7 +188,7 @@ export default function BuyerSignupPage() {
                   setFormData({ ...formData, phoneNumber: e.target.value })
                 }
                 placeholder="e.g., (555) 123-4567"
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -203,7 +203,7 @@ export default function BuyerSignupPage() {
                   setFormData({ ...formData, linkedIn: e.target.value })
                 }
                 placeholder="https://www.linkedin.com/in/your-profile"
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -221,7 +221,7 @@ export default function BuyerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, firmName: e.target.value })
                 }
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -236,7 +236,7 @@ export default function BuyerSignupPage() {
                   setFormData({ ...formData, firmWebsite: e.target.value })
                 }
                 placeholder="https://"
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -250,7 +250,7 @@ export default function BuyerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, firmType: e.target.value })
                 }
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               >
                 <option value="">Select firm type</option>
                 {BUYER_TYPES.map((type) => (
@@ -273,7 +273,7 @@ export default function BuyerSignupPage() {
                   setFormData({ ...formData, aum: e.target.value })
                 }
                 placeholder="e.g., $50M"
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -288,7 +288,7 @@ export default function BuyerSignupPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, location: e.target.value })
                 }
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -306,7 +306,7 @@ export default function BuyerSignupPage() {
                     firmDescription: e.target.value,
                   })
                 }
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
@@ -331,7 +331,7 @@ export default function BuyerSignupPage() {
                     className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${
                       formData.industryFocus.includes(industry)
                         ? "bg-primary text-bg border-primary"
-                        : "bg-bg text-[#757280] border-subtle hover:border-primary"
+                        : "bg-bg text-[#757280] border-border-color hover:border-primary"
                     }`}
                   >
                     {industry}
@@ -395,11 +395,11 @@ export default function BuyerSignupPage() {
                   setFormData({ ...formData, otherMembers: e.target.value })
                 }
                 placeholder="Email addresses, one per line"
-                className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
               />
             </div>
 
-            <div className="border-t border-subtle pt-6">
+            <div className="border-t border-border-color pt-6">
               <h3 className="text-xl font-semibold text-primary mb-4">
                 Membership Agreement
               </h3>
@@ -446,7 +446,7 @@ export default function BuyerSignupPage() {
                     setFormData({ ...formData, signature: e.target.value })
                   }
                   placeholder="Type your full name as signature"
-                  className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                  className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
                 />
               </div>
             </div>

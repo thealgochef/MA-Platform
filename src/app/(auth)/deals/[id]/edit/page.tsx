@@ -170,57 +170,57 @@ export default function EditDealPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading deal...</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-3xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-navy">Edit Deal</h1>
-          <a href={`/deals/${dealId}`} className="text-sm text-slate-blue hover:underline">Back to deal</a>
+          <h1 className="text-2xl font-bold text-primary">Edit Deal</h1>
+          <a href={`/deals/${dealId}`} className="text-sm text-secondary hover:underline">Back to deal</a>
         </div>
 
         {error && (
           <div className="bg-error/10 border border-error/20 text-error rounded-md p-3 mb-6 text-sm">{error}</div>
         )}
 
-        <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
+        <div className="bg-surface-alt rounded-lg shadow-md p-6 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Project Name *</label>
+            <label className="block text-sm font-medium text-text mb-1">Project Name *</label>
             <input
               type="text"
               value={formData.projectName}
               onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">External Headline *</label>
+            <label className="block text-sm font-medium text-text mb-1">External Headline *</label>
             <input
               type="text"
               value={formData.headline}
               onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Description *</label>
+            <label className="block text-sm font-medium text-text mb-1">Description *</label>
             <textarea
               rows={5}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">Geography Display *</label>
+            <label className="block text-sm font-medium text-text mb-2">Geography Display *</label>
             <div className="flex gap-4 mb-3">
               <label className="flex items-center gap-2 text-sm">
                 <input type="radio" checked={formData.geographyDisplay === "state"} onChange={() => setFormData({ ...formData, geographyDisplay: "state", region: "" })} />
@@ -245,7 +245,7 @@ export default function EditDealPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Industry *</label>
+            <label className="block text-sm font-medium text-text mb-1">Industry *</label>
             <select value={formData.industry} onChange={(e) => setFormData({ ...formData, industry: e.target.value })} className="w-full border border-border-gray rounded-md px-3 py-2 text-sm">
               <option value="">Select</option>
               {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
@@ -254,9 +254,9 @@ export default function EditDealPage() {
 
           {/* Financials */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">Financials</label>
+            <label className="block text-sm font-medium text-text mb-2">Financials</label>
             <table className="w-full text-sm border border-border-gray">
-              <thead className="bg-light-gray">
+              <thead className="bg-bg-alt">
                 <tr>
                   <th className="px-3 py-2 text-left">Period</th>
                   <th className="px-3 py-2 text-left">Label</th>
@@ -286,12 +286,12 @@ export default function EditDealPage() {
           {/* File uploads */}
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Teaser Document</label>
+              <label className="block text-sm font-medium text-text mb-1">Teaser Document</label>
               {formData.teaserDocumentPath && <p className="text-xs text-success mb-1">Uploaded</p>}
               <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, "teaser")} className="text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">CIM Document</label>
+              <label className="block text-sm font-medium text-text mb-1">CIM Document</label>
               {formData.cimDocumentPath && <p className="text-xs text-success mb-1">Uploaded</p>}
               <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, "cim")} className="text-sm" />
             </div>
@@ -300,21 +300,21 @@ export default function EditDealPage() {
           {/* Preferences */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">NDA Type</label>
+              <label className="block text-sm font-medium text-text mb-1">NDA Type</label>
               <select value={formData.ndaType} onChange={(e) => setFormData({ ...formData, ndaType: e.target.value as "platform" | "custom" })} className="w-full border border-border-gray rounded-md px-3 py-2 text-sm">
                 <option value="platform">Platform Standard</option>
                 <option value="custom">Custom NDA</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">CIM Sharing</label>
+              <label className="block text-sm font-medium text-text mb-1">CIM Sharing</label>
               <select value={formData.cimSharingPreference} onChange={(e) => setFormData({ ...formData, cimSharingPreference: e.target.value as "auto" | "manual" })} className="w-full border border-border-gray rounded-md px-3 py-2 text-sm">
                 <option value="auto">Auto</option>
                 <option value="manual">Manual</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">NDA Vetting</label>
+              <label className="block text-sm font-medium text-text mb-1">NDA Vetting</label>
               <select value={formData.ndaVettingPreference} onChange={(e) => setFormData({ ...formData, ndaVettingPreference: e.target.value as "auto" | "manual" })} className="w-full border border-border-gray rounded-md px-3 py-2 text-sm">
                 <option value="auto">Auto</option>
                 <option value="manual">Manual</option>
@@ -324,7 +324,7 @@ export default function EditDealPage() {
 
           {/* POC */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Point of Contact</label>
+            <label className="block text-sm font-medium text-text mb-1">Point of Contact</label>
             <select value={formData.pointOfContactId} onChange={(e) => setFormData({ ...formData, pointOfContactId: e.target.value })} className="w-full border border-border-gray rounded-md px-3 py-2 text-sm">
               {firmMembers.map(m => <option key={m.id} value={m.id}>{m.full_name}{m.id === currentUserId ? " (you)" : ""}</option>)}
             </select>
@@ -333,11 +333,11 @@ export default function EditDealPage() {
           {/* Due dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">IOI Due Date</label>
+              <label className="block text-sm font-medium text-text mb-1">IOI Due Date</label>
               <input type="date" value={formData.ioiDueDate} onChange={(e) => setFormData({ ...formData, ioiDueDate: e.target.value })} className="w-full border border-border-gray rounded-md px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">LOI Due Date</label>
+              <label className="block text-sm font-medium text-text mb-1">LOI Due Date</label>
               <input type="date" value={formData.loiDueDate} onChange={(e) => setFormData({ ...formData, loiDueDate: e.target.value })} className="w-full border border-border-gray rounded-md px-3 py-2 text-sm" />
             </div>
           </div>

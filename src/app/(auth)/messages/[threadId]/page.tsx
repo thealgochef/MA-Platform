@@ -145,19 +145,19 @@ export default function ThreadPage() {
 
   if (loading || !thread) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading thread...</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-light-gray flex flex-col">
+    <main className="min-h-screen bg-bg-alt flex flex-col">
       {/* Deal context header */}
-      <div className="bg-white border-b border-border-gray px-4 py-3">
+      <div className="bg-surface-alt border-b border-border-gray px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-navy">
+            <h1 className="text-lg font-semibold text-primary">
               {thread.otherParty?.full_name || "Unknown"}
             </h1>
             <p className="text-xs text-text-secondary">
@@ -167,7 +167,7 @@ export default function ThreadPage() {
           <div className="text-right">
             <a
               href={`/deals/${thread.engagement.deal_id}`}
-              className="text-sm text-slate-blue hover:underline"
+              className="text-sm text-secondary hover:underline"
             >
               {thread.engagement.headline}
             </a>
@@ -189,7 +189,7 @@ export default function ThreadPage() {
             messages.map((msg) => (
               <div key={msg.id} className="flex flex-col">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-medium text-navy">
+                  <span className="text-sm font-medium text-primary">
                     {msg.users?.full_name || "Unknown"}
                   </span>
                   <span className="text-xs text-text-secondary">
@@ -197,13 +197,13 @@ export default function ThreadPage() {
                   </span>
                 </div>
                 {msg.content && (
-                  <p className="text-sm text-text-primary mt-1">{msg.content}</p>
+                  <p className="text-sm text-text mt-1">{msg.content}</p>
                 )}
                 {msg.attachment_path && (
                   <div className="mt-1">
                     <a
                       href={`/api/messages/${threadId}/attachment?path=${encodeURIComponent(msg.attachment_path)}`}
-                      className="inline-flex items-center gap-1 text-xs text-slate-blue hover:underline bg-light-gray rounded px-2 py-1"
+                      className="inline-flex items-center gap-1 text-xs text-secondary hover:underline bg-bg-alt rounded px-2 py-1"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -219,7 +219,7 @@ export default function ThreadPage() {
       </div>
 
       {/* Message input */}
-      <div className="bg-white border-t border-border-gray px-4 py-3">
+      <div className="bg-surface-alt border-t border-border-gray px-4 py-3">
         <div className="max-w-4xl mx-auto flex gap-2 items-end">
           <div className="flex-1">
             <textarea
@@ -228,7 +228,7 @@ export default function ThreadPage() {
               onKeyDown={handleKeyDown}
               placeholder="Type a message..."
               rows={1}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50 resize-none"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50 resize-none"
             />
             {attachment && (
               <div className="flex items-center gap-2 mt-1">
@@ -244,7 +244,7 @@ export default function ThreadPage() {
           </div>
 
           {/* PDF attachment button */}
-          <label className="cursor-pointer px-3 py-2 text-sm border border-border-gray rounded-md text-text-secondary hover:bg-light-gray transition-colors">
+          <label className="cursor-pointer px-3 py-2 bg-bg-alt text-sm border border-border-gray rounded-md text-text-secondary hover:bg-btn-hover-gray transition-colors">
             PDF
             <input
               type="file"

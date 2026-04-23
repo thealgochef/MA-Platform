@@ -11,7 +11,7 @@ export default function HowItWorksPage() {
       <nav
         className="fixed left-0 right-0 top-0 z-50 animate-fade-in"
         style={{
-          background: "rgba(255, 255, 255, 0.95)",
+          background: "var(--color-background)",
           backdropFilter: "blur(12px)",
           borderBottom: "1px solid rgba(45, 106, 79, 0.1)",
         }}
@@ -55,7 +55,7 @@ export default function HowItWorksPage() {
                 1
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-primary mb-2">Create your profile</h3>
+                <h3 className="text-xl font-display font-semibold text-primary mb-2">Create your profile</h3>
                 <p className="">
                   Sign up as a buyer or broker using Google authentication. Fill out your
                   firm details, investment criteria, and professional background.
@@ -68,7 +68,7 @@ export default function HowItWorksPage() {
                 2
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-primary mb-2">Sign the membership agreement</h3>
+                <h3 className="text-xl font-display font-semibold text-primary mb-2">Sign the membership agreement</h3>
                 <p className="">
                   Review and sign the platform membership agreement as part of your
                   onboarding process. This ensures all participants adhere to our
@@ -82,7 +82,7 @@ export default function HowItWorksPage() {
                 3
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-primary mb-2">Profile reviewed and approved</h3>
+                <h3 className="text-xl font-display font-semibold text-primary mb-2">Profile reviewed and approved</h3>
                 <p className="">
                   Our team reviews every application within 24 hours. We verify
                   credentials and ensure quality on both sides of the marketplace.
@@ -95,7 +95,7 @@ export default function HowItWorksPage() {
                 4
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-primary mb-2">Buyers create projects; brokers post deals</h3>
+                <h3 className="text-xl font-display font-semibold text-primary mb-2">Buyers create projects; brokers post deals</h3>
                 <p className="">
                   Buyers define their acquisition criteria and get matched with relevant deals.
                   Brokers create deal listings with teasers and set their NDA preferences.
@@ -108,7 +108,7 @@ export default function HowItWorksPage() {
                 5
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-primary mb-2">Buyers matched to deals, browse and pursue</h3>
+                <h3 className="text-xl font-display font-semibold text-primary mb-2">Buyers matched to deals, browse and pursue</h3>
                 <p className="">
                   Our matching algorithm connects buyers with relevant opportunities.
                   Buyers can also browse all active deals and filter by industry, size, and location.
@@ -121,7 +121,7 @@ export default function HowItWorksPage() {
                 6
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-primary mb-2">NDA signed, CIM reviewed, offers submitted</h3>
+                <h3 className="text-xl font-display font-semibold text-primary mb-2">NDA signed, CIM reviewed, offers submitted</h3>
                 <p className="">
                   Everything happens in-platform: electronic NDA signing, confidential CIM access,
                   IOI and LOI submission, secure messaging, and deal closure tracking.

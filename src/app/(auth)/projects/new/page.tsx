@@ -60,31 +60,31 @@ export default function NewProjectPage() {
   };
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-2xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-navy">New Acquisition Project</h1>
-          <a href="/dashboard" className="text-sm text-slate-blue hover:underline">Back to dashboard</a>
+          <h1 className="text-2xl font-bold text-primary">New Acquisition Project</h1>
+          <a href="/dashboard" className="text-sm text-secondary hover:underline">Back to dashboard</a>
         </div>
 
         {error && (
           <div className="bg-error/10 border border-error/20 text-error rounded-md p-3 mb-6 text-sm">{error}</div>
         )}
 
-        <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
+        <div className="bg-surface-alt rounded-lg shadow-md p-6 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Project Name *</label>
+            <label className="block text-sm font-medium text-text mb-1">Project Name *</label>
             <input
               type="text"
               value={formData.projectName}
               onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
               placeholder="e.g., Healthcare Roll-Up"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Industry</label>
+            <label className="block text-sm font-medium text-text mb-1">Industry</label>
             <select
               value={formData.industry}
               onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
@@ -97,7 +97,7 @@ export default function NewProjectPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Minimum Revenue (M)</label>
+              <label className="block text-sm font-medium text-text mb-1">Minimum Revenue (M)</label>
               <input
                 type="number"
                 value={formData.revenueMin ?? ""}
@@ -107,7 +107,7 @@ export default function NewProjectPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Maximum Revenue (M)</label>
+              <label className="block text-sm font-medium text-text mb-1">Maximum Revenue (M)</label>
               <input
                 type="number"
                 value={formData.revenueMax ?? ""}
@@ -120,7 +120,7 @@ export default function NewProjectPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Minimum EBITDA (M)</label>
+              <label className="block text-sm font-medium text-text mb-1">Minimum EBITDA (M)</label>
               <input
                 type="number"
                 value={formData.ebitdaMin ?? ""}
@@ -130,7 +130,7 @@ export default function NewProjectPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Maximum EBITDA (M)</label>
+              <label className="block text-sm font-medium text-text mb-1">Maximum EBITDA (M)</label>
               <input
                 type="number"
                 value={formData.ebitdaMax ?? ""}
@@ -142,7 +142,7 @@ export default function NewProjectPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">EBITDA Margin (%)</label>
+            <label className="block text-sm font-medium text-text mb-1">EBITDA Margin (%)</label>
             <input
               type="number"
               value={formData.ebitdaMargin ?? ""}
@@ -153,7 +153,7 @@ export default function NewProjectPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Location</label>
+            <label className="block text-sm font-medium text-text mb-1">Location</label>
             <select
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -165,7 +165,7 @@ export default function NewProjectPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Keywords</label>
+            <label className="block text-sm font-medium text-text mb-1">Keywords</label>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"
@@ -178,7 +178,7 @@ export default function NewProjectPage() {
               <button
                 type="button"
                 onClick={addKeyword}
-                className="px-3 py-2 bg-light-gray border border-border-gray rounded-md text-sm hover:bg-border-gray"
+                className="px-3 py-2 bg-bg-alt border border-border-gray rounded-md text-sm hover:bg-btn-hover-gray"
               >
                 Add
               </button>
@@ -186,7 +186,7 @@ export default function NewProjectPage() {
             {formData.keywords.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {formData.keywords.map(kw => (
-                  <span key={kw} className="inline-flex items-center gap-1 px-2 py-1 bg-light-gray rounded-full text-xs">
+                  <span key={kw} className="inline-flex items-center gap-1 px-2 py-1 bg-bg-alt rounded-full text-xs">
                     {kw}
                     <button onClick={() => removeKeyword(kw)} className="text-text-secondary hover:text-error">&times;</button>
                   </span>

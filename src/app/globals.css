@@ -4,11 +4,15 @@
 
 :root {
   /* Primary color palette */
+  --color-bg: #ffffff;
+  --color-surface: #f8f6f3;
   --color-text: #2a2420;
   --color-primary: #2d6a4f;
   --color-secondary: #8b9d83;
-  --color-background: #ffffff;
-  --color-surface: #f8f6f3;
+  
+  /* Alternative color palette for auth/dashboard */
+  --color-bg-alt: #f7f8fa; /* bg color for /auth and /dashboard */
+  --color-surface-alt: #ffffff; /* card color for /auth and /dashboard */
 
   /* Supplementary colors for borders, accents, etc. */
   --color-subtle: rgba(45, 106, 79, 0.15);

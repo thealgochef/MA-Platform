@@ -11,7 +11,7 @@ export default function AboutPage() {
       <nav
         className="fixed left-0 right-0 top-0 z-50 animate-fade-in"
         style={{
-          background: "rgba(255, 255, 255, 0.95)",
+          background: "var(--color-background)",
           backdropFilter: "blur(12px)",
           borderBottom: "1px solid rgba(45, 106, 79, 0.1)",
         }}
@@ -60,19 +60,19 @@ export default function AboutPage() {
               <h2 className="text-2xl font-display font-semibold text-primary mb-3">Our Values</h2>
               <div className="grid md:grid-cols-3 gap-6">
                 <div>
-                  <h3 className="font-medium text-primary mb-2">Confidentiality</h3>
+                  <h3 className="font-display font-medium text-primary mb-2">Confidentiality</h3>
                   <p className="text-sm">
                     Every interaction on our platform is protected by NDAs and strict access controls.
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-medium text-primary mb-2">Transparency</h3>
+                  <h3 className="font-display font-medium text-primary mb-2">Transparency</h3>
                   <p className="text-sm">
                     Simple, flat fees with no hidden costs. You always know what you are paying.
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-medium text-primary mb-2">Quality</h3>
+                  <h3 className="font-display font-medium text-primary mb-2">Quality</h3>
                   <p className="text-sm">
                     Every participant is vetted and approved before accessing the platform.
                   </p>

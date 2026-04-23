@@ -50,7 +50,7 @@ export default function SharedDealPage() {
             Sign Up to View This Deal
           </Link>
 
-          <div className="border-t pt-8">
+          <div className="border-t border-border-color pt-8">
             <h2 className="text-lg font-display font-semibold text-primary mb-4">
               Have Questions? Get in Touch
             </h2>
@@ -70,7 +70,7 @@ export default function SharedDealPage() {
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
                     required
-                    className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                    className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
                   />
                 </div>
                 <div>
@@ -83,7 +83,7 @@ export default function SharedDealPage() {
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
                     required
-                    className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                    className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
                   />
                 </div>
                 <div>
@@ -96,7 +96,7 @@ export default function SharedDealPage() {
                     onChange={(e) => setContactMessage(e.target.value)}
                     required
                     rows={4}
-                    className="w-full border border-subtle rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                    className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
                   />
                 </div>
                 <button

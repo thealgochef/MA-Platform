@@ -57,7 +57,7 @@ export default function BuyerDealWorkspace() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <div className="max-w-4xl mx-auto">
           <p className="text-text-secondary">Loading deal...</p>
         </div>
@@ -67,7 +67,7 @@ export default function BuyerDealWorkspace() {
 
   if (error || !deal) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <div className="max-w-4xl mx-auto">
           <p className="text-error">{error || "Deal not found."}</p>
         </div>
@@ -80,10 +80,10 @@ export default function BuyerDealWorkspace() {
   const cimReleased = engagement?.cim_released === true;
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-navy">{deal.headline}</h1>
+          <h1 className="text-2xl font-bold text-primary">{deal.headline}</h1>
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
             deal.status === "paused" ? "bg-warning/10 text-warning" :
             deal.status === "terminated" ? "bg-error/10 text-error" :
@@ -95,24 +95,24 @@ export default function BuyerDealWorkspace() {
         </div>
 
         {/* Deal Overview */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-navy mb-3">Overview</h2>
+        <div className="bg-surface-alt rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-lg font-semibold text-primary mb-3">Overview</h2>
           <p className="text-text-secondary mb-4">{deal.description}</p>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-text-secondary">Industry</p>
-              <p className="font-medium text-text-primary">{deal.industry}</p>
+              <p className="font-medium text-text">{deal.industry}</p>
             </div>
             <div>
               <p className="text-text-secondary">Geography</p>
-              <p className="font-medium text-text-primary">{deal.geography_display}</p>
+              <p className="font-medium text-text">{deal.geography_display}</p>
             </div>
           </div>
         </div>
 
         {/* Financials */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-navy mb-3">Financials</h2>
+        <div className="bg-surface-alt rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-lg font-semibold text-primary mb-3">Financials</h2>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border-gray">
@@ -124,13 +124,13 @@ export default function BuyerDealWorkspace() {
             </thead>
             <tbody>
               <tr className="border-b border-border-gray">
-                <td className="py-2 text-text-primary">Revenue</td>
+                <td className="py-2 text-text">Revenue</td>
                 <td className="py-2 text-right">{deal.revenue_year_1 != null ? formatCurrency(deal.revenue_year_1) : "—"}</td>
                 <td className="py-2 text-right">{deal.revenue_year_2 != null ? formatCurrency(deal.revenue_year_2) : "—"}</td>
                 <td className="py-2 text-right">{deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}</td>
               </tr>
               <tr>
-                <td className="py-2 text-text-primary">EBITDA</td>
+                <td className="py-2 text-text">EBITDA</td>
                 <td className="py-2 text-right">{deal.ebitda_year_1 != null ? formatCurrency(deal.ebitda_year_1) : "—"}</td>
                 <td className="py-2 text-right">{deal.ebitda_year_2 != null ? formatCurrency(deal.ebitda_year_2) : "—"}</td>
                 <td className="py-2 text-right">{deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) : "—"}</td>
@@ -140,8 +140,8 @@ export default function BuyerDealWorkspace() {
         </div>
 
         {/* Engagement Status & Actions */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-navy mb-3">Your Engagement</h2>
+        <div className="bg-surface-alt rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-lg font-semibold text-primary mb-3">Your Engagement</h2>
           {engagement ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -191,7 +191,7 @@ export default function BuyerDealWorkspace() {
                 {ndaSigned && stage !== "passed" && stage !== "terminated" && (
                   <Link
                     href={`/deals/${dealId}/close`}
-                    className="px-4 py-2 border border-border-gray text-text-primary rounded-md text-sm font-medium hover:bg-light-gray transition-colors"
+                    className="px-4 py-2 border border-border-gray text-text rounded-md text-sm font-medium hover:bg-bg-alt transition-colors"
                   >
                     Report Closure
                   </Link>
@@ -203,7 +203,7 @@ export default function BuyerDealWorkspace() {
                 <div className="pt-3 border-t border-border-gray">
                   <Link
                     href={`/messages/${engagement.id}`}
-                    className="text-sm text-navy hover:underline"
+                    className="text-sm text-primary hover:underline"
                   >
                     Message Broker
                   </Link>

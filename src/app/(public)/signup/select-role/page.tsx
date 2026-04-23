@@ -21,7 +21,7 @@ export default function SelectRolePage() {
         <div className="space-y-4">
           <button
             onClick={() => router.push("/signup/broker")}
-            className="w-full text-left p-4 border border-subtle rounded-lg hover:border-primary hover:bg-faint transition-colors group"
+            className="w-full text-left p-4 border border-border-color rounded-lg hover:border-primary hover:bg-faint transition-colors group"
           >
             <h3 className="text-lg font-semibold text-primary group-hover:text-primary">
               Sell a Business
@@ -33,7 +33,7 @@ export default function SelectRolePage() {
 
           <button
             onClick={() => router.push("/signup/buyer")}
-            className="w-full text-left p-4 border border-subtle rounded-lg hover:border-primary hover:bg-faint transition-colors group"
+            className="w-full text-left p-4 border border-border-color rounded-lg hover:border-primary hover:bg-faint transition-colors group"
           >
             <h3 className="text-lg font-semibold text-primary group-hover:text-primary">
               Buy a Business

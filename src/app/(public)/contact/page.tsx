@@ -11,7 +11,7 @@ export default function ContactPage() {
       <nav
         className="fixed left-0 right-0 top-0 z-50 animate-fade-in"
         style={{
-          background: "rgba(255, 255, 255, 0.95)",
+          background: "var(--color-background)",
           backdropFilter: "blur(12px)",
           borderBottom: "1px solid rgba(45, 106, 79, 0.1)",
         }}
