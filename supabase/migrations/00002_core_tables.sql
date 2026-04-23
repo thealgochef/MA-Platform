@@ -31,7 +31,7 @@ CREATE TABLE users (
   phone text,
   linkedin text,
   location text,
-  buyer_type text CHECK (buyer_type IN ('pe', 'independent_sponsor', 'family_office', 'search_fund', 'private_investor', 'other')),
+  buyer_type text CHECK (buyer_type IN ('family_office', 'pe', 'vc', 'search_fund', 'independent_sponsor', 'holding_company', 'ma_advisor', 'individual_investor', 'other')),
   aum text,
   license_credentials text,
   deal_types text,
