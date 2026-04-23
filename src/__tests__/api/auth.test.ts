@@ -99,13 +99,13 @@ describe("Phase 2: Authentication & Onboarding Files", () => {
       expect(content).toContain("firmType");
     });
 
-    it("buyer signup form should conditionally show document upload for search_fund/private_investor", () => {
+    it("buyer signup form should conditionally show document upload for search_fund/individual_investor", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "(public)", "signup", "buyer", "page.tsx"),
         "utf-8"
       );
       expect(content).toContain("search_fund");
-      expect(content).toContain("private_investor");
+      expect(content).toContain("individual_investor");
     });
 
     it("broker signup API should create firm and update user", () => {

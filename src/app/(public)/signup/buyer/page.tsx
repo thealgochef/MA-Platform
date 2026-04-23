@@ -32,7 +32,7 @@ export default function BuyerSignupPage() {
 
   const showDocumentUpload =
     formData.firmType === "search_fund" ||
-    formData.firmType === "private_investor";
+    formData.firmType === "individual_investor";
 
   const handleIndustryToggle = (industry: string) => {
     setFormData((prev) => ({
@@ -344,8 +344,8 @@ export default function BuyerSignupPage() {
                 <label className="block text-sm font-medium text-text-primary mb-1">
                   Supporting Documents (PDF only, 50MB max)
                 </label>
-                <p className="text-xs text-text-secondary mb-2">
-                  Required for search_fund and private_investor buyer types.
+                <p className="text-xs mb-2">
+                  Required for search_fund and individual_investor buyer types.
                   Upload credentials, track record, or other supporting
                   documentation.
                 </p>
