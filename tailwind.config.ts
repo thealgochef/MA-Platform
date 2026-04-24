@@ -23,6 +23,7 @@ const config: Config = {
         'btn-hover': 'var(--color-btn-hover)', // hover state of primary colored btns
         'neutral-btn-hover': 'var(--color-neutral-btn-hover)', // hover state of neutral colored btns
         'border-color': 'var(--color-border)', // decorative border color (in /public)
+        'subtle': 'var(--color-subtle)', // used for deal engagement stage
         'faint': 'var(--color-faint)', // area hover state (in /public/select-role)
 
         // Legacy colors still in use
