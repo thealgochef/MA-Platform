@@ -9,34 +9,37 @@ const config: Config = {
       // --- Color palette from :root custom properties ---
       colors: {
         // Core colors 
-        'bg': 'var(--color-bg)', // bg color for /public
-        'bg-alt': 'var(--color-bg-alt)', // bg color for /auth and /dashboard, light colored btns 
-        'surface': 'var(--color-surface)', // card color for /public
-        'surface-alt': 'var(--color-surface-alt)', // card color for /auth and /dashboard
+        'bg': 'var(--color-bg)',
+        'surface': 'var(--color-surface)',
         'text': 'var(--color-text)',
-        'primary': 'var(--color-primary)', 
-        'secondary': 'var(--color-secondary)', // accent color
+        'primary': 'var(--color-primary)',
+        'secondary': 'var(--color-secondary)',
+
+        // Alternative palette for /auth and /components
+        'bg-alt': 'var(--color-bg-alt)', // bg for neutral colored btns also
+        'surface-alt': 'var(--color-surface-alt)',
 
         // Supplementary colors 
         'btn-hover': 'var(--color-btn-hover)', // hover state of primary colored btns
-        'btn-hover-gray': '#E5E7EB', // hover state of light colored btns
-        'border-color': 'var(--color-subtle)', // decorative border color (in /public)
+        'neutral-btn-hover': 'var(--color-neutral-btn-hover)', // hover state of neutral colored btns
+        'border-color': 'var(--color-border)', // decorative border color (in /public)
         'faint': 'var(--color-faint)', // area hover state (in /public/select-role)
 
         // Legacy colors still in use
-        "border-gray": "#E5E7EB", // generic border color for inputs, cards, etc.
+        "border-gray": "#E5E7EB", // generic border color for inputs and dividers
         "text-secondary": "#6B7280", // secondary text, e.g. in service cards and deal cards
 
         // Legacy colors TO BE PHASED OUT, included here to avoid breaking changes in the interim
         "navy": "#1B2A4A",
         "slate-blue": "#3B5278",
+        "light-gray": "#F7F8FA",
         "text-primary": "#111827",
 
         // Semantic colors for status indicators, alerts, etc.
-        success: 'var(--color-success, #10B981)',
-        error: 'var(--color-error, #EF4444)',
-        warning: 'var(--color-warning, #F59E0B)',
-        info: 'var(--color-info, #3B82F6)',
+        success: '#10B981',
+        error: '#EF4444',
+        warning: '#F59E0B',
+        info: '#3B82F6',
       },
 
       // --- Font families ---
@@ -84,10 +87,10 @@ const config: Config = {
         'hero-pattern': [
           'radial-gradient(circle at 20% 50%, rgba(45, 106, 79, 0.04) 0%, transparent 50%)',
           'radial-gradient(circle at 80% 80%, rgba(45, 106, 79, 0.02) 0%, transparent 50%)',
-          'linear-gradient(180deg, #ffffff 0%, #f8f6f3 100%)',
+          'linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 100%)',
         ].join(', '),
         'gradient-text':
-          'linear-gradient(135deg, #2d6a4f 0%, #d4b87a 50%, #2d6a4f 100%)',
+          'linear-gradient(135deg, var(--color-primary) 0%, #d4b87a 50%, var(--color-primary) 100%)',
         'btn-shimmer':
           'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
       },

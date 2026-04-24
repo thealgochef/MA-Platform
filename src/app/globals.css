@@ -9,15 +9,19 @@
   --color-text: #2a2420;
   --color-primary: #2d6a4f;
   --color-secondary: #8b9d83;
-  
-  /* Alternative color palette for auth/dashboard */
-  --color-bg-alt: #f7f8fa; /* bg color for /auth and /dashboard */
-  --color-surface-alt: #ffffff; /* card color for /auth and /dashboard */
 
-  /* Supplementary colors for borders, accents, etc. */
-  --color-subtle: rgba(45, 106, 79, 0.15);
-  --color-faint: rgba(45, 106, 79, 0.05);
+  /* RGB bg value for dynamic use in components like nav backdrop (opacity) */
+  --color-bg-rgb: 255, 255, 255;
+
+  /* Alternative color palette for /auth and /components */
+  --color-bg-alt: #f7f8fa;
+  --color-surface-alt: #ffffff;
+
+  /* Supplementary colors */
   --color-btn-hover: #348d65;
+  --color-neutral-btn-hover: #e5e7eb;
+  --color-border: rgba(45, 106, 79, 0.15);
+  --color-faint: rgba(45, 106, 79, 0.05);
 }
 
 body {

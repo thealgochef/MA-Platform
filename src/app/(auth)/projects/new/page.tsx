@@ -178,7 +178,7 @@ export default function NewProjectPage() {
               <button
                 type="button"
                 onClick={addKeyword}
-                className="px-3 py-2 bg-bg-alt border border-border-gray rounded-md text-sm hover:bg-btn-hover-gray"
+                className="px-3 py-2 bg-bg-alt border border-border-gray rounded-md text-sm hover:bg-neutral-btn-hover"
               >
                 Add
               </button>

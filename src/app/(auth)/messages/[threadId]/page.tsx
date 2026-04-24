@@ -244,7 +244,7 @@ export default function ThreadPage() {
           </div>
 
           {/* PDF attachment button */}
-          <label className="cursor-pointer px-3 py-2 bg-bg-alt text-sm border border-border-gray rounded-md text-text-secondary hover:bg-btn-hover-gray transition-colors">
+          <label className="cursor-pointer px-3 py-2 bg-bg-alt text-sm border border-border-gray rounded-md text-text-secondary hover:bg-neutral-btn-hover transition-colors">
             PDF
             <input
               type="file"

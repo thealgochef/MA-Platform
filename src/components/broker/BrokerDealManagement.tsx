@@ -225,7 +225,7 @@ export default function BrokerDealManagement() {
               {deal.status === "draft" && (
                 <a
                   href={`/deals/${dealId}/preview`}
-                  className="px-3 py-1 bg-bg-alt border border-primary text-primary rounded-md text-sm hover:bg-btn-hover-gray transition-colors"
+                  className="px-3 py-1 bg-bg-alt border border-primary text-primary rounded-md text-sm hover:bg-neutral-btn-hover transition-colors"
                 >
                   Preview
                 </a>
