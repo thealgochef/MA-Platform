@@ -151,7 +151,7 @@ export default function BuyerDashboard() {
                   {Object.entries(analytics.dealsByStage).map(([stage, count]) => (
                     <div key={stage} className="flex justify-between text-sm">
                       <span className="text-text-secondary capitalize">{stage.replace(/_/g, " ")}</span>
-                      <span className="font-medium">{count}</span>
+                      <span className="text-primary font-medium">{count}</span>
                     </div>
                   ))}
                 </div>
@@ -166,7 +166,7 @@ export default function BuyerDashboard() {
                   {Object.entries(analytics.dealsByIndustry).map(([industry, count]) => (
                     <div key={industry} className="flex justify-between text-sm">
                       <span className="text-text-secondary">{industry}</span>
-                      <span className="font-medium">{count}</span>
+                      <span className="text-primary font-medium">{count}</span>
                     </div>
                   ))}
                 </div>
