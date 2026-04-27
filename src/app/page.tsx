@@ -2,6 +2,9 @@ import Link from "next/link";
 
 export default function HomePage() {
   const navLinkClass = "text-sm font-medium text-secondary transition-colors hover:text-primary";
+  const valuePropCardClass = "rounded-lg bg-surface p-6 shadow-md";
+  const valuePropTitleClass = "mb-3 font-display text-xl font-semibold text-primary";
+  const howItWorksCardClass = "rounded-lg bg-bg p-6 border border-border-color";
   const footerLinkClass = "font-medium text-secondary transition-colors hover:text-primary";
 
   return (
@@ -11,8 +14,9 @@ export default function HomePage() {
       <nav
         className="fixed left-0 right-0 top-0 z-50 animate-fade-in"
         style={{
-          background: "var(--color-background)",
-          backdropFilter: "blur(12px)",
+          background: "rgba(var(--color-bg-rgb), 0.95)",
+          backdropFilter: "blur(2px)",
+          WebkitBackdropFilter: "blur(2px)", // for Safari support
           borderBottom: "1px solid rgba(45, 106, 79, 0.1)",
         }}
       >
@@ -42,26 +46,19 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="bg-bg py-20">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-5xl font-display font-bold mb-6">
-            The Professional M&A Marketplace for the Middle Market
+      <section className="bg-hero-pattern py-20">
+        <div className="mx-auto max-w-4xl px-4 text-center">
+          <h1 id="hero-headline" className="mb-8 font-display text-4xl font-medium leading-tight sm:text-5xl md:text-6xl lg:text-7xl animate-fade-in-up delay-2">
+            Where Strategic <br /><span className="gradient-text">Transactions</span> Begin
           </h1>
-          <p className="text-xl text-secondary mb-8 max-w-2xl mx-auto">
-            Geneva Holdings connects vetted brokers and bankers with qualified buyers
-            for confidential, efficient deal execution.
+          <p className="mx-auto mb-8 max-w-2xl text-xl animate-fade-in-up delay-3">
+            An exclusive platform connecting principals, investors, and advisors across the North American lower middle market.
           </p>
-          <div className="flex gap-4 justify-center">
-            <Link
-              href="/login"
-              className="bg-primary text-bg px-8 py-3 rounded-md font-medium hover:bg-light-gray transition-colors"
-            >
-              Get Started
+          <div className="flex justify-center gap-4 animate-fade-in-up delay-4">
+            <Link href="/login" className="btn-primary rounded px-8 py-3 text-sm font-bold tracking-widest transition-all">
+              Request Access
             </Link>
-            <Link
-              href="/how-it-works"
-              className="border border-secondary px-8 py-3 rounded-md font-medium hover:bg-bg/10 transition-colors"
-            >
+            <Link href="/how-it-works" className="rounded border-2 border-border-color bg-bg px-8 py-3 text-sm font-bold text-secondary transition-colors hover:bg-faint hover:text-primary">
               Learn More
             </Link>
           </div>
@@ -69,25 +66,25 @@ export default function HomePage() {
       </section>
 
       {/* Value Props */}
-      <section className="py-16 bg-surface">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-bg rounded-lg p-6 shadow-md">
-              <h3 className="text-lg font-display font-semibold text-primary mb-3">Vetted Participants</h3>
+      <section className="py-16"> {/* add accent-colored background here */}
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="grid gap-8 md:grid-cols-3">
+            <div className={valuePropCardClass}>
+              <h3 className={valuePropTitleClass}>Vetted Participants</h3>
               <p className="text-sm">
                 Every broker and buyer is reviewed and approved before accessing the platform,
                 ensuring quality and confidentiality.
               </p>
             </div>
-            <div className="bg-bg rounded-lg p-6 shadow-md">
-              <h3 className="text-lg font-display font-semibold text-primary mb-3">Simple, Transparent Fees</h3>
+            <div className={valuePropCardClass}>
+              <h3 className={valuePropTitleClass}>Simple, Transparent Fees</h3>
               <p className="text-sm">
                 1.25% flat success fee for buyers. No subscription fees, no hidden costs.
                 Brokers earn a 0.25% incentive on every closed deal.
               </p>
             </div>
-            <div className="bg-bg rounded-lg p-6 shadow-md">
-              <h3 className="text-lg font-display font-semibold text-primary mb-3">End-to-End Platform</h3>
+            <div className={valuePropCardClass}>
+              <h3 className={valuePropTitleClass}>End-to-End Platform</h3>
               <p className="text-sm">
                 From deal discovery to NDA signing, CIM review, IOI/LOI submission,
                 and deal closure — all managed in one secure platform.
@@ -98,27 +95,27 @@ export default function HomePage() {
       </section>
 
       {/* How It Works Preview */}
-      <section className="py-16">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-display font-bold text-primary mb-8">How It Works</h2>
-          <div className="grid md:grid-cols-2 gap-6 text-left">
-            <div className="bg-surface rounded-lg p-6">
-              <h3 className="text-lg font-display font-semibold text-primary mb-2">For Buyers</h3>
+      <section className="bg-surface py-16">
+        <div className="mx-auto max-w-4xl px-4 text-center">
+          <h2 className="mb-8 font-display text-3xl font-bold text-primary">How It Works</h2>
+          <div className="grid gap-6 text-left md:grid-cols-2">
+            <div className={howItWorksCardClass}>
+              <h3 className="mb-2 font-display text-xl font-semibold text-primary">For Buyers</h3>
               <p className="text-sm">
                 Create acquisition criteria projects, get matched with relevant deals,
                 and manage the entire pursuit process from NDA to close.
               </p>
-              <Link href="/for-buyers" className="text-sm text-slate-blue hover:underline mt-3 inline-block">
+              <Link href="/for-buyers" className="mt-3 inline-block text-sm text-primary hover:underline">
                 Learn more
               </Link>
             </div>
-            <div className="bg-surface rounded-lg p-6">
-              <h3 className="text-lg font-display font-semibold text-primary mb-2">For Brokers</h3>
+            <div className={howItWorksCardClass}>
+              <h3 className="mb-2 font-display text-xl font-semibold text-primary">For Brokers</h3>
               <p className="text-sm">
                 Post deals for free, reach vetted buyers, manage your pipeline,
                 and earn an incentive on every successful close.
               </p>
-              <Link href="/for-brokers" className="text-sm text-slate-blue hover:underline mt-3 inline-block">
+              <Link href="/for-brokers" className="mt-3 inline-block text-sm text-primary hover:underline">
                 Learn more
               </Link>
             </div>
