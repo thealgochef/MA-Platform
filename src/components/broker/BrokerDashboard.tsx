@@ -42,7 +42,7 @@ export default function BrokerDashboard() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <div className="max-w-6xl mx-auto">
           <p className="text-text-secondary">Loading dashboard...</p>
         </div>
@@ -55,13 +55,13 @@ export default function BrokerDashboard() {
   const draftDeals = deals.filter(d => d.status === "draft");
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-navy">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-primary">Dashboard</h1>
           <Link
             href="/deals/new"
-            className="px-4 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue transition-colors"
+            className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
           >
             New Deal
           </Link>
@@ -81,42 +81,42 @@ export default function BrokerDashboard() {
 
         {/* Analytics Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-4">
+          <div className="bg-surface-alt rounded-lg shadow-sm p-4">
             <p className="text-xs text-text-secondary">Total Deals</p>
-            <p className="text-2xl font-bold text-navy">{deals.length}</p>
+            <p className="text-2xl font-bold text-primary">{deals.length}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-4">
+          <div className="bg-surface-alt rounded-lg shadow-sm p-4">
             <p className="text-xs text-text-secondary">Active Deals</p>
-            <p className="text-2xl font-bold text-navy">{activeDeals.length}</p>
+            <p className="text-2xl font-bold text-primary">{activeDeals.length}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-4">
+          <div className="bg-surface-alt rounded-lg shadow-sm p-4">
             <p className="text-xs text-text-secondary">Drafts</p>
-            <p className="text-2xl font-bold text-navy">{draftDeals.length}</p>
+            <p className="text-2xl font-bold text-primary">{draftDeals.length}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-4">
+          <div className="bg-surface-alt rounded-lg shadow-sm p-4">
             <p className="text-xs text-text-secondary">Closed</p>
-            <p className="text-2xl font-bold text-navy">{closedDeals.length}</p>
+            <p className="text-2xl font-bold text-primary">{closedDeals.length}</p>
           </div>
         </div>
 
         {/* Deal List */}
-        <h2 className="text-lg font-semibold text-navy mb-4">Your Deals</h2>
+        <h2 className="text-lg font-semibold text-primary mb-4">Your Deals</h2>
 
         {deals.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center">
             <p className="text-text-secondary mb-4">Post your first deal</p>
             <Link
               href="/deals/new"
-              className="inline-block px-6 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue transition-colors"
+              className="inline-block px-6 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
             >
               Create Deal
             </Link>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+          <div className="bg-surface-alt rounded-lg shadow-md overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border-gray bg-light-gray">
+                <tr className="border-b border-border-gray bg-bg-alt">
                   <th className="px-4 py-3 text-left font-medium text-text-secondary">Project Name</th>
                   <th className="px-4 py-3 text-left font-medium text-text-secondary">Headline</th>
                   <th className="px-4 py-3 text-left font-medium text-text-secondary">Industry</th>
@@ -129,10 +129,10 @@ export default function BrokerDashboard() {
                 {deals.map((deal) => (
                   <tr
                     key={deal.id}
-                    className="border-t border-border-gray hover:bg-light-gray cursor-pointer"
+                    className="border-t border-border-gray hover:bg-bg-alt cursor-pointer"
                     onClick={() => window.location.href = `/deals/${deal.id}`}
                   >
-                    <td className="px-4 py-3 font-medium text-navy">{deal.project_name}</td>
+                    <td className="px-4 py-3 font-medium text-primary">{deal.project_name}</td>
                     <td className="px-4 py-3 text-text-secondary">{deal.headline}</td>
                     <td className="px-4 py-3 text-text-secondary">{deal.industry}</td>
                     <td className="px-4 py-3">

@@ -151,7 +151,7 @@ export default function BrokerDealManagement() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <div className="max-w-6xl mx-auto">
           <p className="text-text-secondary">Loading deal...</p>
         </div>
@@ -161,7 +161,7 @@ export default function BrokerDealManagement() {
 
   if (!deal) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <div className="max-w-6xl mx-auto">
           <p className="text-error">Deal not found.</p>
         </div>
@@ -182,13 +182,13 @@ export default function BrokerDealManagement() {
   const ndaSent = engagements.filter(e => ["sent", "signed"].includes(e.nda_status)).length;
 
   return (
-    <main className="min-h-screen bg-light-gray">
+    <main className="min-h-screen bg-bg-alt">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-navy">{deal.project_name}</h1>
+              <h1 className="text-2xl font-bold text-primary">{deal.project_name}</h1>
               <p className="text-text-secondary text-sm mt-1">{deal.headline}</p>
             </div>
             <div className="flex items-center gap-3">
@@ -218,14 +218,14 @@ export default function BrokerDealManagement() {
               )}
               <a
                 href={`/deals/${dealId}/edit`}
-                className="px-3 py-1 bg-slate-blue text-white rounded-md text-sm hover:bg-navy transition-colors"
+                className="px-3 py-1 bg-primary text-white rounded-md text-sm hover:bg-btn-hover transition-colors"
               >
                 Edit
               </a>
               {deal.status === "draft" && (
                 <a
                   href={`/deals/${dealId}/preview`}
-                  className="px-3 py-1 bg-white border border-navy text-navy rounded-md text-sm hover:bg-light-gray transition-colors"
+                  className="px-3 py-1 bg-bg-alt border border-primary text-primary rounded-md text-sm hover:bg-neutral-btn-hover transition-colors"
                 >
                   Preview
                 </a>
@@ -235,7 +235,7 @@ export default function BrokerDealManagement() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white rounded-lg shadow-md mb-6">
+        <div className="bg-surface-alt rounded-lg shadow-md mb-6">
           <div className="flex border-b border-border-gray overflow-x-auto">
             {tabs.map((tab) => (
               <button
@@ -243,8 +243,8 @@ export default function BrokerDealManagement() {
                 onClick={() => setActiveTab(tab)}
                 className={`px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab
-                    ? "border-b-2 border-navy text-navy"
-                    : "text-text-secondary hover:text-text-primary"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-text-secondary hover:text-text"
                 }`}
               >
                 {tab}
@@ -300,7 +300,7 @@ export default function BrokerDealManagement() {
                 <div className="mt-4">
                   <p className="text-xs text-text-secondary mb-2">Financials</p>
                   <table className="w-full text-sm border border-border-gray">
-                    <thead className="bg-light-gray">
+                    <thead className="bg-bg-alt">
                       <tr>
                         <th className="px-3 py-2 text-left">Period</th>
                         <th className="px-3 py-2 text-right">Revenue</th>
@@ -334,7 +334,7 @@ export default function BrokerDealManagement() {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                      <thead className="bg-light-gray">
+                      <thead className="bg-bg-alt">
                         <tr>
                           <th className="px-3 py-2 text-left">Buyer</th>
                           <th className="px-3 py-2 text-left">Firm</th>
@@ -369,9 +369,9 @@ export default function BrokerDealManagement() {
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-navy">IOIs ({iois.length})</h3>
+                    <h3 className="font-medium text-primary">IOIs ({iois.length})</h3>
                     {iois.length >= 2 && (
-                      <a href={`/deals/${dealId}/ioi-compare`} className="text-sm text-slate-blue hover:underline">
+                      <a href={`/deals/${dealId}/ioi-compare`} className="text-sm text-secondary hover:underline">
                         Compare IOIs
                       </a>
                     )}
@@ -381,7 +381,7 @@ export default function BrokerDealManagement() {
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm border border-border-gray">
-                        <thead className="bg-light-gray">
+                        <thead className="bg-bg-alt">
                           <tr>
                             <th className="px-3 py-2 text-left">Buyer</th>
                             <th className="px-3 py-2 text-right">Offer Price</th>
@@ -409,9 +409,9 @@ export default function BrokerDealManagement() {
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-navy">LOIs ({lois.length})</h3>
+                    <h3 className="font-medium text-primary">LOIs ({lois.length})</h3>
                     {lois.length >= 2 && (
-                      <a href={`/deals/${dealId}/loi-compare`} className="text-sm text-slate-blue hover:underline">
+                      <a href={`/deals/${dealId}/loi-compare`} className="text-sm text-secondary hover:underline">
                         Compare LOIs
                       </a>
                     )}
@@ -421,7 +421,7 @@ export default function BrokerDealManagement() {
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm border border-border-gray">
-                        <thead className="bg-light-gray">
+                        <thead className="bg-bg-alt">
                           <tr>
                             <th className="px-3 py-2 text-left">Buyer</th>
                             <th className="px-3 py-2 text-right">Offer Price</th>
@@ -478,7 +478,7 @@ export default function BrokerDealManagement() {
                   ))}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">Upload Additional Document</label>
+                  <label className="block text-sm font-medium text-text mb-1">Upload Additional Document</label>
                   <input type="file" accept="application/pdf" onChange={handleFileUpload} className="text-sm" />
                 </div>
               </div>
@@ -495,7 +495,7 @@ export default function BrokerDealManagement() {
                       <a
                         key={eng.id}
                         href={`/messages/${eng.id}`}
-                        className="block p-3 border border-border-gray rounded-md hover:bg-light-gray transition-colors"
+                        className="block p-3 border border-border-gray rounded-md hover:bg-bg-alt transition-colors"
                       >
                         <p className="text-sm font-medium">{eng.users?.full_name}</p>
                         <p className="text-xs text-text-secondary">{eng.firms?.name} — {eng.stage}</p>
@@ -509,36 +509,36 @@ export default function BrokerDealManagement() {
             {/* Analytics Tab */}
             {activeTab === "Analytics" && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-light-gray rounded-md p-4 text-center">
-                  <p className="text-2xl font-bold text-navy">{deal.view_count}</p>
+                <div className="bg-bg-alt rounded-md p-4 text-center">
+                  <p className="text-2xl font-bold text-primary">{deal.view_count}</p>
                   <p className="text-xs text-text-secondary">Total Views</p>
                 </div>
-                <div className="bg-light-gray rounded-md p-4 text-center">
-                  <p className="text-2xl font-bold text-navy">{pursueCount}</p>
+                <div className="bg-bg-alt rounded-md p-4 text-center">
+                  <p className="text-2xl font-bold text-primary">{pursueCount}</p>
                   <p className="text-xs text-text-secondary">Pursues</p>
                 </div>
-                <div className="bg-light-gray rounded-md p-4 text-center">
-                  <p className="text-2xl font-bold text-navy">{passCount}</p>
+                <div className="bg-bg-alt rounded-md p-4 text-center">
+                  <p className="text-2xl font-bold text-primary">{passCount}</p>
                   <p className="text-xs text-text-secondary">Passes</p>
                 </div>
-                <div className="bg-light-gray rounded-md p-4 text-center">
-                  <p className="text-2xl font-bold text-navy">{ndaSent}</p>
+                <div className="bg-bg-alt rounded-md p-4 text-center">
+                  <p className="text-2xl font-bold text-primary">{ndaSent}</p>
                   <p className="text-xs text-text-secondary">NDAs Sent</p>
                 </div>
-                <div className="bg-light-gray rounded-md p-4 text-center">
-                  <p className="text-2xl font-bold text-navy">{ndaSigned}</p>
+                <div className="bg-bg-alt rounded-md p-4 text-center">
+                  <p className="text-2xl font-bold text-primary">{ndaSigned}</p>
                   <p className="text-xs text-text-secondary">NDAs Signed</p>
                 </div>
-                <div className="bg-light-gray rounded-md p-4 text-center">
-                  <p className="text-2xl font-bold text-navy">{iois.length}</p>
+                <div className="bg-bg-alt rounded-md p-4 text-center">
+                  <p className="text-2xl font-bold text-primary">{iois.length}</p>
                   <p className="text-xs text-text-secondary">IOIs Received</p>
                 </div>
-                <div className="bg-light-gray rounded-md p-4 text-center">
-                  <p className="text-2xl font-bold text-navy">{lois.length}</p>
+                <div className="bg-bg-alt rounded-md p-4 text-center">
+                  <p className="text-2xl font-bold text-primary">{lois.length}</p>
                   <p className="text-xs text-text-secondary">LOIs Received</p>
                 </div>
-                <div className="bg-light-gray rounded-md p-4 text-center">
-                  <p className="text-2xl font-bold text-navy">{daysOnMarket}</p>
+                <div className="bg-bg-alt rounded-md p-4 text-center">
+                  <p className="text-2xl font-bold text-primary">{daysOnMarket}</p>
                   <p className="text-xs text-text-secondary">Days on Market</p>
                 </div>
               </div>
@@ -553,7 +553,7 @@ export default function BrokerDealManagement() {
                   <div className="space-y-3">
                     {activities.map((activity) => (
                       <div key={activity.id} className="flex items-start gap-3 py-2 border-b border-border-gray last:border-0">
-                        <div className="w-2 h-2 rounded-full bg-slate-blue mt-1.5 flex-shrink-0" />
+                        <div className="w-2 h-2 rounded-full bg-secondary mt-1.5 flex-shrink-0" />
                         <div>
                           <p className="text-sm">
                             <span className="font-medium">{activity.actor?.full_name || "System"}</span>

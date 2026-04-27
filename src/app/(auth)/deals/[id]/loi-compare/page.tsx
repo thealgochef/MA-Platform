@@ -58,14 +58,14 @@ export default function LOIComparePage() {
   };
 
   if (loading) {
-    return <main className="min-h-screen bg-light-gray p-8"><p className="text-text-secondary">Loading...</p></main>;
+    return <main className="min-h-screen bg-bg-alt p-8"><p className="text-text-secondary">Loading...</p></main>;
   }
 
   if (lois.length === 0) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-2xl font-bold text-navy mb-4">LOI Comparison</h1>
+          <h1 className="text-2xl font-bold text-primary mb-4">LOI Comparison</h1>
           <p className="text-text-secondary">No LOIs to compare.</p>
         </div>
       </main>
@@ -88,22 +88,22 @@ export default function LOIComparePage() {
   ];
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-navy">LOI Comparison</h1>
-          <a href={`/deals/${dealId}`} className="text-sm text-slate-blue hover:underline">Back to deal</a>
+          <h1 className="text-2xl font-bold text-primary">LOI Comparison</h1>
+          <a href={`/deals/${dealId}`} className="text-sm text-secondary hover:underline">Back to deal</a>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+        <div className="bg-surface-alt rounded-lg shadow-md overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border-gray bg-light-gray">
+              <tr className="border-b border-border-gray bg-bg-alt">
                 <th className="px-4 py-3 text-left font-medium text-text-secondary w-48">Field</th>
                 {lois.map((loi) => {
                   const buyer = getBuyerInfo(loi.buyer_user_id);
                   return (
-                    <th key={loi.id} className="px-4 py-3 text-left font-medium text-navy">
+                    <th key={loi.id} className="px-4 py-3 text-left font-medium text-primary">
                       <div>{buyer.name}</div>
                       <div className="text-xs font-normal text-text-secondary">{buyer.firm}</div>
                     </th>

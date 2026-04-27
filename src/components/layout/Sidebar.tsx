@@ -40,7 +40,7 @@ export default function Sidebar({ userName, userRole, unreadCount = 0 }: Sidebar
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/");
   };
 
   const commonItems: NavItem[] = [
@@ -51,14 +51,14 @@ export default function Sidebar({ userName, userRole, unreadCount = 0 }: Sidebar
   const roleItems: NavItem[] =
     userRole === "broker"
       ? [
-          { label: "My Deals", href: "/deals", icon: <Briefcase size={20} />, matchPrefix: "/deals" },
-          { label: "New Deal", href: "/deals/new", icon: <PlusCircle size={20} /> },
-        ]
+        { label: "My Deals", href: "/deals", icon: <Briefcase size={20} />, matchPrefix: "/deals" },
+        { label: "New Deal", href: "/deals/new", icon: <PlusCircle size={20} /> },
+      ]
       : userRole === "buyer"
         ? [
-            { label: "My Projects", href: "/projects", icon: <FolderKanban size={20} />, matchPrefix: "/projects" },
-            { label: "New Project", href: "/projects/new", icon: <FilePlus size={20} /> },
-          ]
+          { label: "My Projects", href: "/projects", icon: <FolderKanban size={20} />, matchPrefix: "/projects" },
+          { label: "New Project", href: "/projects/new", icon: <FilePlus size={20} /> },
+        ]
         : [];
 
   const bottomItems: NavItem[] = [
@@ -100,14 +100,14 @@ export default function Sidebar({ userName, userRole, unreadCount = 0 }: Sidebar
             onClick={() => setMobileOpen(false)}
             className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
               isActive(item)
-                ? "bg-slate-blue text-white"
-                : "text-white/70 hover:bg-white/10 hover:text-white"
+                ? "bg-secondary text-white"
+                : "text-white/70 hover:bg-surface-alt/10 hover:text-white"
             }`}
           >
             {item.icon}
             <span>{item.label}</span>
             {item.badge != null && (
-              <span className="ml-auto bg-white text-navy text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+              <span className="ml-auto bg-surface-alt text-primary text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
                 {item.badge}
               </span>
             )}
@@ -119,7 +119,7 @@ export default function Sidebar({ userName, userRole, unreadCount = 0 }: Sidebar
       <div className="p-3 border-t border-white/10">
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+          className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium text-white/70 hover:bg-surface-alt/10 hover:text-white transition-colors"
         >
           <LogOut size={20} />
           <span>Sign Out</span>
@@ -134,7 +134,7 @@ export default function Sidebar({ userName, userRole, unreadCount = 0 }: Sidebar
       <button
         aria-label="Toggle menu"
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="fixed top-4 left-4 z-50 p-2 bg-navy text-white rounded-md lg:hidden"
+        className="fixed top-4 left-4 z-50 p-2 bg-primary text-white rounded-md lg:hidden"
       >
         {mobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
@@ -150,8 +150,7 @@ export default function Sidebar({ userName, userRole, unreadCount = 0 }: Sidebar
       {/* Sidebar nav */}
       <nav
         role="navigation"
-        className={`fixed top-0 left-0 z-40 h-screen w-64 bg-navy flex flex-col transition-transform duration-200 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed top-0 left-0 z-40 h-screen w-64 bg-primary flex flex-col transition-transform duration-200 ${mobileOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0 lg:static lg:flex`}
       >
         {navContent}

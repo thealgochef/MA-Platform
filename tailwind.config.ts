@@ -1,51 +1,104 @@
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss'
 
 const config: Config = {
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
+      // --- Color palette from :root custom properties ---
       colors: {
-        navy: "#1B2A4A",
+        // Core colors 
+        'bg': 'var(--color-bg)',
+        'surface': 'var(--color-surface)',
+        'text': 'var(--color-text)',
+        'primary': 'var(--color-primary)',
+        'secondary': 'var(--color-secondary)',
+
+        // Alternative palette for /auth and /components
+        'bg-alt': 'var(--color-bg-alt)', // bg for neutral colored btns also
+        'surface-alt': 'var(--color-surface-alt)',
+
+        // Supplementary colors 
+        'btn-hover': 'var(--color-btn-hover)', // hover state of primary colored btns
+        'neutral-btn-hover': 'var(--color-neutral-btn-hover)', // hover state of neutral colored btns
+        'border-color': 'var(--color-border)', // decorative border color (in /public)
+        'subtle': 'var(--color-subtle)', // used for deal engagement stage
+        'faint': 'var(--color-faint)', // area hover state (in /public/select-role)
+
+        // Legacy colors still in use
+        "border-gray": "#E5E7EB", // generic border color for inputs and dividers
+        "text-secondary": "#6B7280", // secondary text, e.g. in service cards and deal cards
+
+        // Legacy colors TO BE PHASED OUT, included here to avoid breaking changes in the interim
+        "navy": "#1B2A4A",
         "slate-blue": "#3B5278",
         "light-gray": "#F7F8FA",
-        "border-gray": "#E5E7EB",
         "text-primary": "#111827",
-        "text-secondary": "#6B7280",
-        success: "#10B981",
-        error: "#EF4444",
-        warning: "#F59E0B",
-        info: "#3B82F6",
+
+        // Semantic colors for status indicators, alerts, etc.
+        success: '#10B981',
+        error: '#EF4444',
+        warning: '#F59E0B',
+        info: '#3B82F6',
       },
+
+      // --- Font families ---
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        'display': 'var(--font-display, "Cormorant Garamond", Georgia, serif)',
+        'body': 'var(--font-body, "Outfit", system-ui, sans-serif)',
       },
-      borderRadius: {
-        lg: "8px",
-        md: "6px",
+
+      // --- Box shadows: card-glow + service-card hover ---
+      boxShadow: {
+        'card-glow': '0 4px 40px rgba(45, 106, 79, 0.05)',
+        'card-hover': '0 8px 50px rgba(45, 106, 79, 0.10)',
       },
-      spacing: {
-        "1": "4px",
-        "2": "8px",
-        "3": "12px",
-        "4": "16px",
-        "5": "20px",
-        "6": "24px",
-        "7": "28px",
-        "8": "32px",
-        "9": "36px",
-        "10": "40px",
-        "12": "48px",
-        "14": "56px",
-        "16": "64px",
-        "20": "80px",
-        "24": "96px",
+
+      // --- Keyframe animations ---
+      keyframes: {
+        fadeInUp: {
+          from: { opacity: '0', transform: 'translateY(30px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        fadeIn: {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+      },
+
+      // --- Animation utilities ---
+      animation: {
+        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+        'fade-in': 'fadeIn 1s ease-out forwards',
+      },
+
+      // --- Transition timing: service-card cubic-bezier ---
+      transitionTimingFunction: {
+        'card': 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+      },
+
+      // --- Transition durations used across components ---
+      transitionDuration: {
+        '400': '400ms',
+      },
+
+      // --- Background images: hero-pattern, gradient-text, btn shimmer ---
+      backgroundImage: {
+        'hero-pattern': [
+          'radial-gradient(circle at 20% 50%, rgba(45, 106, 79, 0.04) 0%, transparent 50%)',
+          'radial-gradient(circle at 80% 80%, rgba(45, 106, 79, 0.02) 0%, transparent 50%)',
+          'linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 100%)',
+        ].join(', '),
+        'gradient-text':
+          'linear-gradient(135deg, var(--color-primary) 0%, #d4b87a 50%, var(--color-primary) 100%)',
+        'btn-shimmer':
+          'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
       },
     },
   },
+
   plugins: [],
-};
-export default config;
+}
+
+export default config

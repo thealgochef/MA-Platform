@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Cormorant_Garamond, Outfit } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const bodyFont = Outfit({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-body",
+});
+
+const displayFont = Cormorant_Garamond({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
   title: "Geneva Holdings — M&A Marketplace",
   description:
-    "Professional, confidential M&A marketplace connecting vetted brokers with qualified buyers in the middle market.",
+    "Professional, confidential M&A marketplace connecting vetted brokers with qualified buyers in the lower middle market.",
 };
 
 export default function RootLayout({
@@ -20,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${bodyFont.variable} ${displayFont.variable} font-body antialiased`}>
         {children}
       </body>
     </html>

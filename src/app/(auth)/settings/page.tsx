@@ -153,17 +153,17 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-3xl mx-auto px-4 space-y-8">
-        <h1 className="text-3xl font-bold text-navy">Settings</h1>
+        <h1 className="text-3xl font-bold text-primary">Settings</h1>
 
         {/* ─── Edit Profile ────────────────────────────────────── */}
-        <section className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-navy mb-4">Edit Profile</h2>
+        <section className="bg-surface-alt rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-primary mb-4">Edit Profile</h2>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 Full Name
               </label>
               <input
@@ -175,7 +175,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 Title
               </label>
               <input
@@ -187,7 +187,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 Phone Number
               </label>
               <input
@@ -200,7 +200,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 LinkedIn Profile
               </label>
               <input
@@ -213,7 +213,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 Firm Name
               </label>
               <input
@@ -225,7 +225,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 Description
               </label>
               <textarea
@@ -237,7 +237,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 Location
               </label>
               <input
@@ -249,7 +249,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 Industry Focus
               </label>
               <select
@@ -271,7 +271,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 Website
               </label>
               <input
@@ -286,7 +286,7 @@ export default function SettingsPage() {
             {role === "broker" && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
+                  <label className="block text-sm font-medium text-text mb-1">
                     License & Credentials
                   </label>
                   <input
@@ -297,7 +297,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
+                  <label className="block text-sm font-medium text-text mb-1">
                     Deal Types
                   </label>
                   <input
@@ -314,7 +314,7 @@ export default function SettingsPage() {
             {role === "buyer" && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
+                  <label className="block text-sm font-medium text-text mb-1">
                     Buyer Type
                   </label>
                   <select
@@ -331,7 +331,7 @@ export default function SettingsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-primary mb-1">
+                  <label className="block text-sm font-medium text-text mb-1">
                     Assets Under Management (AUM)
                   </label>
                   <input
@@ -348,7 +348,7 @@ export default function SettingsPage() {
               <button
                 onClick={handleProfileSave}
                 disabled={profileSaving}
-                className="bg-navy text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+                className="bg-primary text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
               >
                 {profileSaving ? "Saving..." : "Save Profile"}
               </button>
@@ -360,8 +360,8 @@ export default function SettingsPage() {
         </section>
 
         {/* ─── Notification Preferences ─────────────────────── */}
-        <section className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-navy mb-4">
+        <section className="bg-surface-alt rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-primary mb-4">
             Notification Preferences
           </h2>
 
@@ -369,13 +369,13 @@ export default function SettingsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-2 pr-4 font-medium text-text-primary">
+                  <th className="text-left py-2 pr-4 font-medium text-text">
                     Event
                   </th>
-                  <th className="text-center py-2 px-4 font-medium text-text-primary">
+                  <th className="text-center py-2 px-4 font-medium text-text">
                     Email
                   </th>
-                  <th className="text-center py-2 px-4 font-medium text-text-primary">
+                  <th className="text-center py-2 px-4 font-medium text-text">
                     In-Platform
                   </th>
                 </tr>
@@ -420,7 +420,7 @@ export default function SettingsPage() {
             <button
               onClick={handleNotifSave}
               disabled={notifSaving}
-              className="bg-navy text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+              className="bg-primary text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
             >
               {notifSaving ? "Saving..." : "Save Preferences"}
             </button>
@@ -431,7 +431,7 @@ export default function SettingsPage() {
         </section>
 
         {/* ─── Delete Account ───────────────────────────────── */}
-        <section className="bg-white rounded-lg shadow-sm p-6 border border-red-200">
+        <section className="bg-surface-alt rounded-lg shadow-sm p-6 border border-red-200">
           <h2 className="text-xl font-semibold text-red-600 mb-2">
             Delete Account
           </h2>

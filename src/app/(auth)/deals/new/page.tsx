@@ -165,9 +165,9 @@ export default function CreateDealPage() {
   };
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-3xl mx-auto px-4">
-        <h1 className="text-2xl font-bold text-navy mb-6">Create New Deal</h1>
+        <h1 className="text-2xl font-bold text-primary mb-6">Create New Deal</h1>
 
         {error && (
           <div className="bg-error/10 border border-error/20 text-error rounded-md p-3 mb-6 text-sm">
@@ -176,8 +176,8 @@ export default function CreateDealPage() {
         )}
 
         {/* Teaser Upload Zone */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-lg font-semibold text-navy mb-2">Teaser Document</h2>
+        <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-lg font-semibold text-primary mb-2">Teaser Document</h2>
           <p className="text-xs text-text-secondary mb-3">
             Upload your teaser PDF. Auto-extraction coming soon — for now the file is stored.
           </p>
@@ -192,49 +192,49 @@ export default function CreateDealPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
+        <div className="bg-surface-alt rounded-lg shadow-md p-6 space-y-6">
           {/* Project Name */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-text mb-1">
               Project Name * <span className="text-text-secondary font-normal">(internal only)</span>
             </label>
             <input
               type="text"
               value={formData.projectName}
               onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
             />
           </div>
 
           {/* Headline */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-text mb-1">
               External Headline * <span className="text-text-secondary font-normal">(visible to buyers)</span>
             </label>
             <input
               type="text"
               value={formData.headline}
               onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-text mb-1">
               About the Business *
             </label>
             <textarea
               rows={5}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
             />
           </div>
 
           {/* Geography */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">Geography Display *</label>
+            <label className="block text-sm font-medium text-text mb-2">Geography Display *</label>
             <div className="flex gap-4 mb-3">
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -261,7 +261,7 @@ export default function CreateDealPage() {
               <select
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
               >
                 <option value="">Select state</option>
                 {US_STATES.map((s) => (
@@ -272,7 +272,7 @@ export default function CreateDealPage() {
               <select
                 value={formData.region}
                 onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
               >
                 <option value="">Select region</option>
                 {REGIONS.map((r) => (
@@ -284,11 +284,11 @@ export default function CreateDealPage() {
 
           {/* Industry */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Industry *</label>
+            <label className="block text-sm font-medium text-text mb-1">Industry *</label>
             <select
               value={formData.industry}
               onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
             >
               <option value="">Select industry</option>
               {INDUSTRIES.map((i) => (
@@ -299,10 +299,10 @@ export default function CreateDealPage() {
 
           {/* Financials Table */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">Financials</label>
+            <label className="block text-sm font-medium text-text mb-2">Financials</label>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border border-border-gray">
-                <thead className="bg-light-gray">
+                <thead className="bg-bg-alt">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium text-text-secondary">Period</th>
                     <th className="px-3 py-2 text-left font-medium text-text-secondary">Label</th>
@@ -352,7 +352,7 @@ export default function CreateDealPage() {
 
           {/* NDA Type */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">NDA Type *</label>
+            <label className="block text-sm font-medium text-text mb-2">NDA Type *</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -390,7 +390,7 @@ export default function CreateDealPage() {
 
           {/* CIM Upload */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-text mb-1">
               CIM Document <span className="text-text-secondary font-normal">(required to publish)</span>
             </label>
             <input
@@ -404,7 +404,7 @@ export default function CreateDealPage() {
 
           {/* CIM Sharing Preference */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">CIM Sharing Preference *</label>
+            <label className="block text-sm font-medium text-text mb-2">CIM Sharing Preference *</label>
             <div className="flex flex-col gap-2">
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -431,7 +431,7 @@ export default function CreateDealPage() {
 
           {/* NDA Vetting Preference */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">NDA Vetting Preference *</label>
+            <label className="block text-sm font-medium text-text mb-2">NDA Vetting Preference *</label>
             <div className="flex flex-col gap-2">
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -458,11 +458,11 @@ export default function CreateDealPage() {
 
           {/* Point of Contact */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Point of Contact</label>
+            <label className="block text-sm font-medium text-text mb-1">Point of Contact</label>
             <select
               value={formData.pointOfContactId}
               onChange={(e) => setFormData({ ...formData, pointOfContactId: e.target.value })}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
             >
               {firmMembers.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -475,21 +475,21 @@ export default function CreateDealPage() {
           {/* Due dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">IOI Due Date</label>
+              <label className="block text-sm font-medium text-text mb-1">IOI Due Date</label>
               <input
                 type="date"
                 value={formData.ioiDueDate}
                 onChange={(e) => setFormData({ ...formData, ioiDueDate: e.target.value })}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">LOI Due Date</label>
+              <label className="block text-sm font-medium text-text mb-1">LOI Due Date</label>
               <input
                 type="date"
                 value={formData.loiDueDate}
                 onChange={(e) => setFormData({ ...formData, loiDueDate: e.target.value })}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
               />
             </div>
           </div>
@@ -500,7 +500,7 @@ export default function CreateDealPage() {
               type="button"
               onClick={() => handleSubmit(false)}
               disabled={loading}
-              className="flex-1 bg-white border border-navy text-navy rounded-md py-3 font-medium hover:bg-light-gray transition-colors disabled:opacity-50"
+              className="flex-1 bg-surface-alt border border-primary text-primary rounded-md py-3 font-medium hover:bg-bg-alt transition-colors disabled:opacity-50"
             >
               {loading ? "Saving..." : "Save Draft"}
             </button>
@@ -508,7 +508,7 @@ export default function CreateDealPage() {
               type="button"
               onClick={() => handleSubmit(true)}
               disabled={loading}
-              className="flex-1 bg-navy text-white rounded-md py-3 font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+              className="flex-1 bg-primary text-white rounded-md py-3 font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
             >
               {loading ? "Publishing..." : "Publish"}
             </button>

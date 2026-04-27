@@ -67,7 +67,7 @@ export default function DealClosurePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading...</p>
       </main>
     );
@@ -76,13 +76,13 @@ export default function DealClosurePage() {
   // Already submitted — show status
   if (closure) {
     return (
-      <main className="min-h-screen bg-light-gray py-8">
+      <main className="min-h-screen bg-bg-alt py-8">
         <div className="max-w-2xl mx-auto px-4">
-          <h1 className="text-2xl font-bold text-navy mb-6">Deal Closure</h1>
-          <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
+          <h1 className="text-2xl font-bold text-primary mb-6">Deal Closure</h1>
+          <div className="bg-surface-alt rounded-lg shadow-md p-6 space-y-4">
             <div>
               <p className="text-sm text-text-secondary">Enterprise Value</p>
-              <p className="text-lg font-semibold text-navy">
+              <p className="text-lg font-semibold text-primary">
                 ${closure.enterprise_value.toLocaleString()}
               </p>
             </div>
@@ -97,8 +97,8 @@ export default function DealClosurePage() {
                   {closure.broker_disputed
                     ? "Disputed"
                     : closure.broker_confirmed
-                    ? "Yes"
-                    : "Pending"}
+                      ? "Yes"
+                      : "Pending"}
                 </p>
               </div>
             </div>
@@ -110,7 +110,7 @@ export default function DealClosurePage() {
             )}
             <button
               onClick={() => router.push("/dashboard")}
-              className="text-sm text-slate-blue hover:underline"
+              className="text-sm text-secondary hover:underline"
             >
               Back to Dashboard
             </button>
@@ -122,9 +122,9 @@ export default function DealClosurePage() {
 
   // Show form to report enterprise value
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-2xl mx-auto px-4">
-        <h1 className="text-2xl font-bold text-navy mb-2">Deal Closure Form</h1>
+        <h1 className="text-2xl font-bold text-primary mb-2">Deal Closure Form</h1>
         <p className="text-sm text-text-secondary mb-6">
           Congratulations! Please report the final enterprise value for this deal,
           including all earnouts and future payments.
@@ -136,16 +136,16 @@ export default function DealClosurePage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-surface-alt rounded-lg shadow-md p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">
+            <label className="block text-sm font-medium text-text mb-1">
               Total Enterprise Value ($) *
             </label>
             <input
               type="number"
               value={enterpriseValue}
               onChange={(e) => setEnterpriseValue(e.target.value ? Number(e.target.value) : "")}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
               placeholder="Include all earnouts and future payments"
               required
               min={1}
@@ -158,7 +158,7 @@ export default function DealClosurePage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-navy text-white rounded-md py-3 font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+            className="w-full bg-primary text-white rounded-md py-3 font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
           >
             {submitting ? "Submitting..." : "Report Enterprise Value"}
           </button>

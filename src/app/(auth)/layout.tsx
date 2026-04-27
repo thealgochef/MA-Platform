@@ -27,7 +27,7 @@ export default async function AuthLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-light-gray">
+    <div className="flex min-h-screen bg-bg-alt">
       <Sidebar
         userName={profile.full_name || user.email || "User"}
         userRole={profile.role as "broker" | "buyer" | "admin"}

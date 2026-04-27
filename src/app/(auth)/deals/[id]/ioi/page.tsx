@@ -95,16 +95,16 @@ export default function IOISubmissionPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading...</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-2xl mx-auto px-4">
-        <h1 className="text-2xl font-bold text-navy mb-2">Submit Indication of Interest</h1>
+        <h1 className="text-2xl font-bold text-primary mb-2">Submit Indication of Interest</h1>
         <p className="text-sm text-text-secondary mb-6">
           Submit your IOI for this deal. You can submit multiple revised offers.
         </p>
@@ -116,8 +116,8 @@ export default function IOISubmissionPage() {
         )}
 
         {previousIOIs.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-            <h3 className="text-sm font-medium text-text-primary mb-3">
+          <div className="bg-surface-alt rounded-lg shadow-md p-4 mb-6">
+            <h3 className="text-sm font-medium text-text mb-3">
               Previous IOIs ({previousIOIs.length})
             </h3>
             <div className="space-y-2">
@@ -133,73 +133,73 @@ export default function IOISubmissionPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-surface-alt rounded-lg shadow-md p-6 space-y-4">
           {/* Required Fields */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Offer Price ($) *</label>
+              <label className="block text-sm font-medium text-text mb-1">Offer Price ($) *</label>
               <input
                 type="number"
                 value={offerPrice}
                 onChange={(e) => setOfferPrice(e.target.value ? Number(e.target.value) : "")}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Multiple *</label>
+              <label className="block text-sm font-medium text-text mb-1">Multiple *</label>
               <input
                 type="number"
                 step="0.1"
                 value={multiple}
                 onChange={(e) => setMultiple(e.target.value ? Number(e.target.value) : "")}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Earnout *</label>
+            <label className="block text-sm font-medium text-text mb-1">Earnout *</label>
             <input
               type="text"
               value={earnout}
               onChange={(e) => setEarnout(e.target.value)}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
               placeholder='e.g., "None" or earnout terms'
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Rollover *</label>
+            <label className="block text-sm font-medium text-text mb-1">Rollover *</label>
             <input
               type="text"
               value={rollover}
               onChange={(e) => setRollover(e.target.value)}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Cash at Close ($) *</label>
+              <label className="block text-sm font-medium text-text mb-1">Cash at Close ($) *</label>
               <input
                 type="number"
                 value={cashAtClose}
                 onChange={(e) => setCashAtClose(e.target.value ? Number(e.target.value) : "")}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Time to Close *</label>
+              <label className="block text-sm font-medium text-text mb-1">Time to Close *</label>
               <input
                 type="text"
                 value={timeToClose}
                 onChange={(e) => setTimeToClose(e.target.value)}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 placeholder="e.g., 60 days"
                 required
               />
@@ -208,7 +208,7 @@ export default function IOISubmissionPage() {
 
           {/* Platform or Add-On */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">Deal Type *</label>
+            <label className="block text-sm font-medium text-text mb-2">Deal Type *</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2">
                 <input
@@ -217,7 +217,7 @@ export default function IOISubmissionPage() {
                   value="platform"
                   checked={dealType === "platform"}
                   onChange={() => setDealType("platform")}
-                  className="text-slate-blue"
+                  className="text-secondary"
                 />
                 <span className="text-sm">Platform</span>
               </label>
@@ -228,7 +228,7 @@ export default function IOISubmissionPage() {
                   value="addon"
                   checked={dealType === "addon"}
                   onChange={() => setDealType("addon")}
-                  className="text-slate-blue"
+                  className="text-secondary"
                 />
                 <span className="text-sm">Add-On</span>
               </label>
@@ -237,14 +237,14 @@ export default function IOISubmissionPage() {
 
           {dealType === "addon" && (
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 Platform Company Website URL *
               </label>
               <input
                 type="url"
                 value={addonPlatformUrl}
                 onChange={(e) => setAddonPlatformUrl(e.target.value)}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 placeholder="https://..."
                 required
               />
@@ -256,39 +256,39 @@ export default function IOISubmissionPage() {
           <p className="text-xs text-text-secondary">Optional Fields</p>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Escrow</label>
+            <label className="block text-sm font-medium text-text mb-1">Escrow</label>
             <input
               type="text"
               value={escrow}
               onChange={(e) => setEscrow(e.target.value)}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Working Capital Peg</label>
+            <label className="block text-sm font-medium text-text mb-1">Working Capital Peg</label>
             <input
               type="text"
               value={workingCapitalPeg}
               onChange={(e) => setWorkingCapitalPeg(e.target.value)}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">Special Considerations</label>
+            <label className="block text-sm font-medium text-text mb-1">Special Considerations</label>
             <textarea
               value={specialConsiderations}
               onChange={(e) => setSpecialConsiderations(e.target.value)}
               rows={3}
-              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+              className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
             />
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-navy text-white rounded-md py-3 font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+            className="w-full bg-primary text-white rounded-md py-3 font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
           >
             {submitting ? "Submitting..." : "Submit IOI"}
           </button>
