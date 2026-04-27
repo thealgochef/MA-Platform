@@ -87,30 +87,38 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
   });
 
   describe("Tailwind theme", () => {
-    it("should have custom colors defined in tailwind.config.ts", () => {
+    it("should define theme color tokens in tailwind.config.ts", () => {
       const content = fs.readFileSync(path.join(ROOT, "tailwind.config.ts"), "utf-8");
-      expect(content).toContain("#1B2A4A"); // navy
-      expect(content).toContain("#3B5278"); // slate-blue
-      expect(content).toContain("#F7F8FA"); // light-gray
-      expect(content).toContain("#E5E7EB"); // border-gray
-      expect(content).toContain("#111827"); // text-primary
-      expect(content).toContain("#6B7280"); // text-secondary
-      expect(content).toContain("#10B981"); // success
-      expect(content).toContain("#EF4444"); // error
-      expect(content).toContain("#F59E0B"); // warning
-      expect(content).toContain("#3B82F6"); // info
+      expect(content).toContain("var(--color-bg)");
+      expect(content).toContain("var(--color-bg-alt)");
+      expect(content).toContain("var(--color-surface)");
+      expect(content).toContain("var(--color-surface-alt)");
+      expect(content).toContain("var(--color-text)");
+      expect(content).toContain("var(--color-primary)");
+      expect(content).toContain("var(--color-secondary)");
+      expect(content).toContain("var(--color-btn-hover)");
+      expect(content).toContain("var(--color-subtle)");
+      expect(content).toContain("var(--color-faint)");
+      expect(content).toContain("#10B981"); // success fallback
+      expect(content).toContain("#EF4444"); // error fallback
+      expect(content).toContain("#F59E0B"); // warning fallback
+      expect(content).toContain("#3B82F6"); // info fallback
     });
 
-    it("should use Inter font variable in tailwind config", () => {
+    it("should use app font variables in tailwind config", () => {
       const content = fs.readFileSync(path.join(ROOT, "tailwind.config.ts"), "utf-8");
-      expect(content).toContain("--font-inter");
+      expect(content).toContain("--font-body");
+      expect(content).toContain("--font-display");
     });
   });
 
   describe("Layout", () => {
-    it("should use Inter font from next/font/google in root layout", () => {
+    it("should use Outfit and Cormorant Garamond fonts from next/font/google in root layout", () => {
       const content = fs.readFileSync(path.join(SRC, "app", "layout.tsx"), "utf-8");
-      expect(content).toContain("Inter");
+      expect(content).toContain("--font-body");
+      expect(content).toContain("--font-display");
+      expect(content).toContain("Outfit");
+      expect(content).toContain("Cormorant_Garamond");
       expect(content).toContain("next/font/google");
     });
 

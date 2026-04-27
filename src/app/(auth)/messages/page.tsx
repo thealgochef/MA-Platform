@@ -39,42 +39,42 @@ export default function InboxPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading messages...</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-4xl mx-auto px-4">
-        <h1 className="text-2xl font-bold text-navy mb-6">Messages</h1>
+        <h1 className="text-2xl font-bold text-primary mb-6">Messages</h1>
 
         {threads.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center">
             <p className="text-text-secondary">No message threads yet.</p>
             <p className="text-sm text-text-secondary mt-2">
               Threads are created when you engage with a deal.
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-md divide-y divide-border-gray">
+          <div className="bg-surface-alt rounded-lg shadow-md divide-y divide-border-color">
             {threads.map((thread) => (
               <Link
                 key={thread.engagementId}
                 href={`/messages/${thread.engagementId}`}
-                className="block hover:bg-light-gray transition-colors"
+                className="block hover:bg-bg-alt transition-colors"
               >
                 <div className="px-4 py-3 flex items-center gap-3">
                   {/* Unread indicator */}
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    thread.unread ? "bg-slate-blue" : "bg-transparent"
+                    thread.unread ? "bg-secondary" : "bg-transparent"
                   }`} />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className={`text-sm ${thread.unread ? "font-semibold text-navy" : "font-medium text-text-primary"}`}>
+                        <span className={`text-sm ${thread.unread ? "font-semibold text-primary" : "font-medium text-text"}`}>
                           {thread.otherParty?.full_name || "Unknown"}
                         </span>
                         <span className="text-xs text-text-secondary">
@@ -92,14 +92,14 @@ export default function InboxPage() {
                     </p>
                     {thread.lastMessage && (
                       <p className={`text-sm truncate mt-1 ${
-                        thread.unread ? "text-text-primary" : "text-text-secondary"
+                        thread.unread ? "text-text" : "text-text-secondary"
                       }`}>
                         {thread.lastMessage.content || "[Attachment]"}
                       </p>
                     )}
                   </div>
 
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-light-gray text-text-secondary flex-shrink-0">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-bg-alt text-text-secondary flex-shrink-0">
                     {thread.stage}
                   </span>
                 </div>

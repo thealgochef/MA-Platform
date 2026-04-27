@@ -103,7 +103,7 @@ export default function NDASigningPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading NDA...</p>
       </main>
     );
@@ -111,19 +111,19 @@ export default function NDASigningPage() {
 
   if (!deal || !engagement) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <div className="max-w-2xl mx-auto">
           <p className="text-error">{error || "NDA not available."}</p>
-          <a href="/dashboard" className="text-sm text-slate-blue hover:underline mt-4 inline-block">Back to dashboard</a>
+          <a href="/dashboard" className="text-sm text-secondary hover:underline mt-4 inline-block">Back to dashboard</a>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-2xl mx-auto px-4">
-        <h1 className="text-2xl font-bold text-navy mb-2">Non-Disclosure Agreement</h1>
+        <h1 className="text-2xl font-bold text-primary mb-2">Non-Disclosure Agreement</h1>
         <p className="text-sm text-text-secondary mb-6">
           Deal: {deal.headline}
         </p>
@@ -133,17 +133,17 @@ export default function NDASigningPage() {
         )}
 
         {/* NDA Document Display */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-lg font-semibold text-navy mb-4">
+        <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-lg font-semibold text-primary mb-4">
             {deal.nda_type === "custom" ? "Custom NDA" : "Platform Standard NDA"}
           </h2>
 
           {deal.nda_type === "custom" && deal.nda_document_path ? (
-            <div className="bg-light-gray rounded-md p-4 mb-4">
+            <div className="bg-bg-alt rounded-md p-4 mb-4">
               <p className="text-sm text-text-secondary">Custom NDA document uploaded by broker.</p>
               <a
                 href={`/api/deals/${dealId}/documents?path=${encodeURIComponent(deal.nda_document_path)}`}
-                className="text-sm text-slate-blue hover:underline"
+                className="text-sm text-secondary hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -151,8 +151,8 @@ export default function NDASigningPage() {
               </a>
             </div>
           ) : (
-            <div className="bg-light-gray rounded-md p-4 mb-4 text-sm text-text-secondary space-y-2">
-              <p className="font-medium text-text-primary">Geneva Holdings Platform NDA</p>
+            <div className="bg-bg-alt rounded-md p-4 mb-4 text-sm text-text-secondary space-y-2">
+              <p className="font-medium text-text">Geneva Holdings Platform NDA</p>
               <p>
                 This Non-Disclosure Agreement (&quot;Agreement&quot;) is entered into by the undersigned party
                 (&quot;Receiving Party&quot;) and the sell-side representative (&quot;Disclosing Party&quot;) through
@@ -174,46 +174,46 @@ export default function NDASigningPage() {
         </div>
 
         {/* Signature Fields */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h3 className="text-sm font-medium text-text-primary mb-4">Electronic Signature</h3>
+        <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
+          <h3 className="text-sm font-medium text-text mb-4">Electronic Signature</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Full Name *</label>
+              <label className="block text-sm font-medium text-text mb-1">Full Name *</label>
               <input
                 type="text"
                 value={signatureName}
                 onChange={(e) => setSignatureName(e.target.value)}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 placeholder="Your full legal name"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Title *</label>
+              <label className="block text-sm font-medium text-text mb-1">Title *</label>
               <input
                 type="text"
                 value={signatureTitle}
                 onChange={(e) => setSignatureTitle(e.target.value)}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 placeholder="e.g., Managing Partner"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Company *</label>
+              <label className="block text-sm font-medium text-text mb-1">Company *</label>
               <input
                 type="text"
                 value={signatureCompany}
                 onChange={(e) => setSignatureCompany(e.target.value)}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 placeholder="Your company name"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Date *</label>
+              <label className="block text-sm font-medium text-text mb-1">Date *</label>
               <input
                 type="date"
                 value={signatureDate}
                 onChange={(e) => setSignatureDate(e.target.value)}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-blue/50"
+                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
               />
             </div>
           </div>
@@ -224,14 +224,14 @@ export default function NDASigningPage() {
           <button
             onClick={handleSign}
             disabled={submitting}
-            className="flex-1 bg-navy text-white rounded-md py-3 font-medium hover:bg-slate-blue transition-colors disabled:opacity-50"
+            className="flex-1 bg-primary text-white rounded-md py-3 font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
           >
             {submitting ? "Signing..." : "Sign NDA"}
           </button>
           <button
             onClick={handleDecline}
             disabled={submitting}
-            className="px-6 py-3 bg-white border border-border-gray text-text-secondary rounded-md font-medium hover:bg-light-gray transition-colors disabled:opacity-50"
+            className="px-6 py-3 bg-surface-alt border border-border-gray text-text-secondary rounded-md font-medium hover:bg-bg-alt transition-colors disabled:opacity-50"
           >
             Decline NDA
           </button>

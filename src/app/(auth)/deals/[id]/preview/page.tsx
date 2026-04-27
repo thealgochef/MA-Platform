@@ -69,7 +69,7 @@ export default function DealPreviewPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading preview...</p>
       </main>
     );
@@ -77,14 +77,14 @@ export default function DealPreviewPage() {
 
   if (!deal) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <p className="text-error">Deal not found.</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-3xl mx-auto px-4">
         {/* Preview Banner */}
         <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-6 flex items-center justify-between">
@@ -93,14 +93,14 @@ export default function DealPreviewPage() {
             <p className="text-xs text-text-secondary">This is how buyers will see your deal listing.</p>
           </div>
           <div className="flex gap-2">
-            <a href={`/deals/${dealId}/edit`} className="px-3 py-1 bg-white border border-border-gray text-text-primary rounded-md text-sm hover:bg-light-gray">
+            <a href={`/deals/${dealId}/edit`} className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-md text-sm hover:bg-bg-alt">
               Edit
             </a>
             {deal.status === "draft" && (
               <button
                 onClick={handlePublish}
                 disabled={publishing}
-                className="px-4 py-1 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue disabled:opacity-50"
+                className="px-4 py-1 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover disabled:opacity-50"
               >
                 {publishing ? "Publishing..." : "Publish"}
               </button>
@@ -113,9 +113,9 @@ export default function DealPreviewPage() {
         )}
 
         {/* Deal Card — Buyer View */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-surface-alt rounded-lg shadow-md p-6">
           <div className="flex items-start justify-between mb-4">
-            <h1 className="text-xl font-bold text-navy">{deal.headline}</h1>
+            <h1 className="text-xl font-bold text-primary">{deal.headline}</h1>
             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
               deal.status === "draft" ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
             }`}>
@@ -149,23 +149,23 @@ export default function DealPreviewPage() {
           </div>
 
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-text-primary mb-2">About the Business</h3>
+            <h3 className="text-sm font-medium text-text mb-2">About the Business</h3>
             <p className="text-sm text-text-secondary whitespace-pre-wrap">{deal.description}</p>
           </div>
 
           {/* Financials summary */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-text-primary mb-2">Financials</h3>
+            <h3 className="text-sm font-medium text-text mb-2">Financials</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-light-gray rounded-md p-3">
+              <div className="bg-bg-alt rounded-md p-3">
                 <p className="text-xs text-text-secondary">Revenue (Last Year)</p>
-                <p className="text-lg font-bold text-navy">
+                <p className="text-lg font-bold text-primary">
                   {deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}
                 </p>
               </div>
-              <div className="bg-light-gray rounded-md p-3">
+              <div className="bg-bg-alt rounded-md p-3">
                 <p className="text-xs text-text-secondary">EBITDA (Last Year)</p>
-                <p className="text-lg font-bold text-navy">
+                <p className="text-lg font-bold text-primary">
                   {deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) : "—"}
                 </p>
               </div>
@@ -174,7 +174,7 @@ export default function DealPreviewPage() {
 
           {/* Teaser info */}
           {deal.teaser_document_path && (
-            <div className="bg-light-gray rounded-md p-3">
+            <div className="bg-bg-alt rounded-md p-3">
               <p className="text-sm font-medium">Teaser Available</p>
               <p className="text-xs text-text-secondary">Download the teaser document for more details.</p>
             </div>

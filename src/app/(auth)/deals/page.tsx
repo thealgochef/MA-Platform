@@ -43,7 +43,7 @@ export default function DealsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-light-gray p-8">
+      <div className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading deals...</p>
       </div>
     );
@@ -57,13 +57,13 @@ export default function DealsPage() {
   const statuses = Array.from(new Set(deals.map((d) => d.status)));
 
   return (
-    <div className="min-h-screen bg-light-gray py-8">
+    <div className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-navy">My Deals</h1>
+          <h1 className="text-2xl font-bold text-primary">My Deals</h1>
           <Link
             href="/deals/new"
-            className="px-4 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue transition-colors"
+            className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
           >
             New Deal
           </Link>
@@ -82,8 +82,8 @@ export default function DealsPage() {
               onClick={() => setFilter("all")}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 filter === "all"
-                  ? "bg-navy text-white"
-                  : "bg-white text-text-secondary border border-border-gray hover:bg-light-gray"
+                  ? "bg-primary text-white"
+                  : "bg-surface-alt text-text-secondary border border-border-gray hover:bg-bg-alt"
               }`}
             >
               All ({deals.length})
@@ -94,8 +94,8 @@ export default function DealsPage() {
                 onClick={() => setFilter(s)}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                   filter === s
-                    ? "bg-navy text-white"
-                    : "bg-white text-text-secondary border border-border-gray hover:bg-light-gray"
+                    ? "bg-primary text-white"
+                    : "bg-surface-alt text-text-secondary border border-border-gray hover:bg-bg-alt"
                 }`}
               >
                 {DEAL_STATUS_LABELS[s] || s} ({deals.filter((d) => d.status === s).length})
@@ -105,20 +105,20 @@ export default function DealsPage() {
         )}
 
         {deals.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center">
             <p className="text-text-secondary mb-4">You haven&apos;t created any deals yet.</p>
             <Link
               href="/deals/new"
-              className="inline-block px-6 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue transition-colors"
+              className="inline-block px-6 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
             >
               Create Your First Deal
             </Link>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+          <div className="bg-surface-alt rounded-lg shadow-md overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border-gray bg-light-gray">
+                <tr className="border-b border-border-gray bg-bg-alt">
                   <th className="px-4 py-3 text-left font-medium text-text-secondary">Project Name</th>
                   <th className="px-4 py-3 text-left font-medium text-text-secondary">Headline</th>
                   <th className="px-4 py-3 text-left font-medium text-text-secondary">Industry</th>
@@ -130,11 +130,11 @@ export default function DealsPage() {
               </thead>
               <tbody>
                 {filtered.map((deal) => (
-                  <tr key={deal.id} className="border-t border-border-gray hover:bg-light-gray">
+                  <tr key={deal.id} className="border-t border-border-gray hover:bg-bg-alt">
                     <td className="px-4 py-3">
                       <Link
                         href={`/deals/${deal.id}`}
-                        className="font-medium text-navy hover:underline"
+                        className="font-medium text-primary hover:underline"
                       >
                         {deal.project_name}
                       </Link>

@@ -42,20 +42,20 @@ export default function ProjectsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-light-gray p-8">
+      <div className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading projects...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-light-gray py-8">
+    <div className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-navy">My Projects</h1>
+          <h1 className="text-2xl font-bold text-primary">My Projects</h1>
           <Link
             href="/projects/new"
-            className="px-4 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue transition-colors"
+            className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
           >
             New Project
           </Link>
@@ -68,13 +68,13 @@ export default function ProjectsPage() {
         )}
 
         {projects.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center">
             <p className="text-text-secondary mb-4">
               Create your first acquisition project to start matching with deals.
             </p>
             <Link
               href="/projects/new"
-              className="inline-block px-6 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-slate-blue transition-colors"
+              className="inline-block px-6 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
             >
               Create Project
             </Link>
@@ -85,9 +85,9 @@ export default function ProjectsPage() {
               <Link
                 key={project.id}
                 href={`/projects/${project.id}`}
-                className="bg-white rounded-lg shadow-md p-5 hover:shadow-lg transition-shadow block"
+                className="bg-surface-alt rounded-lg shadow-md p-5 hover:shadow-lg transition-shadow block"
               >
-                <h3 className="font-semibold text-navy mb-2">{project.name}</h3>
+                <h3 className="font-semibold text-primary mb-2">{project.name}</h3>
                 <div className="space-y-1 text-xs text-text-secondary">
                   {project.industry && <p>Industry: {project.industry}</p>}
                   {project.location && <p>Location: {project.location}</p>}
@@ -120,7 +120,7 @@ export default function ProjectsPage() {
                       {project.keywords.map((kw) => (
                         <span
                           key={kw}
-                          className="px-2 py-0.5 bg-light-gray rounded-full text-xs text-text-secondary"
+                          className="px-2 py-0.5 bg-bg-alt rounded-full text-xs text-text-secondary"
                         >
                           {kw}
                         </span>

@@ -123,20 +123,29 @@ export default function BrowseDealsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-6xl mx-auto px-4">
-        <h1 className="text-2xl font-bold text-navy mb-6">Browse All Deals</h1>
+        <h1 className="text-2xl font-bold text-primary mb-6">Browse All Deals</h1>
 
         {/* Filter Bar */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div className="bg-surface-alt rounded-lg shadow-md p-4 mb-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+
             <select
               value={filters.industry}
               onChange={(e) => setFilters({ ...filters, industry: e.target.value })}
-              className="border border-border-gray rounded-md px-3 py-2 text-sm"
+              className="border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary"
             >
               <option value="">All Industries</option>
               {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+            </select>
+
+            <select
+              value={filters.location}
+              onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+              className="border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary">
+              <option value="">All Locations</option>
+              {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
 
             <input
@@ -144,7 +153,7 @@ export default function BrowseDealsPage() {
               placeholder="Revenue Min"
               value={filters.revenueMin}
               onChange={(e) => setFilters({ ...filters, revenueMin: e.target.value })}
-              className="border border-border-gray rounded-md px-3 py-2 text-sm"
+              className="border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
             />
 
             <input
@@ -152,24 +161,15 @@ export default function BrowseDealsPage() {
               placeholder="Revenue Max"
               value={filters.revenueMax}
               onChange={(e) => setFilters({ ...filters, revenueMax: e.target.value })}
-              className="border border-border-gray rounded-md px-3 py-2 text-sm"
+              className="border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
             />
-
-            <select
-              value={filters.location}
-              onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-              className="border border-border-gray rounded-md px-3 py-2 text-sm"
-            >
-              <option value="">All Locations</option>
-              {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
 
             <input
               type="number"
               placeholder="EBITDA Min"
               value={filters.ebitdaMin}
               onChange={(e) => setFilters({ ...filters, ebitdaMin: e.target.value })}
-              className="border border-border-gray rounded-md px-3 py-2 text-sm"
+              className="border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
             />
 
             <input
@@ -177,7 +177,7 @@ export default function BrowseDealsPage() {
               placeholder="EBITDA Max"
               value={filters.ebitdaMax}
               onChange={(e) => setFilters({ ...filters, ebitdaMax: e.target.value })}
-              className="border border-border-gray rounded-md px-3 py-2 text-sm"
+              className="border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
             />
 
             <input
@@ -185,7 +185,7 @@ export default function BrowseDealsPage() {
               placeholder="Keyword search"
               value={filters.keyword}
               onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-              className="border border-border-gray rounded-md px-3 py-2 text-sm"
+              className="border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
             />
           </div>
         </div>
@@ -194,10 +194,10 @@ export default function BrowseDealsPage() {
         {loading ? (
           <p className="text-text-secondary">Loading deals...</p>
         ) : (
-          <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+          <div className="bg-surface-alt rounded-lg shadow-md overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border-gray bg-light-gray">
+                <tr className="border-b border-border-gray bg-bg-alt">
                   <th className="px-4 py-3 text-left font-medium text-text-secondary">Headline</th>
                   <th className="px-4 py-3 text-left font-medium text-text-secondary">Industry</th>
                   <th className="px-4 py-3 text-left font-medium text-text-secondary">Geography</th>
@@ -215,7 +215,7 @@ export default function BrowseDealsPage() {
 
                   return (
                     <tr key={deal.id} className={`border-t border-border-gray ${notClickable ? "opacity-60" : ""}`}>
-                      <td className="px-4 py-3 font-medium text-navy">{deal.headline}</td>
+                      <td className="px-4 py-3 font-medium text-primary">{deal.headline}</td>
                       <td className="px-4 py-3 text-text-secondary">{deal.industry}</td>
                       <td className="px-4 py-3 text-text-secondary">{getGeography(deal) || "—"}</td>
                       <td className="px-4 py-3">{deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}</td>
@@ -239,14 +239,14 @@ export default function BrowseDealsPage() {
                             <button
                               onClick={() => handlePursue(deal.id)}
                               disabled={actionLoading === deal.id}
-                              className="px-3 py-1 bg-navy text-white rounded text-xs font-medium hover:bg-slate-blue disabled:opacity-50"
+                              className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
                             >
                               Pursue
                             </button>
                             <button
                               onClick={() => handleDecline(deal.id)}
                               disabled={actionLoading === deal.id}
-                              className="px-3 py-1 bg-white border border-border-gray text-text-secondary rounded text-xs hover:bg-light-gray disabled:opacity-50"
+                              className="px-3 py-1 bg-surface-alt border border-border-gray text-text-secondary rounded text-xs hover:bg-bg-alt disabled:opacity-50"
                             >
                               Decline
                             </button>
@@ -255,12 +255,12 @@ export default function BrowseDealsPage() {
                           <button
                             onClick={() => handlePursue(deal.id)}
                             disabled={actionLoading === deal.id}
-                            className="px-3 py-1 bg-navy text-white rounded text-xs font-medium hover:bg-slate-blue disabled:opacity-50"
+                            className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
                           >
                             Pursue
                           </button>
                         ) : (
-                          <span className="text-xs text-slate-blue capitalize">
+                          <span className="text-xs text-secondary capitalize">
                             {deal.engagement?.stage.replace(/_/g, " ")}
                           </span>
                         )}
@@ -285,7 +285,7 @@ export default function BrowseDealsPage() {
             <button
               onClick={loadMore}
               disabled={loadingMore}
-              className="px-6 py-2 bg-white border border-border-gray rounded-md text-sm hover:bg-light-gray disabled:opacity-50"
+              className="px-6 py-2 bg-surface-alt border border-border-gray rounded-md text-sm hover:bg-bg-alt disabled:opacity-50"
             >
               {loadingMore ? "Loading..." : "Load More"}
             </button>

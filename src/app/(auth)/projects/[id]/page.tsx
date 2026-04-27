@@ -107,7 +107,7 @@ export default function ProjectDealFeedPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-light-gray p-8">
+      <main className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading deals...</p>
       </main>
     );
@@ -118,25 +118,25 @@ export default function ProjectDealFeedPage() {
   };
 
   return (
-    <main className="min-h-screen bg-light-gray py-8">
+    <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-navy">{project?.name || "Project"}</h1>
+            <h1 className="text-2xl font-bold text-primary">{project?.name || "Project"}</h1>
             <p className="text-sm text-text-secondary">
               {deals.length} matched deal{deals.length !== 1 ? "s" : ""}
             </p>
           </div>
           <div className="flex gap-2">
-            <a href={`/projects/${projectId}/edit`} className="px-3 py-1 bg-white border border-border-gray text-text-primary rounded-md text-sm hover:bg-light-gray">Edit</a>
-            <a href="/dashboard" className="text-sm text-slate-blue hover:underline self-center">Dashboard</a>
+            <a href={`/projects/${projectId}/edit`} className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-md text-sm hover:bg-bg-alt">Edit</a>
+            <a href="/dashboard" className="text-sm text-secondary hover:underline self-center">Dashboard</a>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+        <div className="bg-surface-alt rounded-lg shadow-md overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border-gray bg-light-gray">
+              <tr className="border-b border-border-gray bg-bg-alt">
                 <th className="px-4 py-3 text-left font-medium text-text-secondary">Headline</th>
                 <th className="px-4 py-3 text-left font-medium text-text-secondary">Industry</th>
                 <th className="px-4 py-3 text-left font-medium text-text-secondary">Geography</th>
@@ -153,7 +153,7 @@ export default function ProjectDealFeedPage() {
 
                 return (
                   <tr key={deal.id} className={`border-t border-border-gray ${isDeclined ? "opacity-60" : ""}`}>
-                    <td className="px-4 py-3 font-medium text-navy">{deal.headline}</td>
+                    <td className="px-4 py-3 font-medium text-primary">{deal.headline}</td>
                     <td className="px-4 py-3 text-text-secondary">{deal.industry}</td>
                     <td className="px-4 py-3 text-text-secondary">{getGeography(deal) || "—"}</td>
                     <td className="px-4 py-3">{deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}</td>
@@ -163,7 +163,7 @@ export default function ProjectDealFeedPage() {
                         {DEAL_STATUS_LABELS[deal.status] || deal.status}
                       </span>
                       {deal.engagement && (
-                        <span className="ml-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-blue/10 text-slate-blue capitalize">
+                        <span className="ml-1 px-2 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary capitalize">
                           {deal.engagement.stage.replace(/_/g, " ")}
                         </span>
                       )}
@@ -174,14 +174,14 @@ export default function ProjectDealFeedPage() {
                           <button
                             onClick={() => handlePursue(deal.id)}
                             disabled={actionLoading === deal.id}
-                            className="px-3 py-1 bg-navy text-white rounded text-xs font-medium hover:bg-slate-blue disabled:opacity-50"
+                            className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
                           >
                             Pursue
                           </button>
                           <button
                             onClick={() => handleDecline(deal.id)}
                             disabled={actionLoading === deal.id}
-                            className="px-3 py-1 bg-white border border-border-gray text-text-secondary rounded text-xs hover:bg-light-gray disabled:opacity-50"
+                            className="px-3 py-1 bg-surface-alt border border-border-gray text-text-secondary rounded text-xs hover:bg-bg-alt disabled:opacity-50"
                           >
                             Decline
                           </button>
@@ -191,7 +191,7 @@ export default function ProjectDealFeedPage() {
                         <button
                           onClick={() => handlePursue(deal.id)}
                           disabled={actionLoading === deal.id}
-                          className="px-3 py-1 bg-navy text-white rounded text-xs font-medium hover:bg-slate-blue disabled:opacity-50"
+                          className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
                         >
                           Pursue
                         </button>
@@ -216,7 +216,7 @@ export default function ProjectDealFeedPage() {
             <button
               onClick={loadMore}
               disabled={loadingMore}
-              className="px-6 py-2 bg-white border border-border-gray rounded-md text-sm hover:bg-light-gray disabled:opacity-50"
+              className="px-6 py-2 bg-surface-alt border border-border-gray rounded-md text-sm hover:bg-bg-alt disabled:opacity-50"
             >
               {loadingMore ? "Loading..." : "Load More"}
             </button>

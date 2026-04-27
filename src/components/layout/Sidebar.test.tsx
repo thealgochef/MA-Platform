@@ -63,14 +63,14 @@ describe("Sidebar", () => {
     mockPathname.mockReturnValue("/dashboard");
     render(<Sidebar userName="John Doe" userRole="buyer" />);
     const link = screen.getByRole("link", { name: /dashboard/i });
-    expect(link.className).toMatch(/bg-slate-blue|bg-white\/10/);
+    expect(link.className).toMatch(/bg-surface-alt\/10|bg-secondary/);
   });
 
   it("highlights active link for nested routes", () => {
     mockPathname.mockReturnValue("/deals/abc-123/edit");
     render(<Sidebar userName="John Doe" userRole="broker" />);
     const link = screen.getByRole("link", { name: /my deals/i });
-    expect(link.className).toMatch(/bg-slate-blue|bg-white\/10/);
+    expect(link.className).toMatch(/bg-surface-alt\/10|bg-secondary/);
   });
 
   // ─── Buyer-specific items ─────────────────────────────────

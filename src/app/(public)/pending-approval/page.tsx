@@ -2,11 +2,12 @@ import Link from "next/link";
 
 export default function PendingApprovalPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-light-gray">
-      <div className="bg-white rounded-lg shadow-md p-8 w-full max-w-lg text-center">
-        <div className="w-16 h-16 bg-info/10 rounded-full flex items-center justify-center mx-auto mb-6">
+    <main className="min-h-screen flex items-center justify-center bg-surface text-text">
+      <div className="bg-bg rounded-xl shadow-md p-8 w-full max-w-lg text-center">
+
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg
-            className="w-8 h-8 text-info"
+            className="w-8 h-8 text-green-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -19,21 +20,25 @@ export default function PendingApprovalPage() {
             />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-navy mb-4">
+
+        <h1 className="text-3xl font-bold font-display text-primary mb-4">
           Application Received
         </h1>
-        <p className="text-text-secondary mb-6">
+
+        <p className="mb-6">
           All prospective buyers are carefully reviewed to maintain deal confidentiality and the integrity of our network. You can expect a decision within 24 hours.
         </p>
-        <p className="text-text-secondary text-sm mb-8">
-          We&apos;ll send you an email once your application has been reviewed.
+        <p className="text-sm mb-8">
+          We&apos;ll send you an email once a decision has been made.
         </p>
+
         <Link
           href="/"
-          className="text-slate-blue hover:text-navy font-medium text-sm"
+          className="text-md font-medium text-primary hover:text-secondary"
         >
           Return to homepage
         </Link>
+
       </div>
     </main>
   );
