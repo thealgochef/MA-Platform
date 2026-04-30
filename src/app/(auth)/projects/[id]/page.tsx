@@ -170,7 +170,7 @@ export default function ProjectDealFeedPage() {
                 return (
                   <tr
                     key={deal.id}
-                    className={`border-t border-border-gray cursor-pointer ${isDeclined ? "opacity-60" : ""}`}
+                    className={`border-t border-border-gray cursor-pointer transition-colors hover:bg-border-gray ${isDeclined ? "opacity-60" : ""}`}
                     onClick={() => navigateToDeal(deal.id)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -184,7 +184,7 @@ export default function ProjectDealFeedPage() {
                   >
 
                     {/* Headline, industry, geography, revenue, EBITDA */}
-                    <td className="px-4 py-3 font-medium text-primary">{deal.headline}</td>
+                    <td className="px-4 py-3 font-medium text-primary hover:underline">{deal.headline}</td>
                     <td className="px-4 py-3 text-text-secondary">{deal.industry}</td>
                     <td className="px-4 py-3 text-text-secondary">{getGeography(deal) || "—"}</td>
                     <td className="px-4 py-3">{deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}</td>

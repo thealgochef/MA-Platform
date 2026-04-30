@@ -279,7 +279,7 @@ export default function BrokerDealManagement() {
             <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
               <h2 className="text-lg font-semibold text-text">Delete deal?</h2>
               <p className="mt-2 text-sm text-text-secondary">
-                This action cannot be undone. This will permanently delete this deal and it&apos;s related records.
+                This action cannot be undone. This will permanently delete this deal and its related records.
               </p>
               {deleteError && (
                 <p className="mt-3 rounded-md border border-error/20 bg-error/10 px-3 py-2 text-sm text-error">
