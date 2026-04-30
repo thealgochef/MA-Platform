@@ -178,6 +178,61 @@ describe("Phase 3: Deal Creation & Management", () => {
       expect(content).toContain("export async function DELETE");
       expect(content).toContain("Failed to delete deal");
     });
+
+    it("deal DELETE route should use admin client to verify broker ownership", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "route.ts"),
+        "utf-8"
+      );
+      // Must use the admin client (not the user-scoped client) for profile and deal checks
+      expect(content).toContain("createAdminClient");
+      expect(content).toContain("adminClient");
+      // Must enforce broker + approved status
+      expect(content).toContain('role !== "broker"');
+      expect(content).toContain('status !== "approved"');
+      // Must confirm the deal belongs to the broker's firm before deleting
+      expect(content).toContain("deal.firm_id !== profile.firm_id");
+    });
+
+    it("deal DELETE route should remove associated storage files before deleting the record", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "route.ts"),
+        "utf-8"
+      );
+      // Must collect paths from the three document columns on the deal row
+      expect(content).toContain("teaser_document_path");
+      expect(content).toContain("cim_document_path");
+      expect(content).toContain("nda_document_path");
+      // Must also collect paths from the deal_documents table
+      expect(content).toContain('"deal_documents"');
+      expect(content).toContain("file_path");
+      // Must call storage.remove on the deal-documents bucket
+      expect(content).toContain('"deal-documents"');
+      expect(content).toContain(".remove(storagePaths)");
+      // Storage removal must happen before the deal record is deleted
+      const storageRemoveIndex = content.indexOf(".remove(storagePaths)");
+      const dealDeleteIndex = content.indexOf("deleteError");
+      expect(storageRemoveIndex).toBeLessThan(dealDeleteIndex);
+    });
+
+    it("deal PATCH route should advance pending_review engagements to nda_pending when ndaVettingPreference switches to auto", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "route.ts"),
+        "utf-8"
+      );
+      // The logic must only trigger when switching to "auto"
+      expect(content).toContain('ndaVettingPreference === "auto"');
+      // It must update the deal_engagements table
+      expect(content).toContain('"deal_engagements"');
+      // It must advance stage from "pursued" to "nda_pending"
+      expect(content).toContain('"pursued"');
+      expect(content).toContain('"nda_pending"');
+      // It must only target engagements still awaiting manual review
+      expect(content).toContain('"pending_review"');
+      // It must approve vetting and mark NDA as sent
+      expect(content).toContain('"sent"');
+      expect(content).toContain('"approved"');
+    });
   });
 
   describe("Deal Pages", () => {
