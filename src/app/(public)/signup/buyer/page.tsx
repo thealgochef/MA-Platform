@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { INDUSTRIES, BUYER_TYPES } from "@/lib/constants";
+import { INDUSTRIES, BUYER_TYPES, ACCREDITATIONS} from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 
 export default function BuyerSignupPage() {
@@ -21,6 +21,7 @@ export default function BuyerSignupPage() {
     location: "",
     firmType: "",
     firmDescription: "",
+    accreditation: "",
     industryFocus: [] as string[],
     aum: "",
     otherMembers: "",
@@ -313,6 +314,27 @@ export default function BuyerSignupPage() {
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
               Credentials & Accreditations
             </p>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Basis for Accreditation *
+              </label>
+              <select
+                required
+                value={formData.accreditation}
+                onChange={(e) =>
+                  setFormData({ ...formData, accreditation: e.target.value })
+                }
+                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+              >
+                <option value="">Select basis for accreditation</option>
+                {ACCREDITATIONS.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
               Focus

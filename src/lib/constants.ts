@@ -68,6 +68,14 @@ export const BUYER_TYPES = [
   { value: "other", label: "Other" },
 ] as const;
 
+export const ACCREDITATIONS = [
+  { value: "income", label: "My income exceeds $200K annually (or $300K with spouse)" },
+  { value: "net_worth", label: "My net worth exceeds $1M (excluding primary residence)" },
+  { value: "entity", label: "I represent a qualified entity (trust, fund, or institution with $5M+ in assets)" },
+  { value: "professional", label: "I hold a FINRA Series 7, 65, or 82 license in good standing" },
+  { value: "none", label: "I am not an accredited investor" },
+] as const;
+
 export const DEAL_STATUSES = [
   "draft",
   "accepting_iois",

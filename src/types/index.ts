@@ -1,6 +1,7 @@
 export type UserRole = "broker" | "buyer" | "admin";
 export type UserStatus = "pending" | "approved" | "rejected" | "suspended" | "banned";
 export type BuyerType = "family_office" | "pe" | "vc" | "search_fund" | "independent_sponsor" | "holding_company" | "ma_advisor" | "individual_investor" | "other";
+export type BuyerAccreditation = "income" | "net_worth" | "entity" | "professional" | "none";
 export type FirmType = "broker" | "buyer";
 
 export type DealStatus = "draft" | "accepting_iois" | "accepting_lois" | "under_loi" | "paused" | "closed" | "terminated";
@@ -36,6 +37,7 @@ export interface User {
   title?: string;
   location?: string;
   buyer_type?: BuyerType;
+  accreditation?: BuyerAccreditation;
   aum?: string;
   license_credentials?: string;
   deal_types?: string;

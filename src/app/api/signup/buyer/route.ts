@@ -70,6 +70,7 @@ export async function POST(request: Request) {
         status: "approved", // ⚠️ DEV-ONLY: change back to "pending" for production
         location: data.location,
         buyer_type: data.firmType,
+        accreditation: data.accreditation,
         aum: data.aum,
         industry_focus: data.industryFocus,
         membership_agreement_signed: true,

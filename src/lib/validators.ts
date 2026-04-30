@@ -36,6 +36,7 @@ export const buyerSignupSchema = z.object({
   location: z.string().min(1, "Location is required"),
   firmType: z.enum(["family_office", "pe", "vc", "search_fund", "independent_sponsor", "holding_company", "ma_advisor", "individual_investor", "other"]),
   firmDescription: z.string().min(1, "Firm description is required"),
+  accreditation: z.enum(["income", "net_worth", "entity", "professional", "none"]),
   industryFocus: z.array(z.string()).min(1, "Select at least one industry"),
   aum: z.string().min(1, "Assets under management is required"),
   otherMembers: z.string().optional(),

@@ -32,6 +32,7 @@ CREATE TABLE users (
   linkedin text,
   location text,
   buyer_type text CHECK (buyer_type IN ('pe', 'independent_sponsor', 'family_office', 'search_fund', 'private_investor', 'other')),
+  accreditation text CHECK (accreditation IN ('income', 'net_worth', 'entity', 'professional', 'none')),
   aum text,
   license_credentials text,
   deal_types text,

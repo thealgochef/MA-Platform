@@ -228,6 +228,7 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
         location: "Chicago",
         firmType: "pe" as const,
         firmDescription: "Private equity firm",
+        accreditation: "income" as const,
         industryFocus: ["Healthcare"],
         aum: "$500M",
         membershipAgreementSigned: true as const,
