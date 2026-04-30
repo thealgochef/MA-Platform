@@ -107,16 +107,20 @@ export const VALID_DEAL_TRANSITIONS: Record<string, string[]> = {
 };
 
 export const ENGAGEMENT_STAGES = [
-  "pursued",
+  // pre-nda stages
+  "declined",
+  "pursued", 
+  // nda stage
   "nda_pending",
   "nda_signed",
+  // post-nda stages
   "reviewing",
+  "passed",
   "ioi_submitted",
   "loi_submitted",
   "diligence",
+  // end stages
   "closed",
-  "passed",
-  "declined",
   "terminated",
 ] as const;
 

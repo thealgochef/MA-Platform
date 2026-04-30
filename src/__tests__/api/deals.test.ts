@@ -159,6 +159,16 @@ describe("Phase 3: Deal Creation & Management", () => {
       expect(content).toContain("deal_engagements");
       expect(content).toContain("users");
     });
+
+    it("deal detail route should return the current buyer engagement", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain("deal_engagements");
+      expect(content).toContain("buyer_user_id");
+      expect(content).toContain("engagement: engagement ?? null");
+    });
   });
 
   describe("Deal Pages", () => {

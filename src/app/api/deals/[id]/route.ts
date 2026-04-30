@@ -23,7 +23,14 @@ export async function GET(
     return NextResponse.json({ error: "Deal not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ deal });
+  const { data: engagement } = await supabase
+    .from("deal_engagements")
+    .select("id, stage, nda_status, cim_released")
+    .eq("deal_id", params.id)
+    .eq("buyer_user_id", user.id)
+    .maybeSingle();
+
+  return NextResponse.json({ deal, engagement: engagement ?? null });
 }
 
 export async function PATCH(
@@ -124,6 +131,21 @@ export async function PATCH(
 
     if (error) {
       return NextResponse.json({ error: "Failed to update deal" }, { status: 500 });
+    }
+
+    // When vetting preference is switched to auto, advance any engagements that are
+    // still awaiting manual review so the NDA is sent immediately.
+    if (data.ndaVettingPreference === "auto") {
+      await supabase
+        .from("deal_engagements")
+        .update({
+          stage: "nda_pending",
+          nda_status: "sent",
+          vetting_status: "approved",
+        })
+        .eq("deal_id", params.id)
+        .eq("stage", "pursued")
+        .eq("nda_status", "pending_review");
     }
 
     await supabase.from("deal_activity_log").insert({
