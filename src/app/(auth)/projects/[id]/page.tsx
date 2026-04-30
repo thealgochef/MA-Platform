@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 
@@ -33,6 +33,7 @@ interface Project {
 
 export default function ProjectDealFeedPage() {
   const params = useParams();
+  const router = useRouter();
   const projectId = params.id as string;
   const [project, setProject] = useState<Project | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -117,9 +118,15 @@ export default function ProjectDealFeedPage() {
     return deal.geography_display === "state" ? deal.state : deal.region;
   };
 
+  const navigateToDeal = (dealId: string) => {
+    router.push(`/deals/${dealId}`);
+  };
+
   return (
     <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-6xl mx-auto px-4">
+
+        {/* Header with project name, deal count, and action buttons */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-primary">{project?.name || "Project"}</h1>
@@ -127,12 +134,21 @@ export default function ProjectDealFeedPage() {
               {deals.length} matched deal{deals.length !== 1 ? "s" : ""}
             </p>
           </div>
+
+          <div className="flex gap-2">
+            <a href={`/projects/`} className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-2xl text-sm hover:text-bg-alt hover:bg-primary hover:border-primary hover:border-1">Matches</a>
+            <a href={`/projects/`} className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-2xl text-sm hover:text-bg-alt hover:bg-primary hover:border-primary hover:border-1">Similar</a>
+            <a href={`/projects/`} className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-2xl text-sm hover:text-bg-alt hover:bg-primary hover:border-primary hover:border-1">Active</a>
+            <a href={`/projects/`} className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-2xl text-sm hover:text-bg-alt hover:bg-primary hover:border-primary hover:border-1">Archived</a>
+          </div>
+
           <div className="flex gap-2">
             <a href={`/projects/${projectId}/edit`} className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-md text-sm hover:bg-bg-alt">Edit</a>
-            <a href="/dashboard" className="text-sm text-secondary hover:underline self-center">Dashboard</a>
+            <a href="/dashboard" className="text-sm text-secondary hover:underline hover:text-primary self-center">Dashboard</a>
           </div>
         </div>
 
+        {/* Deals table */}
         <div className="bg-surface-alt rounded-lg shadow-md overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -152,34 +168,60 @@ export default function ProjectDealFeedPage() {
                 const isDeclined = deal.engagement?.stage === "declined";
 
                 return (
-                  <tr key={deal.id} className={`border-t border-border-gray ${isDeclined ? "opacity-60" : ""}`}>
+                  <tr
+                    key={deal.id}
+                    className={`border-t border-border-gray cursor-pointer ${isDeclined ? "opacity-60" : ""}`}
+                    onClick={() => navigateToDeal(deal.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        navigateToDeal(deal.id);
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Open match ${deal.headline}`}
+                  >
+
+                    {/* Headline, industry, geography, revenue, EBITDA */}
                     <td className="px-4 py-3 font-medium text-primary">{deal.headline}</td>
                     <td className="px-4 py-3 text-text-secondary">{deal.industry}</td>
                     <td className="px-4 py-3 text-text-secondary">{getGeography(deal) || "—"}</td>
                     <td className="px-4 py-3">{deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}</td>
-                    <td className="px-4 py-3">{deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) : "—"}</td>
+                    <td className="px-4 py-3">{deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) : "—"} 
+                    </td>
+
+                    {/* Status with engagement stage if applicable */}
                     <td className="px-4 py-3">
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
                         {DEAL_STATUS_LABELS[deal.status] || deal.status}
                       </span>
                       {deal.engagement && (
-                        <span className="ml-1 px-2 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary capitalize">
+                        <span className="ml-1 px-2 py-1 rounded-full text-xs font-medium bg-subtle text-primary capitalize">
                           {deal.engagement.stage.replace(/_/g, " ")}
                         </span>
                       )}
                     </td>
+
+                    {/* Actions: Pursue/Decline buttons based on engagement status */}
                     <td className="px-4 py-3">
-                      {!isEngaged && (
+                      {!isEngaged && !isDeclined && (
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handlePursue(deal.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handlePursue(deal.id);
+                            }}
                             disabled={actionLoading === deal.id}
                             className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
                           >
                             Pursue
                           </button>
                           <button
-                            onClick={() => handleDecline(deal.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleDecline(deal.id);
+                            }}
                             disabled={actionLoading === deal.id}
                             className="px-3 py-1 bg-surface-alt border border-border-gray text-text-secondary rounded text-xs hover:bg-bg-alt disabled:opacity-50"
                           >
@@ -189,7 +231,10 @@ export default function ProjectDealFeedPage() {
                       )}
                       {isDeclined && (
                         <button
-                          onClick={() => handlePursue(deal.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handlePursue(deal.id);
+                          }}
                           disabled={actionLoading === deal.id}
                           className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
                         >
@@ -197,6 +242,7 @@ export default function ProjectDealFeedPage() {
                         </button>
                       )}
                     </td>
+
                   </tr>
                 );
               })}
