@@ -169,6 +169,15 @@ describe("Phase 3: Deal Creation & Management", () => {
       expect(content).toContain("buyer_user_id");
       expect(content).toContain("engagement: engagement ?? null");
     });
+
+    it("deal detail route should support broker deletion", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain("export async function DELETE");
+      expect(content).toContain("Failed to delete deal");
+    });
   });
 
   describe("Deal Pages", () => {

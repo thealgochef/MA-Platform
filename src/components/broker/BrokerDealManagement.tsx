@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DEAL_STATUS_LABELS, VALID_DEAL_TRANSITIONS, BUYER_TYPES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
@@ -63,6 +63,7 @@ interface Activity {
 
 export default function BrokerDealManagement() {
   const params = useParams();
+  const router = useRouter();
   const dealId = params.id as string;
   const [deal, setDeal] = useState<Deal | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
@@ -73,6 +74,9 @@ export default function BrokerDealManagement() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusChanging, setStatusChanging] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingDeal, setDeletingDeal] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchDeal = useCallback(async () => {
     const res = await fetch(`/api/deals/${dealId}`);
@@ -149,6 +153,28 @@ export default function BrokerDealManagement() {
     fetchDocuments();
   };
 
+  const handleDeleteDeal = async () => {
+    setDeleteError(null);
+    setDeletingDeal(true);
+    try {
+      const res = await fetch(`/api/deals/${dealId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        router.push("/deals");
+        return;
+      }
+
+      const payload = await res.json().catch(() => null);
+      setDeleteError(payload?.error || "Failed to delete this deal. Please try again.");
+    } catch {
+      setDeleteError("Unable to reach the server. Please try again.");
+    } finally {
+      setDeletingDeal(false);
+    }
+  };
+
   if (loading) {
     return (
       <main className="min-h-screen bg-bg-alt p-8">
@@ -184,15 +210,18 @@ export default function BrokerDealManagement() {
   return (
     <main className="min-h-screen bg-bg-alt">
       <div className="max-w-6xl mx-auto px-4 py-8">
+        
         {/* Header */}
         <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-start justify-between">
+
             <div>
               <h1 className="text-2xl font-bold text-primary">{deal.project_name}</h1>
               <p className="text-text-secondary text-sm mt-1">{deal.headline}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+            <div className="flex items-start gap-3">
+
+              <span className={`inline-flex h-8 items-center px-3 py-1 rounded-full text-xs font-medium ${
                 deal.status === "draft" ? "bg-warning/10 text-warning" :
                 deal.status === "paused" ? "bg-warning/10 text-warning" :
                 deal.status === "terminated" ? "bg-error/10 text-error" :
@@ -201,6 +230,7 @@ export default function BrokerDealManagement() {
               }`}>
                 {DEAL_STATUS_LABELS[deal.status]}
               </span>
+
               {availableTransitions.length > 0 && (
                 <select
                   disabled={statusChanging}
@@ -208,7 +238,7 @@ export default function BrokerDealManagement() {
                   onChange={(e) => {
                     if (e.target.value) handleStatusChange(e.target.value);
                   }}
-                  className="border border-border-gray rounded-md px-2 py-1 text-sm"
+                  className="h-8 border border-border-gray rounded-md px-2 py-1 text-sm"
                 >
                   <option value="">Change status...</option>
                   {availableTransitions.map((s) => (
@@ -216,12 +246,22 @@ export default function BrokerDealManagement() {
                   ))}
                 </select>
               )}
-              <a
-                href={`/deals/${dealId}/edit`}
-                className="px-3 py-1 bg-primary text-white rounded-md text-sm hover:bg-btn-hover transition-colors"
-              >
-                Edit
-              </a>
+              
+              <div className="flex flex-col gap-2">
+                <a
+                  href={`/deals/${dealId}/edit`}
+                  className="inline-flex h-8 items-center justify-center px-3 py-1 bg-primary text-white rounded-md text-sm hover:bg-btn-hover transition-colors text-center"
+                >
+                  Edit
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="inline-flex h-8 items-center justify-center px-3 py-1 bg-error text-white rounded-md text-sm hover:opacity-90 transition-opacity"
+                >
+                  Delete
+                </button>
+              </div>
               {deal.status === "draft" && (
                 <a
                   href={`/deals/${dealId}/preview`}
@@ -233,6 +273,43 @@ export default function BrokerDealManagement() {
             </div>
           </div>
         </div>
+
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
+              <h2 className="text-lg font-semibold text-text">Delete deal?</h2>
+              <p className="mt-2 text-sm text-text-secondary">
+                This action cannot be undone. This will permanently delete this deal and it&apos;s related records.
+              </p>
+              {deleteError && (
+                <p className="mt-3 rounded-md border border-error/20 bg-error/10 px-3 py-2 text-sm text-error">
+                  {deleteError}
+                </p>
+              )}
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={deletingDeal}
+                  onClick={() => {
+                    setDeleteError(null);
+                    setShowDeleteConfirm(false);
+                  }}
+                  className="rounded-md border border-border-gray px-3 py-1.5 text-sm text-text hover:bg-bg-alt transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={deletingDeal}
+                  onClick={handleDeleteDeal}
+                  className="rounded-md bg-error px-3 py-1.5 text-sm text-white hover:opacity-90 transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {deletingDeal ? "Deleting..." : "Yes, delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="bg-surface-alt rounded-lg shadow-md mb-6">
