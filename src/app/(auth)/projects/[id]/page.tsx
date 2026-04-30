@@ -170,7 +170,7 @@ export default function ProjectDealFeedPage() {
                 return (
                   <tr
                     key={deal.id}
-                    className={`border-t border-border-gray cursor-pointer transition-colors hover:bg-border-gray ${isDeclined ? "opacity-60" : ""}`}
+                    className={`border-t border-border-gray cursor-pointer hover:bg-border-gray transition-colors ${isDeclined ? "opacity-60" : ""}`}
                     onClick={() => navigateToDeal(deal.id)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
