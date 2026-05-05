@@ -35,6 +35,7 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   title?: string;
+  avatar_path?: string;
   location?: string;
   buyer_type?: BuyerType;
   accreditation?: BuyerAccreditation;

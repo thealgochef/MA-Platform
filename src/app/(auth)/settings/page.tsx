@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import {
   INDUSTRIES,
   BUYER_TYPES,
@@ -18,6 +19,8 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState("");
   const [title, setTitle] = useState("");
+  const [avatarPath, setAvatarPath] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [location, setLocation] = useState("");
   const [industryFocus, setIndustryFocus] = useState<string[]>([]);
   const [credentials, setCredentials] = useState("");
@@ -42,6 +45,7 @@ export default function SettingsPage() {
 
   // UI state
   const [profileSaving, setProfileSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [notifSaving, setNotifSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [profileMessage, setProfileMessage] = useState("");
@@ -57,9 +61,16 @@ export default function SettingsPage() {
 
       if (profileRes.ok) {
         const { profile, firm } = await profileRes.json();
+        const supabase = createClient();
         setRole(profile.role || "");
         setFullName(profile.full_name || "");
         setTitle(profile.title || "");
+        setAvatarPath(profile.avatar_path || null);
+        setAvatarUrl(
+          profile.avatar_path
+            ? supabase.storage.from("profile-pictures").getPublicUrl(profile.avatar_path).data.publicUrl
+            : null
+        );
         setLocation(profile.location || "");
         setIndustryFocus(profile.industry_focus || []);
         setCredentials(profile.license_credentials || "");
@@ -84,6 +95,102 @@ export default function SettingsPage() {
     }
     loadData();
   }, []);
+
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setProfileMessage("Profile picture must be an image file.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileMessage("Profile picture must be 5MB or smaller.");
+      return;
+    }
+
+    setAvatarUploading(true);
+    setProfileMessage("");
+
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error("Authentication required");
+      }
+
+      const avatarStoragePath = `${user.id}/avatar`;
+      const { error: uploadError } = await supabase.storage
+        .from("profile-pictures")
+        .upload(avatarStoragePath, file, {
+          upsert: true,
+          contentType: file.type,
+        });
+
+      if (uploadError) {
+        throw new Error(uploadError.message || "Failed to upload profile picture.");
+      }
+
+      const saveResponse = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarPath: avatarStoragePath }),
+      });
+
+      if (!saveResponse.ok) {
+        throw new Error("Failed to save profile picture.");
+      }
+
+      const publicUrl = supabase.storage
+        .from("profile-pictures")
+        .getPublicUrl(avatarStoragePath).data.publicUrl;
+
+      setAvatarPath(avatarStoragePath);
+      setAvatarUrl(`${publicUrl}?t=${Date.now()}`);
+      setProfileMessage("Profile picture updated.");
+    } catch (error) {
+      setProfileMessage(
+        error instanceof Error ? error.message : "Failed to upload profile picture."
+      );
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleAvatarRemove = async () => {
+    if (!avatarPath) return;
+
+    setAvatarUploading(true);
+    setProfileMessage("");
+
+    try {
+      const res = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarPath: null }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to remove profile picture.");
+      }
+
+      setAvatarPath(null);
+      setAvatarUrl(null);
+      setProfileMessage("Profile picture removed.");
+    } catch (error) {
+      setProfileMessage(
+        error instanceof Error ? error.message : "Failed to remove profile picture."
+      );
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   const handleProfileSave = async () => {
     setProfileSaving(true);
@@ -162,6 +269,57 @@ export default function SettingsPage() {
           <h2 className="text-xl font-semibold text-primary mb-4">Edit Profile</h2>
 
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-text mb-3">
+                Profile Picture
+              </label>
+              <div className="flex flex-col gap-4 rounded-lg border border-dashed border-gray-300 p-4 sm:flex-row sm:items-center">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={`${fullName || "User"} profile picture`}
+                    className="h-20 w-20 rounded-full object-cover border border-gray-200"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-xl font-semibold text-primary">
+                    {(fullName || "User")
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <p className="text-sm text-text-secondary">
+                    Upload a square JPG, PNG, WEBP, or GIF up to 5MB.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <label className="inline-flex cursor-pointer items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-btn-hover">
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={handleAvatarChange}
+                        className="sr-only"
+                        disabled={avatarUploading}
+                      />
+                      {avatarUploading ? "Uploading..." : avatarPath ? "Replace Photo" : "Upload Photo"}
+                    </label>
+                    {avatarPath && (
+                      <button
+                        type="button"
+                        onClick={handleAvatarRemove}
+                        disabled={avatarUploading}
+                        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-text transition-colors hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        Remove Photo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-text mb-1">
                 Full Name

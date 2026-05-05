@@ -78,6 +78,15 @@ describe("Phase 9: Settings & Account Management", () => {
       expect(content).toContain('from("firms")');
     });
 
+    it("profile route should persist avatar path updates", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "settings", "profile", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain("avatarPath");
+      expect(content).toContain("avatar_path");
+    });
+
     it("profile route should require authentication", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "api", "settings", "profile", "route.ts"),
@@ -227,6 +236,16 @@ describe("Phase 9: Settings & Account Management", () => {
         "utf-8"
       );
       expect(content).toContain("Edit Profile");
+    });
+
+    it("settings page should have profile picture upload controls", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+      expect(content).toContain("Profile Picture");
+      expect(content).toContain("profile-pictures");
+      expect(content).toContain("handleAvatarChange");
     });
 
     it("settings page should have Notification Preferences section", () => {
