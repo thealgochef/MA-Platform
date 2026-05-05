@@ -201,6 +201,7 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
         dealTypes: "Lower middle market",
         industryFocus: ["Technology"],
         membershipAgreementSigned: true as const,
+        signature: "John Doe",
       };
 
       const result = brokerSignupSchema.safeParse(validData);
@@ -232,6 +233,8 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
         industryFocus: ["Healthcare"],
         aum: "$500M",
         membershipAgreementSigned: true as const,
+        signature: "Jane Smith",
+        documentPaths: [],
       };
 
       const result = buyerSignupSchema.safeParse(validData);
@@ -253,6 +256,31 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
         aum: "$500M",
         membershipAgreementSigned: false,
       });
+      expect(result.success).toBe(false);
+    });
+
+    it("should require supporting documents for individual investors", async () => {
+      const { buyerSignupSchema } = await import("@/lib/validators");
+
+      const result = buyerSignupSchema.safeParse({
+        firstName: "Jane",
+        lastName: "Smith",
+        title: "Investor",
+        phoneNumber: "(555) 987-6543",
+        linkedIn: "",
+        firmName: "Smith Capital",
+        firmWebsite: "",
+        location: "Chicago",
+        firmType: "individual_investor",
+        firmDescription: "Private investor",
+        accreditation: "income",
+        industryFocus: ["Healthcare"],
+        aum: "$10M",
+        membershipAgreementSigned: true,
+        signature: "Jane Smith",
+        documentPaths: [],
+      });
+
       expect(result.success).toBe(false);
     });
   });
