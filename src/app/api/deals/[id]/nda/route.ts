@@ -121,7 +121,7 @@ export async function POST(
     nda_status: "signed",
     stage: "nda_signed",
     nda_signed_at: new Date().toISOString(),
-    signed_nda_path: ndaPath,
+    nda_document_path: ndaPath,
   };
 
   // Auto CIM release if deal has cim_sharing_preference = 'auto'
