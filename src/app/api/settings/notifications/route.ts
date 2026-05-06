@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { settingsNotificationsUpdateSchema } from "@/lib/validators";
+import { isAuthResponse, requireUser } from "@/server/auth";
 
 export async function GET() {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const context = await requireUser();
+  if (isAuthResponse(context)) return context;
+  const { supabase, user } = context;
 
   const { data, error } = await supabase
     .from("notification_preferences")
@@ -28,24 +24,21 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const supabase = createClient();
+  const context = await requireUser();
+  if (isAuthResponse(context)) return context;
+  const { supabase, user } = context;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const body = await request.json().catch(() => null);
+  const parsed = settingsNotificationsUpdateSchema.safeParse(body);
 
-  const body = await request.json();
-  const { preferences } = body;
-
-  if (!preferences || typeof preferences !== "object") {
+  if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid preferences format" },
       { status: 400 }
     );
   }
+
+  const { preferences } = parsed.data;
 
   // Upsert notification preferences
   const { error } = await supabase

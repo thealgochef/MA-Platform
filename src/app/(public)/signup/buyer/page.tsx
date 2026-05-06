@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { INDUSTRIES, BUYER_TYPES } from "@/lib/constants";
+import { BUYER_TYPES, FILE_CONSTRAINTS, INDUSTRIES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 
 export default function BuyerSignupPage() {
@@ -50,11 +50,11 @@ export default function BuyerSignupPage() {
     const validFiles: File[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (file.type !== "application/pdf") {
+      if (!FILE_CONSTRAINTS.ALLOWED_TYPES.includes(file.type as (typeof FILE_CONSTRAINTS.ALLOWED_TYPES)[number])) {
         setError("Only PDF files are allowed");
         return;
       }
-      if (file.size > 50 * 1024 * 1024) {
+      if (file.size > FILE_CONSTRAINTS.MAX_SIZE_BYTES) {
         setError("Files must be under 50MB");
         return;
       }

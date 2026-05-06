@@ -7,13 +7,20 @@ import { Suspense } from "react";
 function LoginContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+  const invitation = searchParams.get("invitation");
 
   const handleGoogleLogin = async () => {
     const supabase = createClient();
+    const callbackUrl = new URL("/api/auth/callback", window.location.origin);
+
+    if (invitation) {
+      callbackUrl.searchParams.set("invitation", invitation);
+    }
+
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
+        redirectTo: callbackUrl.toString(),
       },
     });
   };

@@ -314,5 +314,51 @@ describe("Phase 7: Messaging", () => {
       );
       expect(content).toContain("message-attachments");
     });
+
+    it("thread page uploads attachments with a generated PDF key and preserves display name", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "messages", "[threadId]", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain("`${threadId}/${crypto.randomUUID()}.pdf`");
+      expect(content).toContain("attachmentName = attachment.name");
+      expect(content).not.toContain("Date.now()}_${attachment.name}");
+    });
+
+    it("thread route only accepts generated PDF attachment paths under the thread", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "messages", "[threadId]", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("isValidMessageAttachmentPath");
+      expect(content).toContain("UUID_PATTERN");
+      expect(content).toContain("allowedPrefixes: [threadId]");
+      expect(content).toContain("/${UUID_PATTERN}\\\\.pdf$");
+      expect(content).toContain("generated PDF key");
+    });
+
+    it("has a guarded message attachment download route preserving UI links", () => {
+      const routePath = path.join(SRC, "app", "api", "messages", "[threadId]", "attachment", "route.ts");
+      expect(fs.existsSync(routePath)).toBe(true);
+
+      const content = fs.readFileSync(routePath, "utf-8");
+      expect(content).toContain("export async function GET");
+      expect(content).toContain('searchParams.get("path")');
+      expect(content).toContain("isValidMessageAttachmentPath");
+      expect(content).toContain("allowedPrefixes: [threadId]");
+      expect(content).toContain("UUID_PATTERN");
+      expect(content).toContain('from("deal_engagements")');
+      expect(content).toContain("buyer_user_id");
+      expect(content).toContain("point_of_contact_id");
+      expect(content).toContain('role === "admin"');
+      expect(content).toContain('status === "approved"');
+      expect(content).toContain('from("messages")');
+      expect(content).toContain("attachment_path");
+      expect(content).toContain('from("message-attachments")');
+      expect(content).toContain("download(attachmentPath)");
+      expect(content).toContain("Content-Disposition");
+    });
   });
 });

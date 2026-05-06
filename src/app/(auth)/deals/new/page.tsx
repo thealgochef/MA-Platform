@@ -75,9 +75,9 @@ export default function CreateDealPage() {
     loadUser();
   }, []);
 
-  const uploadFile = async (file: File, type: string, dealId?: string) => {
+  const uploadFile = async (file: File, type: string, dealId: string) => {
     const supabase = createClient();
-    const path = `${dealId || "temp"}/${type}/${crypto.randomUUID()}.pdf`;
+    const path = `${dealId}/${type}/${crypto.randomUUID()}.pdf`;
     const { error } = await supabase.storage
       .from("deal-documents")
       .upload(path, file, { contentType: "application/pdf" });
@@ -110,21 +110,20 @@ export default function CreateDealPage() {
     setError(null);
 
     try {
-      // Upload files first
-      let teaserPath = formData.teaserDocumentPath;
-      let cimPath = formData.cimDocumentPath;
-      let ndaPath = formData.ndaDocumentPath;
+      if (publish && (!teaserFile || !cimFile)) {
+        throw new Error("CIM and teaser are required to publish");
+      }
 
-      if (teaserFile) teaserPath = await uploadFile(teaserFile, "teaser");
-      if (cimFile) cimPath = await uploadFile(cimFile, "cim");
-      if (ndaFile) ndaPath = await uploadFile(ndaFile, "nda");
+      if (publish && formData.ndaType === "custom" && !ndaFile) {
+        throw new Error("Custom NDA is required to publish");
+      }
 
       const payload = {
         ...formData,
-        teaserDocumentPath: teaserPath,
-        cimDocumentPath: cimPath,
-        ndaDocumentPath: ndaPath,
-        publish,
+        teaserDocumentPath: null,
+        cimDocumentPath: null,
+        ndaDocumentPath: null,
+        publish: false,
       };
 
       const res = await fetch("/api/deals", {
@@ -139,6 +138,45 @@ export default function CreateDealPage() {
       }
 
       const { deal } = await res.json();
+
+      let teaserPath = formData.teaserDocumentPath;
+      let cimPath = formData.cimDocumentPath;
+      let ndaPath = formData.ndaDocumentPath;
+
+      if (teaserFile) teaserPath = await uploadFile(teaserFile, "teaser", deal.id);
+      if (cimFile) cimPath = await uploadFile(cimFile, "cim", deal.id);
+      if (ndaFile) ndaPath = await uploadFile(ndaFile, "nda", deal.id);
+
+      if (teaserPath || cimPath || ndaPath) {
+        const updateRes = await fetch(`/api/deals/${deal.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            teaserDocumentPath: teaserPath,
+            cimDocumentPath: cimPath,
+            ndaDocumentPath: ndaPath,
+          }),
+        });
+
+        if (!updateRes.ok) {
+          const data = await updateRes.json();
+          throw new Error(data.error || "Failed to attach deal documents");
+        }
+      }
+
+      if (publish) {
+        const publishRes = await fetch(`/api/deals/${deal.id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newStatus: "accepting_iois" }),
+        });
+
+        if (!publishRes.ok) {
+          const data = await publishRes.json();
+          throw new Error(data.error || "Failed to publish deal");
+        }
+      }
+
       router.push(`/deals/${deal.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
