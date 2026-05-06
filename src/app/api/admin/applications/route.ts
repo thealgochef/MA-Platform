@@ -1,31 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import * as supabaseAdmin from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { notifyAdmin } from "@/lib/notifications";
+import { adminApplicationsActionSchema } from "@/lib/validators";
+import { isAuthResponse, requireRole } from "@/server/auth";
 
 export async function GET() {
-  const supabase = createClient();
+  const context = await requireRole("admin");
+  if (isAuthResponse(context)) return context;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Verify admin role
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { data: applications } = await supabase
+  const { data: applications } = await context.supabase
     .from("users")
     .select("*, firms(name, website)")
     .eq("status", "pending")
@@ -36,37 +19,22 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const supabase = createClient();
+    const context = await requireRole("admin");
+    if (isAuthResponse(context)) return context;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const body = await request.json().catch(() => null);
+    const parsed = adminApplicationsActionSchema.safeParse(body);
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Verify admin role
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile || profile.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const { userId, action } = await request.json();
-
-    if (!userId || !["approve", "reject"].includes(action)) {
+    if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid request" },
         { status: 400 }
       );
     }
 
-    const adminClient = createAdminClient();
+    const { userId, action } = parsed.data;
+
+    const adminClient = supabaseAdmin.createAdminClient();
 
     const newStatus = action === "approve" ? "approved" : "rejected";
 

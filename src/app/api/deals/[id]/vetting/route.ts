@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { notifyBuyer } from "@/lib/notifications";
+import { vettingActionSchema } from "@/lib/validators";
 
 export async function PATCH(
   request: Request,
@@ -35,12 +36,14 @@ export async function PATCH(
     return NextResponse.json({ error: "Deal not found" }, { status: 404 });
   }
 
-  const body = await request.json();
-  const { engagementId, action, reason } = body;
+  const body = await request.json().catch(() => null);
+  const parsed = vettingActionSchema.safeParse(body);
 
-  if (!engagementId || !action) {
+  if (!parsed.success) {
     return NextResponse.json({ error: "engagementId and action are required" }, { status: 400 });
   }
+
+  const { engagementId, action, reason } = parsed.data;
 
   // Fetch the engagement
   const { data: engagement } = await supabase
@@ -119,6 +122,4 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, status: "rejected" });
   }
-
-  return NextResponse.json({ error: "Invalid action. Use 'approve' or 'reject'" }, { status: 400 });
 }

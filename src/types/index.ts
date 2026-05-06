@@ -1,6 +1,8 @@
+import type { BUYER_TYPE_VALUES } from "@/lib/constants";
+
 export type UserRole = "broker" | "buyer" | "admin";
 export type UserStatus = "pending" | "approved" | "rejected" | "suspended" | "banned";
-export type BuyerType = "family_office" | "pe" | "vc" | "search_fund" | "independent_sponsor" | "holding_company" | "ma_advisor" | "individual_investor" | "other";
+export type BuyerType = (typeof BUYER_TYPE_VALUES)[number];
 export type FirmType = "broker" | "buyer";
 
 export type DealStatus = "draft" | "accepting_iois" | "accepting_lois" | "under_loi" | "paused" | "closed" | "terminated";

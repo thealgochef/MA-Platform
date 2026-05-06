@@ -1,5 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { isValidStorageObjectKey, messageCreateSchema } from "@/lib/validators";
+
+const UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const isValidMessageAttachmentPath = (path: string, threadId: string) => {
+  const expectedPattern = new RegExp(`^${escapeRegExp(threadId)}/${UUID_PATTERN}\\.pdf$`, "i");
+
+  return (
+    isValidStorageObjectKey(path, { requirePdf: true, allowedPrefixes: [threadId] }) &&
+    expectedPattern.test(path)
+  );
+};
 
 export async function GET(
   request: Request,
@@ -147,18 +161,16 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await request.json();
-  const { content, attachment_path, attachment_name } = body;
+  const body = await request.json().catch(() => null);
+  const parsed = messageCreateSchema.safeParse(body);
 
-  if (!content && !attachment_path) {
+  if (!parsed.success) {
     return NextResponse.json({ error: "Message content or attachment is required" }, { status: 400 });
   }
 
-  // Validate attachment is PDF if provided
-  if (attachment_path && attachment_name) {
-    if (!attachment_name.toLowerCase().endsWith(".pdf")) {
-      return NextResponse.json({ error: "Only PDF attachments are allowed" }, { status: 400 });
-    }
+  const { content, attachment_path, attachment_name } = parsed.data;
+  if (attachment_path && !isValidMessageAttachmentPath(attachment_path, threadId)) {
+    return NextResponse.json({ error: "Attachment path must be scoped to this thread as a generated PDF key" }, { status: 400 });
   }
 
   // Insert message — attachment uploaded to message-attachments bucket by client

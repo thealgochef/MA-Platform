@@ -154,9 +154,133 @@ CREATE TABLE users (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE OR REPLACE FUNCTION prevent_sensitive_user_self_update()
+RETURNS trigger AS $$
+BEGIN
+  IF auth.role() = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.id IS DISTINCT FROM OLD.id OR
+     NEW.role IS DISTINCT FROM OLD.role OR
+     NEW.status IS DISTINCT FROM OLD.status OR
+     NEW.firm_id IS DISTINCT FROM OLD.firm_id OR
+     NEW.email IS DISTINCT FROM OLD.email OR
+     NEW.membership_agreement_signed IS DISTINCT FROM OLD.membership_agreement_signed OR
+     NEW.membership_agreement_signed_at IS DISTINCT FROM OLD.membership_agreement_signed_at OR
+     NEW.invited_by IS DISTINCT FROM OLD.invited_by OR
+     NEW.invitation_token IS DISTINCT FROM OLD.invitation_token OR
+     NEW.created_at IS DISTINCT FROM OLD.created_at OR
+     NEW.updated_at IS DISTINCT FROM OLD.updated_at THEN
+    RAISE EXCEPTION 'Authenticated users cannot update sensitive profile fields'
+      USING ERRCODE = '42501';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE TRIGGER aa_prevent_sensitive_user_self_update
+  BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION prevent_sensitive_user_self_update();
+
 CREATE TRIGGER users_updated_at
   BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Table: firm_invitations
+CREATE TABLE firm_invitations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email text NOT NULL,
+  firm_id uuid NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
+  role text NOT NULL CHECK (role IN ('broker', 'buyer')),
+  invitation_token text NOT NULL UNIQUE,
+  invited_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  consumed_at timestamptz
+);
+
+CREATE INDEX firm_invitations_email_idx ON firm_invitations (lower(email));
+CREATE INDEX firm_invitations_firm_id_idx ON firm_invitations (firm_id);
+
+ALTER TABLE firm_invitations ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON firm_invitations FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON firm_invitations TO service_role;
+
+CREATE OR REPLACE FUNCTION accept_firm_invitation(
+  p_invitation_token text,
+  p_user_id uuid,
+  p_user_email text,
+  p_full_name text
+)
+RETURNS uuid AS $$
+DECLARE
+  v_invitation firm_invitations%ROWTYPE;
+BEGIN
+  IF p_invitation_token IS NULL OR trim(p_invitation_token) = '' THEN
+    RAISE EXCEPTION 'Invitation token is required'
+      USING ERRCODE = '22023';
+  END IF;
+
+  IF p_user_email IS NULL OR trim(p_user_email) = '' THEN
+    RAISE EXCEPTION 'Authenticated user email is required'
+      USING ERRCODE = '22023';
+  END IF;
+
+  SELECT *
+    INTO v_invitation
+    FROM firm_invitations
+   WHERE invitation_token = p_invitation_token
+   FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invitation not found'
+      USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_invitation.consumed_at IS NOT NULL THEN
+    RAISE EXCEPTION 'Invitation already consumed'
+      USING ERRCODE = '23505';
+  END IF;
+
+  IF lower(trim(v_invitation.email)) <> lower(trim(p_user_email)) THEN
+    RAISE EXCEPTION 'Invitation email does not match authenticated user'
+      USING ERRCODE = '42501';
+  END IF;
+
+  INSERT INTO users (id, email, full_name, firm_id, role, status, membership_agreement_signed)
+  VALUES (
+    p_user_id,
+    p_user_email,
+    COALESCE(NULLIF(trim(p_full_name), ''), p_user_email),
+    v_invitation.firm_id,
+    v_invitation.role,
+    'approved',
+    false
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    full_name = COALESCE(NULLIF(users.full_name, ''), EXCLUDED.full_name),
+    firm_id = EXCLUDED.firm_id,
+    role = EXCLUDED.role,
+    status = 'approved';
+
+  UPDATE firm_invitations
+     SET consumed_at = now()
+   WHERE id = v_invitation.id
+     AND consumed_at IS NULL;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invitation already consumed'
+      USING ERRCODE = '23505';
+  END IF;
+
+  RETURN v_invitation.id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+REVOKE ALL ON FUNCTION accept_firm_invitation(text, uuid, text, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION accept_firm_invitation(text, uuid, text, text) TO service_role;
 
 -- Table: buyer_documents
 CREATE TABLE buyer_documents (
@@ -400,8 +524,25 @@ $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 CREATE OR REPLACE FUNCTION is_admin()
 RETURNS boolean AS $$
-  SELECT EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin');
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+  SELECT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE id = auth.uid()
+      AND role = 'admin'
+      AND status = 'approved'
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
+
+CREATE OR REPLACE FUNCTION current_user_is_approved(required_role text DEFAULT NULL)
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE id = auth.uid()
+      AND status = 'approved'
+      AND (required_role IS NULL OR role = required_role)
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 -- Enable RLS on all tables
 ALTER TABLE firms ENABLE ROW LEVEL SECURITY;
@@ -419,9 +560,13 @@ ALTER TABLE deal_activity_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 
 -- FIRMS policies
-CREATE POLICY "Admins can do everything on firms" ON firms FOR ALL USING (is_admin());
+CREATE POLICY "Admins can do everything on firms" ON firms FOR ALL
+  USING (current_user_is_approved('admin'))
+  WITH CHECK (current_user_is_approved('admin'));
 CREATE POLICY "Firm members can view their own firm" ON firms FOR SELECT USING (id = get_user_firm_id());
-CREATE POLICY "Firm members can update their own firm" ON firms FOR UPDATE USING (id = get_user_firm_id());
+CREATE POLICY "Approved firm members can update their own firm" ON firms FOR UPDATE
+  USING (id = get_user_firm_id() AND current_user_is_approved() AND get_user_role() IN ('broker', 'buyer', 'admin'))
+  WITH CHECK (id = get_user_firm_id() AND current_user_is_approved() AND get_user_role() IN ('broker', 'buyer', 'admin'));
 
 -- USERS policies
 CREATE POLICY "Users can read their own profile" ON users FOR SELECT USING (id = auth.uid());
@@ -438,7 +583,9 @@ CREATE POLICY "Users can read profiles of deal counterparties" ON users FOR SELE
     )
   );
 CREATE POLICY "Admins can read all users" ON users FOR SELECT USING (is_admin());
-CREATE POLICY "Users can update their own profile" ON users FOR UPDATE USING (id = auth.uid());
+CREATE POLICY "Users can update their own profile" ON users FOR UPDATE
+  USING (id = auth.uid())
+  WITH CHECK (id = auth.uid());
 CREATE POLICY "Admins can update any user" ON users FOR UPDATE USING (is_admin());
 CREATE POLICY "Service role can insert users" ON users FOR INSERT WITH CHECK (true);
 
@@ -473,9 +620,16 @@ CREATE POLICY "Broker firm members can manage documents on their deals" ON deal_
 CREATE POLICY "Buyers with appropriate access can view deal documents" ON deal_documents FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM deal_engagements de
+      SELECT 1 FROM deal_engagements de JOIN deals d ON d.id = de.deal_id
       WHERE de.deal_id = deal_documents.deal_id AND de.buyer_user_id = auth.uid()
-      AND (deal_documents.access_level = 'pre_nda' OR (deal_documents.access_level = 'post_nda' AND de.nda_status = 'signed'))
+      AND (
+        deal_documents.access_level = 'pre_nda'
+        OR (
+          deal_documents.access_level = 'post_nda'
+          AND de.nda_status = 'signed'
+          AND d.status NOT IN ('paused', 'terminated', 'closed')
+        )
+      )
     )
   );
 CREATE POLICY "Admins can view all deal documents" ON deal_documents FOR SELECT USING (is_admin());
@@ -514,9 +668,17 @@ CREATE POLICY "Broker firm can update deal closure for confirmation" ON deal_clo
 CREATE POLICY "Admins can update any deal closure" ON deal_closures FOR UPDATE USING (is_admin());
 
 -- BUYER_PROJECTS policies
-CREATE POLICY "Buyers can manage their own projects" ON buyer_projects FOR ALL USING (buyer_user_id = auth.uid());
+CREATE POLICY "Approved buyers can read their own projects" ON buyer_projects FOR SELECT
+  USING (buyer_user_id = auth.uid() AND current_user_is_approved('buyer'));
+CREATE POLICY "Approved buyers can create their own projects" ON buyer_projects FOR INSERT
+  WITH CHECK (buyer_user_id = auth.uid() AND current_user_is_approved('buyer'));
+CREATE POLICY "Approved buyers can update their own projects" ON buyer_projects FOR UPDATE
+  USING (buyer_user_id = auth.uid() AND current_user_is_approved('buyer'))
+  WITH CHECK (buyer_user_id = auth.uid() AND current_user_is_approved('buyer'));
+CREATE POLICY "Approved buyers can delete their own projects" ON buyer_projects FOR DELETE
+  USING (buyer_user_id = auth.uid() AND current_user_is_approved('buyer'));
 CREATE POLICY "Buyer firm members can see firm projects" ON buyer_projects FOR SELECT
-  USING (buyer_firm_id = get_user_firm_id() AND get_user_role() = 'buyer');
+  USING (buyer_firm_id = get_user_firm_id() AND current_user_is_approved('buyer'));
 CREATE POLICY "Admins can see all buyer projects" ON buyer_projects FOR SELECT USING (is_admin());
 
 -- MESSAGES policies
@@ -561,45 +723,258 @@ VALUES
   ('deal-documents', 'deal-documents', false, 52428800, ARRAY['application/pdf']),
   ('message-attachments', 'message-attachments', false, 52428800, ARRAY['application/pdf']),
   ('buyer-documents', 'buyer-documents', false, 52428800, ARRAY['application/pdf']),
-  ('signed-ndas', 'signed-ndas', false, 52428800, ARRAY['application/pdf']),
+  ('signed-ndas', 'signed-ndas', false, 52428800, ARRAY['application/pdf', 'application/json']),
   ('dispute-documents', 'dispute-documents', false, 52428800, ARRAY['application/pdf'])
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for deal-documents
-CREATE POLICY "Broker firm members can upload deal documents" ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'deal-documents' AND EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'broker' AND status = 'approved'));
-CREATE POLICY "Broker firm members can read their deal documents" ON storage.objects FOR SELECT
-  USING (bucket_id = 'deal-documents' AND EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'broker' AND status = 'approved'));
-CREATE POLICY "Buyers with access can read deal documents" ON storage.objects FOR SELECT
-  USING (bucket_id = 'deal-documents' AND EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'buyer' AND status = 'approved'));
+CREATE POLICY "Broker firm members can upload deal documents for owned deals" ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'deal-documents'
+    AND auth.uid() IS NOT NULL
+    AND lower(name) LIKE '%.pdf'
+    AND EXISTS (
+      SELECT 1 FROM users u JOIN deals d ON d.id::text = (storage.foldername(name))[1]
+      WHERE u.id = auth.uid() AND u.role = 'broker' AND u.status = 'approved' AND d.firm_id = u.firm_id
+    )
+  );
+CREATE POLICY "Authorized users can read deal documents by access state" ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'deal-documents'
+    AND auth.uid() IS NOT NULL
+    AND (
+      EXISTS (SELECT 1 FROM users u WHERE u.id = auth.uid() AND u.role = 'admin' AND u.status = 'approved')
+      OR EXISTS (
+        SELECT 1 FROM users u JOIN deals d ON d.id::text = (storage.foldername(name))[1]
+        WHERE u.id = auth.uid() AND u.role = 'broker' AND u.status = 'approved' AND d.firm_id = u.firm_id
+      )
+      OR EXISTS (
+        SELECT 1 FROM users u
+        JOIN deals d ON d.id::text = (storage.foldername(name))[1]
+        JOIN deal_engagements e ON e.deal_id = d.id AND e.buyer_user_id = u.id
+        WHERE u.id = auth.uid() AND u.role = 'buyer' AND u.status = 'approved'
+          AND (
+            name = d.teaser_document_path
+            OR (name = d.nda_document_path AND e.nda_status IN ('sent', 'signed'))
+            OR (
+              name = d.cim_document_path
+              AND e.cim_released = true
+              AND d.status NOT IN ('paused', 'terminated', 'closed')
+            )
+          )
+      )
+      OR EXISTS (
+        SELECT 1 FROM users u
+        JOIN deal_documents dd ON dd.file_path = name
+        JOIN deals d ON d.id = dd.deal_id
+        JOIN deal_engagements e ON e.deal_id = dd.deal_id AND e.buyer_user_id = u.id
+        WHERE u.id = auth.uid() AND u.role = 'buyer' AND u.status = 'approved'
+          AND (
+            dd.access_level = 'pre_nda'
+            OR (
+              dd.access_level = 'post_nda'
+              AND e.nda_status = 'signed'
+              AND d.status NOT IN ('paused', 'terminated', 'closed')
+            )
+          )
+      )
+    )
+  );
 
 -- Storage policies for buyer-documents
-CREATE POLICY "Buyers can upload their documents" ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'buyer-documents' AND auth.uid() IS NOT NULL);
-CREATE POLICY "Buyers can read their own documents" ON storage.objects FOR SELECT
-  USING (bucket_id = 'buyer-documents' AND auth.uid() IS NOT NULL);
+CREATE POLICY "Buyers can upload own scoped buyer documents" ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'buyer-documents'
+    AND auth.uid() IS NOT NULL
+    AND name ~* ('^' || auth.uid()::text || '/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.pdf$')
+  );
+CREATE POLICY "Authorized users can read scoped buyer documents" ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'buyer-documents'
+    AND auth.uid() IS NOT NULL
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = auth.uid() AND u.role = 'admin' AND u.status = 'approved'
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM users u
+        JOIN buyer_documents bd ON bd.file_path = name AND bd.user_id::text = (storage.foldername(name))[1]
+        JOIN deal_engagements e ON e.buyer_user_id = bd.user_id
+        JOIN deals d ON d.id = e.deal_id
+        WHERE u.id = auth.uid() AND u.role = 'broker' AND u.status = 'approved' AND d.firm_id = u.firm_id
+      )
+    )
+  );
 
 -- Storage policies for message-attachments
-CREATE POLICY "Authenticated users can upload message attachments" ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'message-attachments' AND auth.uid() IS NOT NULL);
-CREATE POLICY "Authenticated users can read message attachments" ON storage.objects FOR SELECT
-  USING (bucket_id = 'message-attachments' AND auth.uid() IS NOT NULL);
+CREATE POLICY "Thread participants can upload message attachments" ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'message-attachments'
+    AND auth.uid() IS NOT NULL
+    AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.pdf$'
+    AND EXISTS (
+      SELECT 1 FROM deal_engagements e JOIN deals d ON d.id = e.deal_id
+      WHERE e.id::text = (storage.foldername(name))[1]
+        AND (e.buyer_user_id = auth.uid() OR d.point_of_contact_id = auth.uid())
+    )
+  );
+CREATE POLICY "Thread participants can read message attachments" ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'message-attachments'
+    AND auth.uid() IS NOT NULL
+    AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.pdf$'
+    AND (
+      EXISTS (
+        SELECT 1 FROM deal_engagements e JOIN deals d ON d.id = e.deal_id
+        WHERE e.id::text = (storage.foldername(name))[1]
+          AND (e.buyer_user_id = auth.uid() OR d.point_of_contact_id = auth.uid())
+      )
+      OR EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = auth.uid() AND u.role = 'admin' AND u.status = 'approved'
+      )
+    )
+  );
 
 -- Storage policies for signed-ndas
-CREATE POLICY "Authenticated users can upload signed NDAs" ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'signed-ndas' AND auth.uid() IS NOT NULL);
-CREATE POLICY "Authenticated users can read signed NDAs" ON storage.objects FOR SELECT
-  USING (bucket_id = 'signed-ndas' AND auth.uid() IS NOT NULL);
+CREATE POLICY "Buyers can upload signed NDA artifacts scoped to self" ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'signed-ndas'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[2] = auth.uid()::text
+    AND lower(name) LIKE '%.json'
+    AND EXISTS (
+      SELECT 1
+      FROM users u
+      JOIN deal_engagements e
+        ON e.buyer_user_id = u.id
+       AND e.deal_id::text = (storage.foldername(name))[1]
+      WHERE u.id = auth.uid()
+        AND u.role = 'buyer'
+        AND u.status = 'approved'
+    )
+  );
+CREATE POLICY "Authorized users can read signed NDA artifacts" ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'signed-ndas'
+    AND auth.uid() IS NOT NULL
+    AND (
+      (storage.foldername(name))[2] = auth.uid()::text
+      OR EXISTS (
+        SELECT 1
+        FROM users u
+        JOIN deals d
+          ON d.id::text = (storage.foldername(name))[1]
+         AND d.firm_id = u.firm_id
+        WHERE u.id = auth.uid()
+          AND u.role = 'broker'
+          AND u.status = 'approved'
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM users u
+        WHERE u.id = auth.uid()
+          AND u.role = 'admin'
+          AND u.status = 'approved'
+      )
+    )
+  );
 
 -- Storage policies for dispute-documents
-CREATE POLICY "Authenticated users can upload dispute documents" ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'dispute-documents' AND auth.uid() IS NOT NULL);
-CREATE POLICY "Authenticated users can read dispute documents" ON storage.objects FOR SELECT
-  USING (bucket_id = 'dispute-documents' AND auth.uid() IS NOT NULL);
+CREATE POLICY "Authorized participants can upload dispute documents" ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'dispute-documents'
+    AND auth.uid() IS NOT NULL
+    AND lower(name) LIKE '%.pdf'
+    AND (
+      EXISTS (SELECT 1 FROM users u WHERE u.id = auth.uid() AND u.role = 'admin' AND u.status = 'approved')
+      OR EXISTS (
+        SELECT 1 FROM users u JOIN deals d ON d.id::text = (storage.foldername(name))[1]
+        WHERE u.id = auth.uid() AND u.role = 'broker' AND u.status = 'approved' AND d.firm_id = u.firm_id
+      )
+      OR EXISTS (
+        SELECT 1 FROM users u JOIN deal_closures dc ON dc.deal_id::text = (storage.foldername(name))[1]
+        WHERE u.id = auth.uid() AND u.role = 'buyer' AND u.status = 'approved' AND dc.buyer_user_id = u.id
+      )
+    )
+  );
+CREATE POLICY "Authorized participants can read dispute documents" ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'dispute-documents'
+    AND auth.uid() IS NOT NULL
+    AND (
+      EXISTS (SELECT 1 FROM users u WHERE u.id = auth.uid() AND u.role = 'admin' AND u.status = 'approved')
+      OR EXISTS (
+        SELECT 1 FROM users u JOIN deals d ON d.id::text = (storage.foldername(name))[1]
+        WHERE u.id = auth.uid() AND u.role = 'broker' AND u.status = 'approved' AND d.firm_id = u.firm_id
+      )
+      OR EXISTS (
+        SELECT 1 FROM users u JOIN deal_closures dc ON dc.deal_id::text = (storage.foldername(name))[1]
+        WHERE u.id = auth.uid() AND u.role = 'buyer' AND u.status = 'approved' AND dc.buyer_user_id = u.id
+      )
+    )
+  );
 
 -- ============================================================
 -- PHASE 7: DATABASE FUNCTIONS
 -- ============================================================
+
+CREATE OR REPLACE FUNCTION close_deal_with_winning_engagement(
+  p_deal_id uuid,
+  p_engagement_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_updated_engagement_id uuid;
+BEGIN
+  IF p_deal_id IS NULL OR p_engagement_id IS NULL THEN
+    RAISE EXCEPTION 'deal_id and engagement_id are required'
+      USING ERRCODE = '22023';
+  END IF;
+
+  PERFORM 1
+  FROM deals
+  WHERE id = p_deal_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Deal not found'
+      USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE deal_engagements
+  SET stage = 'closed'
+  WHERE id = p_engagement_id
+    AND deal_id = p_deal_id
+    AND stage IN ('loi_submitted', 'diligence', 'closed')
+  RETURNING id INTO v_updated_engagement_id;
+
+  IF v_updated_engagement_id IS NULL THEN
+    RAISE EXCEPTION 'Winning engagement is not eligible to close this deal'
+      USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE deals
+  SET status = 'closed',
+      closed_at = now()
+  WHERE id = p_deal_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Failed to close deal'
+      USING ERRCODE = 'P0001';
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION close_deal_with_winning_engagement(uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION close_deal_with_winning_engagement(uuid, uuid) TO service_role;
 
 CREATE OR REPLACE FUNCTION match_deals_to_project(p_project_id uuid)
 RETURNS TABLE (deal_id uuid) AS $$
