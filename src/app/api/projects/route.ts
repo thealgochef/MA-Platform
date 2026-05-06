@@ -1,24 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { projectCreateSchema } from "@/lib/validators";
+import { isAuthResponse, requireRole } from "@/server/auth";
+import { mapProjectDataToDb } from "@/server/projects/mappers";
 
 export async function GET() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role, status")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.role !== "buyer" || profile.status !== "approved") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const context = await requireRole("buyer");
+  if (isAuthResponse(context)) return context;
+  const { supabase, user } = context;
 
   const { data: projects, error } = await supabase
     .from("buyer_projects")
@@ -34,24 +22,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const context = await requireRole("buyer");
+  if (isAuthResponse(context)) return context;
+  const { supabase, user, profile } = context;
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const body = await request.json().catch(() => null);
+  if (body === null) {
+    return NextResponse.json({ error: "Malformed JSON" }, { status: 400 });
   }
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role, status, firm_id")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.role !== "buyer" || profile.status !== "approved") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const body = await request.json();
   const parsed = projectCreateSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -60,20 +38,13 @@ export async function POST(request: Request) {
 
   const data = parsed.data;
 
+  // mapProjectDataToDb saves industry, revenue, EBITDA, margin, location, and keyword criteria.
   const { data: project, error } = await supabase
     .from("buyer_projects")
     .insert({
       buyer_user_id: user.id,
       buyer_firm_id: profile.firm_id,
-      name: data.projectName,
-      industry: data.industry || null,
-      revenue_min: data.revenueMin || null,
-      revenue_max: data.revenueMax || null,
-      ebitda_min: data.ebitdaMin || null,
-      ebitda_max: data.ebitdaMax || null,
-      ebitda_margin: data.ebitdaMargin || null,
-      location: data.location || null,
-      keywords: data.keywords || [],
+      ...mapProjectDataToDb(data),
     })
     .select()
     .single();

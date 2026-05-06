@@ -38,6 +38,12 @@ describe("Phase 3: Deal Creation & Management", () => {
       expect(content).toContain("dealPublishSchema");
       expect(content).toContain("cimDocumentPath");
     });
+
+    it("dealStatusUpdateSchema accepts a winning engagement for close transitions", () => {
+      const content = fs.readFileSync(path.join(SRC, "lib", "validators.ts"), "utf-8");
+      expect(content).toContain("winningEngagementId");
+      expect(content).toContain("z.string().uuid().optional()");
+    });
   });
 
   describe("Deal API Routes", () => {
@@ -102,6 +108,67 @@ describe("Phase 3: Deal Creation & Management", () => {
       expect(content).toContain("draft");
     });
 
+    it("deals create and update routes should guard invalid JSON bodies", () => {
+      const createContent = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "route.ts"),
+        "utf-8"
+      );
+      const updateContent = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "route.ts"),
+        "utf-8"
+      );
+      expect(createContent).toContain("Invalid JSON body");
+      expect(updateContent).toContain("Invalid JSON body");
+    });
+
+    it("deal update route should scope deal document paths to the current deal", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain("DEAL_DOCUMENT_FIELDS");
+      expect(content).toContain("allowedPrefixes: [params.id]");
+      expect(content).toContain("must be a PDF path scoped to this deal");
+    });
+
+    it("deal create route should be a draft-only endpoint and reject initial document paths", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("POST /api/deals creates drafts only");
+      expect(content).toContain("upload documents under the returned deal ID");
+      expect(content).toContain("then publish via the deal status endpoint");
+      expect(content).toContain("if (publish)");
+      expect(content).toContain("cannot be set during initial draft creation");
+      expect(content).not.toContain("allowedPrefixes: [dealId]");
+      expect(content).not.toContain("id: dealId");
+    });
+
+    it("deal create route does not support client-provided IDs for pre-upload direct publish", () => {
+      const validatorContent = fs.readFileSync(path.join(SRC, "lib", "validators.ts"), "utf-8");
+      const routeContent = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "route.ts"),
+        "utf-8"
+      );
+
+      expect(validatorContent).not.toContain("dealId: z.string().uuid().optional()");
+      expect(routeContent).not.toContain("data.dealId");
+      expect(routeContent).not.toContain("Support clients that pre-generate a deal ID");
+    });
+
+    it("deal creation page should upload documents only after receiving a deal ID", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "deals", "new", "page.tsx"),
+        "utf-8"
+      );
+      expect(content).toContain("dealId: string");
+      expect(content).toContain("`${dealId}/${type}/${crypto.randomUUID()}.pdf`");
+      expect(content).toContain("fetch(`/api/deals/${deal.id}`");
+      expect(content).not.toContain("dealId || \"temp\"");
+    });
+
     it("deal status route should validate transitions using isValidDealTransition", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "api", "deals", "[id]", "status", "route.ts"),
@@ -127,12 +194,57 @@ describe("Phase 3: Deal Creation & Management", () => {
       expect(content).toContain("published_at");
     });
 
+    it("publishing a custom NDA deal requires an uploaded NDA in the status route and UI", () => {
+      const statusContent = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "status", "route.ts"),
+        "utf-8"
+      );
+      const newPageContent = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "deals", "new", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(statusContent).toContain('deal.nda_type === "custom"');
+      expect(statusContent).toContain("Custom NDA is required to publish");
+      expect(newPageContent).toContain('formData.ndaType === "custom" && !ndaFile');
+    });
+
+    it("buyer deal GET routes use explicit safe selects without protected document paths", () => {
+      const listContent = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "route.ts"),
+        "utf-8"
+      );
+      const detailContent = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "route.ts"),
+        "utf-8"
+      );
+
+      expect(listContent).toContain("BUYER_DEAL_LIST_SELECT");
+      expect(listContent).toContain(".select(BUYER_DEAL_LIST_SELECT)");
+      expect(detailContent).toContain("BUYER_DEAL_DETAIL_SELECT");
+      expect(detailContent).toContain(".select(BUYER_DEAL_DETAIL_SELECT)");
+      expect(listContent.match(/BUYER_DEAL_LIST_SELECT[\s\S]*?`;/)?.[0]).not.toMatch(/cim_document_path|nda_document_path|teaser_document_path/);
+      expect(detailContent.match(/BUYER_DEAL_DETAIL_SELECT[\s\S]*?`;/)?.[0]).not.toMatch(/cim_document_path|nda_document_path|teaser_document_path/);
+    });
+
     it("deal status route should log activity", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "api", "deals", "[id]", "status", "route.ts"),
         "utf-8"
       );
       expect(content).toContain("deal_activity_log");
+    });
+
+    it("deal status route requires and atomically closes an eligible winning engagement", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "status", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain("winningEngagementId is required to close a deal");
+      expect(content).toContain('adminClient.rpc("close_deal_with_winning_engagement"');
+      expect(content).toContain("p_deal_id: params.id");
+      expect(content).toContain("p_engagement_id: winningEngagementId");
+      expect(content).not.toContain('.update({ stage: "closed" })');
     });
 
     it("deal documents route should enforce PDF only", () => {

@@ -46,6 +46,39 @@ describe("Phase 5: NDA Flow & CIM Access", () => {
       expect(content).toContain("signed-ndas");
     });
 
+    it("NDA POST should enforce GET availability rules before sign or decline", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "nda", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain("NDA_AVAILABLE_STAGES");
+      expect(content).toContain("nda_status !== \"sent\"");
+      expect(content).toContain("NDA not available");
+    });
+
+    it("NDA POST should fail before updating engagement NDA artifact path when upload fails", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "nda", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain("uploadError");
+      expect(content).toContain("Failed to store signed NDA");
+      expect(content).toContain("nda_document_path: ndaPath");
+      expect(content).not.toContain("signed_nda_path");
+      expect(content.indexOf("if (uploadError)")).toBeLessThan(content.indexOf("nda_document_path: ndaPath"));
+    });
+
+    it("NDA POST removes uploaded artifact if engagement update fails", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "nda", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain("createAdminClient");
+      expect(content).toContain("adminClient.storage");
+      expect(content).toContain("remove([ndaPath])");
+      expect(content).toContain("Failed to remove orphaned signed NDA artifact");
+    });
+
     it("NDA sign should check cim_sharing_preference for auto CIM release", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "api", "deals", "[id]", "nda", "route.ts"),
@@ -180,6 +213,17 @@ describe("Phase 5: NDA Flow & CIM Access", () => {
       );
       expect(content).toContain("PATCH");
       expect(content).toContain("cim_released");
+    });
+
+    it("CIM manual release should require a signed NDA and guard malformed JSON", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "cim", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain("Invalid JSON body");
+      expect(content).toContain("nda_status");
+      expect(content).toContain('engagement.nda_status !== "signed"');
+      expect(content).toContain("NDA must be signed before CIM release");
     });
 
     it("CIM route should revoke access for paused/terminated/closed deals", () => {

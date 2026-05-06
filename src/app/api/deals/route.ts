@@ -1,6 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { dealCreateSchema } from "@/lib/validators";
+import { logDealActivity } from "@/server/activity-log";
+import { mapDealCreateDataToDb } from "@/server/deals/mappers";
+
+const DEAL_DOCUMENT_FIELDS = ["teaserDocumentPath", "cimDocumentPath", "ndaDocumentPath"] as const;
+const BUYER_DEAL_LIST_SELECT = `
+  id,
+  headline,
+  description,
+  geography_display,
+  state,
+  region,
+  industry,
+  revenue_year_1,
+  ebitda_year_1,
+  revenue_year_2,
+  ebitda_year_2,
+  revenue_year_3,
+  ebitda_year_3,
+  revenue_projection,
+  ebitda_projection,
+  fiscal_year_labels,
+  status,
+  ioi_due_date,
+  loi_due_date,
+  published_at,
+  created_at
+`;
 
 export async function GET() {
   const supabase = createClient();
@@ -37,7 +64,7 @@ export async function GET() {
   // Buyers see only active deals (non-draft)
   const { data: deals, error } = await supabase
     .from("deals")
-    .select("*")
+    .select(BUYER_DEAL_LIST_SELECT)
     .neq("status", "draft")
     .order("created_at", { ascending: false });
 
@@ -66,8 +93,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Only approved brokers can create deals" }, { status: 403 });
     }
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const draftFirstMessage =
+      "POST /api/deals creates drafts only. Create the draft, upload documents under the returned deal ID, PATCH document paths, then publish via the deal status endpoint.";
+
     const { publish, ...formData } = body;
+
+    if (publish) {
+      return NextResponse.json({ error: draftFirstMessage }, { status: 400 });
+    }
+
+    for (const field of DEAL_DOCUMENT_FIELDS) {
+      if (field in body && body[field] !== null && body[field] !== undefined && body[field] !== "") {
+        return NextResponse.json({ error: `${field} cannot be set during initial draft creation. ${draftFirstMessage}` }, { status: 400 });
+      }
+    }
+
     const validation = dealCreateSchema.safeParse(formData);
 
     if (!validation.success) {
@@ -77,60 +122,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const data = validation.data;
-
-    const dealData: Record<string, unknown> = {
-      firm_id: profile.firm_id,
-      created_by: user.id,
-      point_of_contact_id: data.pointOfContactId || user.id,
-      project_name: data.projectName,
-      headline: data.headline,
-      description: data.description,
-      geography_display: data.geographyDisplay,
-      state: data.state || null,
-      region: data.region || null,
-      industry: data.industry,
-      nda_type: data.ndaType,
-      nda_document_path: data.ndaDocumentPath || null,
-      cim_document_path: data.cimDocumentPath || null,
-      cim_sharing_preference: data.cimSharingPreference,
-      nda_vetting_preference: data.ndaVettingPreference,
-      teaser_document_path: data.teaserDocumentPath || null,
-      ioi_due_date: data.ioiDueDate || null,
-      loi_due_date: data.loiDueDate || null,
-      status: "draft",
-    };
-
-    // Map financials
-    if (data.financials) {
-      const f = data.financials;
-      dealData.revenue_year_1 = f.year1?.revenue ?? null;
-      dealData.ebitda_year_1 = f.year1?.ebitda ?? null;
-      dealData.revenue_year_2 = f.year2?.revenue ?? null;
-      dealData.ebitda_year_2 = f.year2?.ebitda ?? null;
-      dealData.revenue_year_3 = f.year3?.revenue ?? null;
-      dealData.ebitda_year_3 = f.year3?.ebitda ?? null;
-      dealData.revenue_projection = f.projection?.revenue ?? null;
-      dealData.ebitda_projection = f.projection?.ebitda ?? null;
-      dealData.fiscal_year_labels = {
-        year_1: f.year1?.label || "",
-        year_2: f.year2?.label || "",
-        year_3: f.year3?.label || "",
-        projection: f.projection?.label || "",
-      };
-    }
-
-    // If publishing, validate CIM and teaser
-    if (publish) {
-      if (!dealData.cim_document_path) {
-        return NextResponse.json({ error: "CIM is required to publish" }, { status: 400 });
-      }
-      if (!dealData.teaser_document_path) {
-        return NextResponse.json({ error: "Teaser is required to publish" }, { status: 400 });
-      }
-      dealData.status = "accepting_iois";
-      dealData.published_at = new Date().toISOString();
-    }
+    const dealData = mapDealCreateDataToDb(validation.data, {
+      firmId: profile.firm_id,
+      userId: user.id,
+    });
 
     const { data: deal, error } = await supabase
       .from("deals")
@@ -142,22 +137,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create deal" }, { status: 500 });
     }
 
-    // Log activity
-    if (publish) {
-      await supabase.from("deal_activity_log").insert({
-        deal_id: deal.id,
-        actor_id: user.id,
-        action: "deal_published",
-        metadata: {},
-      });
-    } else {
-      await supabase.from("deal_activity_log").insert({
-        deal_id: deal.id,
-        actor_id: user.id,
-        action: "deal_created",
-        metadata: {},
-      });
-    }
+    await logDealActivity(supabase, {
+      dealId: deal.id,
+      actorId: user.id,
+      action: "deal_created",
+    });
 
     return NextResponse.json({ deal }, { status: 201 });
   } catch {

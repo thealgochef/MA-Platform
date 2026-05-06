@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.tsx$|^d\")",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(xargs grep:*)"
+    ]
+  },
+  "outputStyle": "Explanatory",
+  "autoDreamEnabled": true
+}

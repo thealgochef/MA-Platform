@@ -117,11 +117,40 @@ export default function BrokerDealManagement() {
   }, [fetchDeal, fetchPipeline, fetchDocuments, fetchTimeline]);
 
   const handleStatusChange = async (newStatus: string) => {
+    let winningEngagementId: string | undefined;
+
+    if (newStatus === "closed") {
+      const eligibleEngagements = engagements.filter((engagement) =>
+        ["loi_submitted", "diligence", "closed"].includes(engagement.stage)
+      );
+
+      if (eligibleEngagements.length === 0) {
+        window.alert("No eligible winning engagement found. Move a buyer to LOI submitted or diligence before closing.");
+        return;
+      }
+
+      if (eligibleEngagements.length === 1) {
+        winningEngagementId = eligibleEngagements[0].id;
+      } else {
+        const options = eligibleEngagements
+          .map((engagement, index) => `${index + 1}. ${engagement.users?.full_name || engagement.firms?.name || engagement.id} (${engagement.stage})`)
+          .join("\n");
+        const selection = window.prompt(`Select the winning engagement to close:\n${options}`);
+        const selectedIndex = selection ? Number.parseInt(selection, 10) - 1 : -1;
+        winningEngagementId = eligibleEngagements[selectedIndex]?.id;
+
+        if (!winningEngagementId) {
+          window.alert("A valid winning engagement selection is required to close the deal.");
+          return;
+        }
+      }
+    }
+
     setStatusChanging(true);
     const res = await fetch(`/api/deals/${dealId}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ newStatus }),
+      body: JSON.stringify({ newStatus, winningEngagementId }),
     });
     if (res.ok) {
       await fetchDeal();

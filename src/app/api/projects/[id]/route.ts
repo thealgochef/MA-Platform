@@ -1,28 +1,17 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { projectCreateSchema } from "@/lib/validators";
+import { isAuthResponse, requireBuyerProjectAccess, requireRole } from "@/server/auth";
+import { mapProjectDataToDb } from "@/server/projects/mappers";
 
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const context = await requireRole("buyer");
+  if (isAuthResponse(context)) return context;
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: project, error } = await supabase
-    .from("buyer_projects")
-    .select("*")
-    .eq("id", params.id)
-    .eq("buyer_user_id", user.id)
-    .single();
-
-  if (error || !project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
-  }
+  const project = await requireBuyerProjectAccess(context.supabase, context.user.id, params.id);
+  if (isAuthResponse(project)) return project;
 
   return NextResponse.json({ project });
 }
@@ -31,26 +20,18 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const context = await requireRole("buyer");
+  if (isAuthResponse(context)) return context;
+  const { supabase } = context;
 
   // Verify ownership
-  const { data: existing } = await supabase
-    .from("buyer_projects")
-    .select("id")
-    .eq("id", params.id)
-    .eq("buyer_user_id", user.id)
-    .single();
+  const existing = await requireBuyerProjectAccess(supabase, context.user.id, params.id, "id");
+  if (isAuthResponse(existing)) return existing;
 
-  if (!existing) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  const body = await request.json().catch(() => null);
+  if (body === null) {
+    return NextResponse.json({ error: "Malformed JSON" }, { status: 400 });
   }
-
-  const body = await request.json();
   const parsed = projectCreateSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -62,15 +43,7 @@ export async function PATCH(
   const { data: project, error } = await supabase
     .from("buyer_projects")
     .update({
-      name: data.projectName,
-      industry: data.industry || null,
-      revenue_min: data.revenueMin || null,
-      revenue_max: data.revenueMax || null,
-      ebitda_min: data.ebitdaMin || null,
-      ebitda_max: data.ebitdaMax || null,
-      ebitda_margin: data.ebitdaMargin || null,
-      location: data.location || null,
-      keywords: data.keywords || [],
+      ...mapProjectDataToDb(data),
     })
     .eq("id", params.id)
     .select()
@@ -87,12 +60,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const context = await requireRole("buyer");
+  if (isAuthResponse(context)) return context;
+  const { supabase, user } = context;
 
   const { error } = await supabase
     .from("buyer_projects")

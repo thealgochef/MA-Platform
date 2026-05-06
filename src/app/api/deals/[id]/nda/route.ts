@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
+import { ndaActionSchema } from "@/lib/validators";
+import { SIGNED_NDA_ARTIFACT_CONSTRAINTS } from "@/lib/constants";
+
+const NDA_AVAILABLE_STAGES = ["nda_pending", "pursued"] as const;
 
 export async function GET(
   _request: Request,
@@ -31,7 +36,7 @@ export async function GET(
     .eq("buyer_user_id", user.id)
     .single();
 
-  if (!engagement || !["nda_pending", "pursued"].includes(engagement.stage) || engagement.nda_status !== "sent") {
+  if (!engagement || !NDA_AVAILABLE_STAGES.includes(engagement.stage) || engagement.nda_status !== "sent") {
     return NextResponse.json({ error: "NDA not available" }, { status: 403 });
   }
 
@@ -49,8 +54,14 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { action, signatureName, signatureTitle, signatureCompany, signatureDate } = body;
+  const body = await request.json().catch(() => null);
+  const parsed = ndaActionSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "All signature fields are required" }, { status: 400 });
+  }
+
+  const { action } = parsed.data;
 
   // Fetch engagement
   const { data: engagement } = await supabase
@@ -62,6 +73,10 @@ export async function POST(
 
   if (!engagement) {
     return NextResponse.json({ error: "Engagement not found" }, { status: 404 });
+  }
+
+  if (!NDA_AVAILABLE_STAGES.includes(engagement.stage) || engagement.nda_status !== "sent") {
+    return NextResponse.json({ error: "NDA not available" }, { status: 403 });
   }
 
   if (action === "decline") {
@@ -89,9 +104,7 @@ export async function POST(
   }
 
   // Sign NDA
-  if (!signatureName || !signatureTitle || !signatureCompany || !signatureDate) {
-    return NextResponse.json({ error: "All signature fields are required" }, { status: 400 });
-  }
+  const { signatureName, signatureTitle, signatureCompany, signatureDate } = parsed.data;
 
   // Store signed NDA record in signed-ndas bucket
   const signedNdaData = JSON.stringify({
@@ -104,10 +117,19 @@ export async function POST(
     signedAt: new Date().toISOString(),
   });
 
-  const ndaPath = `${params.id}/${user.id}/${crypto.randomUUID()}.json`;
-  await supabase.storage
+  const ndaPath = `${params.id}/${user.id}/${crypto.randomUUID()}${SIGNED_NDA_ARTIFACT_CONSTRAINTS.ALLOWED_EXTENSION}`;
+  const { error: uploadError } = await supabase.storage
     .from("signed-ndas")
-    .upload(ndaPath, signedNdaData, { contentType: "application/json" });
+    .upload(ndaPath, signedNdaData, { contentType: SIGNED_NDA_ARTIFACT_CONSTRAINTS.ALLOWED_TYPE });
+
+  if (uploadError) {
+    console.error("Failed to upload signed NDA artifact", {
+      dealId: params.id,
+      buyerUserId: user.id,
+      error: uploadError.message,
+    });
+    return NextResponse.json({ error: "Failed to store signed NDA" }, { status: 500 });
+  }
 
   // Fetch deal to check cim_sharing_preference
   const { data: deal } = await supabase
@@ -121,7 +143,7 @@ export async function POST(
     nda_status: "signed",
     stage: "nda_signed",
     nda_signed_at: new Date().toISOString(),
-    signed_nda_path: ndaPath,
+    nda_document_path: ndaPath,
   };
 
   // Auto CIM release if deal has cim_sharing_preference = 'auto'
@@ -136,6 +158,20 @@ export async function POST(
     .eq("id", engagement.id);
 
   if (error) {
+    const adminClient = createAdminClient();
+    const { error: removeError } = await adminClient.storage
+      .from("signed-ndas")
+      .remove([ndaPath]);
+
+    if (removeError) {
+      console.error("Failed to remove orphaned signed NDA artifact", {
+        dealId: params.id,
+        buyerUserId: user.id,
+        path: ndaPath,
+        error: removeError.message,
+      });
+    }
+
     return NextResponse.json({ error: "Failed to sign NDA" }, { status: 500 });
   }
 

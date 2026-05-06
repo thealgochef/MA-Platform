@@ -78,12 +78,30 @@ describe("Phase 9: Settings & Account Management", () => {
       expect(content).toContain('from("firms")');
     });
 
-    it("profile route should require authentication", () => {
+    it("profile route should require approved authentication", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "api", "settings", "profile", "route.ts"),
         "utf-8"
       );
-      expect(content).toContain("getUser");
+      expect(content).toContain("requireApprovedUser");
+    });
+
+    it("profile route should validate buyerType before updating users", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "settings", "profile", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain("settingsProfileUpdateSchema.safeParse");
+      expect(content).toContain("status: 400");
+    });
+
+    it("profile route should only write buyer_type for buyer users", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "settings", "profile", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain('profile.role === "buyer"');
+      expect(content).toContain("userUpdate.buyer_type");
     });
 
     it("should have notifications route at /api/settings/notifications/route.ts", () => {
@@ -315,6 +333,15 @@ describe("Phase 9: Settings & Account Management", () => {
       expect(content).toContain("buyerType");
     });
 
+    it("settings page should send empty buyerType so buyers can clear it", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+      expect(content).toContain('buyerType === ""');
+      expect(content).toContain("payload.buyerType = buyerType");
+    });
+
     it("settings page should have AUM field for buyers", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
@@ -340,6 +367,15 @@ describe("Phase 9: Settings & Account Management", () => {
         "utf-8"
       );
       expect(content).toContain("in_platform");
+    });
+
+    it("settings page should provide unique accessible names for notification checkboxes", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+      expect(content).toContain('aria-label={`${event.label} email`}');
+      expect(content).toContain('aria-label={`${event.label} in-platform`}');
     });
 
     it("settings page should fetch from /api/settings/notifications", () => {

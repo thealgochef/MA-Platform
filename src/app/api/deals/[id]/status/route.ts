@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { isValidDealTransition } from "@/lib/deal-status";
+import { dealStatusUpdateSchema } from "@/lib/validators";
 import { notifyBuyers } from "@/lib/notifications";
 
 export async function PATCH(
@@ -36,11 +37,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Deal not found" }, { status: 404 });
     }
 
-    const { newStatus } = await request.json();
+    const body = await request.json().catch(() => null);
+    const parsed = dealStatusUpdateSchema.safeParse(body);
 
-    if (!newStatus) {
+    if (!parsed.success) {
       return NextResponse.json({ error: "newStatus is required" }, { status: 400 });
     }
+
+    const { newStatus, winningEngagementId } = parsed.data;
 
     if (!isValidDealTransition(deal.status, newStatus)) {
       return NextResponse.json(
@@ -50,6 +54,7 @@ export async function PATCH(
     }
 
     const updateData: Record<string, unknown> = { status: newStatus };
+    const adminClient = createAdminClient();
 
     // Publishing: draft -> accepting_iois
     if (deal.status === "draft" && newStatus === "accepting_iois") {
@@ -59,24 +64,42 @@ export async function PATCH(
       if (!deal.teaser_document_path) {
         return NextResponse.json({ error: "Teaser is required to publish" }, { status: 400 });
       }
+      if (deal.nda_type === "custom" && !deal.nda_document_path) {
+        return NextResponse.json({ error: "Custom NDA is required to publish" }, { status: 400 });
+      }
       updateData.published_at = new Date().toISOString();
     }
 
     // Closing
     if (newStatus === "closed") {
-      updateData.closed_at = new Date().toISOString();
+      if (!winningEngagementId) {
+        return NextResponse.json({ error: "winningEngagementId is required to close a deal" }, { status: 400 });
+      }
+
+      const { error: closeError } = await adminClient.rpc("close_deal_with_winning_engagement", {
+        p_deal_id: params.id,
+        p_engagement_id: winningEngagementId,
+      });
+
+      if (closeError) {
+        if (closeError.code === "22023") {
+          return NextResponse.json({ error: "Winning engagement is not eligible to close this deal" }, { status: 400 });
+        }
+
+        return NextResponse.json({ error: "Failed to update deal status" }, { status: 500 });
+      }
     }
 
-    const { error: updateError } = await supabase
-      .from("deals")
-      .update(updateData)
-      .eq("id", params.id);
+    if (newStatus !== "closed") {
+      const { error: updateError } = await supabase
+        .from("deals")
+        .update(updateData)
+        .eq("id", params.id);
 
-    if (updateError) {
-      return NextResponse.json({ error: "Failed to update deal status" }, { status: 500 });
+      if (updateError) {
+        return NextResponse.json({ error: "Failed to update deal status" }, { status: 500 });
+      }
     }
-
-    const adminClient = createAdminClient();
 
     // Handle terminate: set all engagements to terminated
     if (newStatus === "terminated") {
@@ -94,7 +117,7 @@ export async function PATCH(
       deal_id: params.id,
       actor_id: user.id,
       action: `deal_status_${newStatus}`,
-      metadata: { from: deal.status, to: newStatus },
+      metadata: { from: deal.status, to: newStatus, winningEngagementId },
     });
 
     return NextResponse.json({ success: true, status: newStatus });

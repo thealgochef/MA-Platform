@@ -3,8 +3,17 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Button,
+  Card,
+  SelectInput,
+  StatusMessage,
+  TextareaInput,
+  TextInput,
+} from "@/components/ui";
+import {
   INDUSTRIES,
   BUYER_TYPES,
+  BUYER_TYPE_VALUES,
   BROKER_NOTIFICATION_EVENTS,
   BUYER_NOTIFICATION_EVENTS,
 } from "@/lib/constants";
@@ -88,25 +97,34 @@ export default function SettingsPage() {
   const handleProfileSave = async () => {
     setProfileSaving(true);
     setProfileMessage("");
+    const payload: Record<string, unknown> = {
+      fullName,
+      title,
+      phone,
+      linkedIn,
+      location,
+      industryFocus,
+      licenseCredentials: credentials,
+      dealTypes,
+      aum,
+      firmName,
+      description,
+      website,
+      firmLocation,
+    };
+
+    if (
+      role === "buyer" &&
+      (buyerType === "" ||
+        BUYER_TYPE_VALUES.includes(buyerType as (typeof BUYER_TYPE_VALUES)[number]))
+    ) {
+      payload.buyerType = buyerType;
+    }
+
     const res = await fetch("/api/settings/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fullName,
-        title,
-        phone,
-        linkedIn,
-        location,
-        industryFocus,
-        licenseCredentials: credentials,
-        dealTypes,
-        buyerType,
-        aum,
-        firmName,
-        description,
-        website,
-        firmLocation,
-      }),
+      body: JSON.stringify(payload),
     });
     setProfileSaving(false);
     setProfileMessage(res.ok ? "Profile saved." : "Failed to save profile.");
@@ -158,209 +176,143 @@ export default function SettingsPage() {
         <h1 className="text-3xl font-bold text-primary">Settings</h1>
 
         {/* ─── Edit Profile ────────────────────────────────────── */}
-        <section className="bg-surface-alt rounded-lg shadow-sm p-6">
+        <Card>
           <h2 className="text-xl font-semibold text-primary mb-4">Edit Profile</h2>
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm"
-              />
-            </div>
+            <TextInput
+              label="Full Name"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">
-                Title
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm"
-              />
-            </div>
+            <TextInput
+              label="Title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g., (555) 123-4567"
-                className="w-full border rounded-md px-3 py-2 text-sm"
-              />
-            </div>
+            <TextInput
+              label="Phone Number"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="e.g., (555) 123-4567"
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">
-                LinkedIn Profile
-              </label>
-              <input
-                type="url"
-                value={linkedIn}
-                onChange={(e) => setLinkedIn(e.target.value)}
-                placeholder="https://www.linkedin.com/in/your-profile"
-                className="w-full border rounded-md px-3 py-2 text-sm"
-              />
-            </div>
+            <TextInput
+              label="LinkedIn Profile"
+              type="url"
+              value={linkedIn}
+              onChange={(e) => setLinkedIn(e.target.value)}
+              placeholder="https://www.linkedin.com/in/your-profile"
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">
-                Firm Name
-              </label>
-              <input
-                type="text"
-                value={firmName}
-                onChange={(e) => setFirmName(e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm"
-              />
-            </div>
+            <TextInput
+              label="Firm Name"
+              type="text"
+              value={firmName}
+              onChange={(e) => setFirmName(e.target.value)}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">
-                Description
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                className="w-full border rounded-md px-3 py-2 text-sm"
-              />
-            </div>
+            <TextareaInput
+              label="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">
-                Location
-              </label>
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm"
-              />
-            </div>
+            <TextInput
+              label="Location"
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">
-                Industry Focus
-              </label>
-              <select
-                multiple
-                value={industryFocus}
-                onChange={(e) =>
-                  setIndustryFocus(
-                    Array.from(e.target.selectedOptions, (o) => o.value)
-                  )
-                }
-                className="w-full border rounded-md px-3 py-2 text-sm h-32"
-              >
-                {INDUSTRIES.map((ind) => (
-                  <option key={ind} value={ind}>
-                    {ind}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectInput
+              label="Industry Focus"
+              multiple
+              value={industryFocus}
+              onChange={(e) =>
+                setIndustryFocus(Array.from(e.target.selectedOptions, (o) => o.value))
+              }
+              className="h-32"
+            >
+              {INDUSTRIES.map((ind) => (
+                <option key={ind} value={ind}>
+                  {ind}
+                </option>
+              ))}
+            </SelectInput>
 
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">
-                Website
-              </label>
-              <input
-                type="url"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm"
-              />
-            </div>
+            <TextInput
+              label="Website"
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
 
             {/* Broker-specific fields */}
             {role === "broker" && (
               <>
-                <div>
-                  <label className="block text-sm font-medium text-text mb-1">
-                    License & Credentials
-                  </label>
-                  <input
-                    type="text"
-                    value={credentials}
-                    onChange={(e) => setCredentials(e.target.value)}
-                    className="w-full border rounded-md px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text mb-1">
-                    Deal Types
-                  </label>
-                  <input
-                    type="text"
-                    value={dealTypes}
-                    onChange={(e) => setDealTypes(e.target.value)}
-                    className="w-full border rounded-md px-3 py-2 text-sm"
-                  />
-                </div>
+                <TextInput
+                  label="License & Credentials"
+                  type="text"
+                  value={credentials}
+                  onChange={(e) => setCredentials(e.target.value)}
+                />
+                <TextInput
+                  label="Deal Types"
+                  type="text"
+                  value={dealTypes}
+                  onChange={(e) => setDealTypes(e.target.value)}
+                />
               </>
             )}
 
             {/* Buyer-specific fields */}
             {role === "buyer" && (
               <>
-                <div>
-                  <label className="block text-sm font-medium text-text mb-1">
-                    Buyer Type
-                  </label>
-                  <select
-                    value={buyerType}
-                    onChange={(e) => setBuyerType(e.target.value)}
-                    className="w-full border rounded-md px-3 py-2 text-sm"
-                  >
-                    <option value="">Select type</option>
-                    {BUYER_TYPES.map((bt) => (
-                      <option key={bt.value} value={bt.value}>
-                        {bt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text mb-1">
-                    Assets Under Management (AUM)
-                  </label>
-                  <input
-                    type="text"
-                    value={aum}
-                    onChange={(e) => setAum(e.target.value)}
-                    className="w-full border rounded-md px-3 py-2 text-sm"
-                  />
-                </div>
+                <SelectInput
+                  label="Buyer Type"
+                  value={buyerType}
+                  onChange={(e) => setBuyerType(e.target.value)}
+                >
+                  <option value="">Select type</option>
+                  {BUYER_TYPES.map((bt) => (
+                    <option key={bt.value} value={bt.value}>
+                      {bt.label}
+                    </option>
+                  ))}
+                </SelectInput>
+                <TextInput
+                  label="Assets Under Management (AUM)"
+                  type="text"
+                  value={aum}
+                  onChange={(e) => setAum(e.target.value)}
+                />
               </>
             )}
 
             <div className="flex items-center gap-3">
-              <button
+              <Button
                 onClick={handleProfileSave}
-                disabled={profileSaving}
-                className="bg-primary text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
+                isLoading={profileSaving}
+                loadingText="Saving..."
               >
-                {profileSaving ? "Saving..." : "Save Profile"}
-              </button>
+                Save Profile
+              </Button>
               {profileMessage && (
-                <span className="text-sm text-text-secondary">{profileMessage}</span>
+                <StatusMessage>{profileMessage}</StatusMessage>
               )}
             </div>
           </div>
-        </section>
+        </Card>
 
         {/* ─── Notification Preferences ─────────────────────── */}
-        <section className="bg-surface-alt rounded-lg shadow-sm p-6">
+        <Card>
           <h2 className="text-xl font-semibold text-primary mb-4">
             Notification Preferences
           </h2>
@@ -394,6 +346,7 @@ export default function SettingsPage() {
                       <td className="text-center py-2 px-4">
                         <input
                           type="checkbox"
+                          aria-label={`${event.label} email`}
                           checked={prefs.email}
                           onChange={() => toggleNotification(event.key, "email")}
                           className="w-4 h-4"
@@ -402,6 +355,7 @@ export default function SettingsPage() {
                       <td className="text-center py-2 px-4">
                         <input
                           type="checkbox"
+                          aria-label={`${event.label} in-platform`}
                           checked={prefs.in_platform}
                           onChange={() =>
                             toggleNotification(event.key, "in_platform")
@@ -417,21 +371,21 @@ export default function SettingsPage() {
           </div>
 
           <div className="mt-4 flex items-center gap-3">
-            <button
+            <Button
               onClick={handleNotifSave}
-              disabled={notifSaving}
-              className="bg-primary text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
+              isLoading={notifSaving}
+              loadingText="Saving..."
             >
-              {notifSaving ? "Saving..." : "Save Preferences"}
-            </button>
+              Save Preferences
+            </Button>
             {notifMessage && (
-              <span className="text-sm text-text-secondary">{notifMessage}</span>
+              <StatusMessage>{notifMessage}</StatusMessage>
             )}
           </div>
-        </section>
+        </Card>
 
         {/* ─── Delete Account ───────────────────────────────── */}
-        <section className="bg-surface-alt rounded-lg shadow-sm p-6 border border-red-200">
+        <Card className="border border-red-200">
           <h2 className="text-xl font-semibold text-red-600 mb-2">
             Delete Account
           </h2>
@@ -441,12 +395,12 @@ export default function SettingsPage() {
           </p>
 
           {!showDeleteModal ? (
-            <button
+            <Button
+              variant="danger"
               onClick={() => setShowDeleteModal(true)}
-              className="bg-red-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
             >
               Delete My Account
-            </button>
+            </Button>
           ) : (
             <div className="bg-red-50 border border-red-200 rounded-md p-4 space-y-4">
               <p className="text-sm font-medium text-red-800">
@@ -466,39 +420,38 @@ export default function SettingsPage() {
                 <li>Permanently delete all your data</li>
                 <li>Delete your account</li>
               </ul>
-              <div>
-                <label className="block text-sm font-medium text-red-800 mb-1">
-                  Type DELETE to confirm
-                </label>
-                <input
-                  type="text"
-                  value={confirmDelete}
-                  onChange={(e) => setConfirmDelete(e.target.value)}
-                  placeholder="DELETE"
-                  className="w-full border border-red-300 rounded-md px-3 py-2 text-sm"
-                />
-              </div>
+              <TextInput
+                label="Type DELETE to confirm"
+                type="text"
+                value={confirmDelete}
+                onChange={(e) => setConfirmDelete(e.target.value)}
+                placeholder="DELETE"
+                className="w-full border border-red-300 rounded-md px-3 py-2 text-sm"
+                labelClassName="text-red-800"
+              />
               <div className="flex gap-3">
-                <button
+                <Button
+                  variant="danger"
                   onClick={handleDeleteAccount}
-                  disabled={confirmDelete !== "DELETE" || deleting}
-                  className="bg-red-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                  disabled={confirmDelete !== "DELETE"}
+                  isLoading={deleting}
+                  loadingText="Deleting..."
                 >
-                  {deleting ? "Deleting..." : "Permanently Delete Account"}
-                </button>
-                <button
+                  Permanently Delete Account
+                </Button>
+                <Button
+                  variant="secondary"
                   onClick={() => {
                     setShowDeleteModal(false);
                     setConfirmDelete("");
                   }}
-                  className="border border-gray-300 px-6 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           )}
-        </section>
+        </Card>
       </div>
     </main>
   );

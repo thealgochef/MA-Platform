@@ -153,6 +153,9 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
       expect(constants.REGIONS.length).toBeGreaterThan(0);
       expect(constants.US_STATES.length).toBe(50);
       expect(constants.BUYER_TYPES.length).toBe(9);
+      expect(constants.BUYER_TYPE_VALUES).toEqual(constants.BUYER_TYPES.map((bt) => bt.value));
+      expect(constants.BUYER_TYPE_VALUES).toContain("private_investor");
+      expect(constants.BUYER_TYPE_VALUES).not.toContain("individual_investor");
     });
 
     it("should export DEAL_STATUSES with correct values", async () => {
@@ -161,6 +164,7 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
       expect(constants.DEAL_STATUSES).toContain("accepting_iois");
       expect(constants.DEAL_STATUSES).toContain("closed");
       expect(constants.DEAL_STATUSES).toContain("terminated");
+      expect(constants.ACTIVE_DEAL_STATUSES).toEqual(["accepting_iois", "accepting_lois", "under_loi"]);
     });
 
     it("should export VALID_DEAL_TRANSITIONS", async () => {
@@ -215,6 +219,7 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
     });
 
     it("should validate buyer signup data", async () => {
+      const { BUYER_TYPE_VALUES } = await import("@/lib/constants");
       const { buyerSignupSchema } = await import("@/lib/validators");
 
       const validData = {
@@ -235,6 +240,12 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
 
       const result = buyerSignupSchema.safeParse(validData);
       expect(result.success).toBe(true);
+
+      for (const firmType of BUYER_TYPE_VALUES) {
+        expect(buyerSignupSchema.safeParse({ ...validData, firmType }).success).toBe(true);
+      }
+
+      expect(buyerSignupSchema.safeParse({ ...validData, firmType: "individual_investor" }).success).toBe(false);
     });
 
     it("should reject buyer signup without membership agreement", async () => {
@@ -263,22 +274,22 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
     });
 
     it("should filter deals by active status", async () => {
+      const { ACTIVE_DEAL_STATUSES } = await import("@/lib/constants");
       const { matchDealsToProject } = await import("@/lib/matching");
 
       const deals = [
-        {
-          id: "1", industry: "Tech", status: "accepting_iois",
+        ...ACTIVE_DEAL_STATUSES.map((status, index) => ({
+          id: `${index + 1}`, industry: "Tech", status,
           headline: "Tech company", description: "Description",
-        },
+        })),
         {
-          id: "2", industry: "Tech", status: "draft",
+          id: "inactive", industry: "Tech", status: "draft",
           headline: "Draft deal", description: "Description",
         },
       ];
 
       const result = matchDealsToProject(deals, {});
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe("1");
+      expect(result.map((deal) => deal.status)).toEqual(ACTIVE_DEAL_STATUSES);
     });
   });
 

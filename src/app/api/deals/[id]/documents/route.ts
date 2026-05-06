@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { dealDocumentCreateSchema, isValidStorageObjectKey } from "@/lib/validators";
 
 export async function GET(
   _request: Request,
@@ -58,18 +59,17 @@ export async function POST(
       return NextResponse.json({ error: "Deal not found" }, { status: 404 });
     }
 
-    const { fileName, filePath, fileSize, accessLevel } = await request.json();
+    // PDF-only validation (application/pdf equivalent) is centralized in dealDocumentCreateSchema.
+    const body = await request.json().catch(() => null);
+    const parsed = dealDocumentCreateSchema.safeParse(body);
 
-    if (!fileName || !filePath) {
+    if (!parsed.success) {
       return NextResponse.json({ error: "fileName and filePath are required" }, { status: 400 });
     }
 
-    // Enforce PDF only via content type check
-    if (!fileName.toLowerCase().endsWith(".pdf")) {
-      return NextResponse.json(
-        { error: "Only PDF files are allowed (application/pdf)" },
-        { status: 400 }
-      );
+    const { fileName, filePath, fileSize, accessLevel } = parsed.data;
+    if (!isValidStorageObjectKey(filePath, { requirePdf: true, allowedPrefixes: [params.id] })) {
+      return NextResponse.json({ error: "filePath must be scoped to this deal" }, { status: 400 });
     }
 
     const { data: doc, error } = await supabase
@@ -79,8 +79,8 @@ export async function POST(
         uploaded_by: user.id,
         file_name: fileName,
         file_path: filePath,
-        file_size: fileSize || 0,
-        access_level: accessLevel || "post_nda",
+        file_size: fileSize,
+        access_level: accessLevel,
       })
       .select()
       .single();
@@ -93,7 +93,7 @@ export async function POST(
       deal_id: params.id,
       actor_id: user.id,
       action: "document_uploaded",
-      metadata: { fileName, accessLevel: accessLevel || "post_nda" },
+      metadata: { fileName, accessLevel },
     });
 
     return NextResponse.json({ document: doc }, { status: 201 });
