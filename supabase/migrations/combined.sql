@@ -726,7 +726,7 @@ VALUES
   ('message-attachments', 'message-attachments', false, 52428800, ARRAY['application/pdf']),
   ('buyer-documents', 'buyer-documents', false, 52428800, ARRAY['application/pdf']),
   ('signed-ndas', 'signed-ndas', false, 52428800, ARRAY['application/pdf', 'application/json']),
-  ('dispute-documents', 'dispute-documents', false, 52428800, ARRAY['application/pdf'])
+  ('dispute-documents', 'dispute-documents', false, 52428800, ARRAY['application/pdf']),
   ('profile-pictures', 'profile-pictures', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 ON CONFLICT (id) DO NOTHING;
 
