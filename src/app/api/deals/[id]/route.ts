@@ -1,7 +1,35 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
-import { dealCreateSchema } from "@/lib/validators";
+import { dealCreateSchema, isValidStorageObjectKey } from "@/lib/validators";
+import { logDealActivity } from "@/server/activity-log";
+import { mapDealUpdateDataToDb } from "@/server/deals/mappers";
+
+const DEAL_DOCUMENT_FIELDS = ["teaserDocumentPath", "cimDocumentPath", "ndaDocumentPath"] as const;
+const BUYER_DEAL_DETAIL_SELECT = `
+  id,
+  headline,
+  description,
+  geography_display,
+  state,
+  region,
+  industry,
+  revenue_year_1,
+  ebitda_year_1,
+  revenue_year_2,
+  ebitda_year_2,
+  revenue_year_3,
+  ebitda_year_3,
+  revenue_projection,
+  ebitda_projection,
+  fiscal_year_labels,
+  status,
+  ioi_due_date,
+  loi_due_date,
+  published_at,
+  closed_at,
+  created_at
+`;
 
 export async function GET(
   _request: Request,
@@ -14,10 +42,37 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role, status, firm_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.status !== "approved") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { data: brokerDeal } = profile.role === "broker"
+    ? await supabase
+      .from("deals")
+      .select("*")
+      .eq("id", params.id)
+      .single()
+    : { data: null };
+
+  if (brokerDeal && brokerDeal.firm_id === profile.firm_id) {
+    return NextResponse.json({ deal: brokerDeal });
+  }
+
+  if (profile.role === "broker") {
+    return NextResponse.json({ error: "Deal not found" }, { status: 404 });
+  }
+
   const { data: deal, error } = await supabase
     .from("deals")
-    .select("*")
+    .select(BUYER_DEAL_DETAIL_SELECT)
     .eq("id", params.id)
+    .neq("status", "draft")
     .single();
 
   if (error || !deal) {
@@ -31,7 +86,7 @@ export async function GET(
     .eq("buyer_user_id", user.id)
     .maybeSingle();
 
-  return NextResponse.json({ deal, engagement: engagement ?? null });
+  return NextResponse.json({ deal, engagement });
 }
 
 export async function PATCH(
@@ -67,7 +122,11 @@ export async function PATCH(
       return NextResponse.json({ error: "Deal not found" }, { status: 404 });
     }
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
     const validation = dealCreateSchema.partial().safeParse(body);
 
     if (!validation.success) {
@@ -78,50 +137,17 @@ export async function PATCH(
     }
 
     const data = validation.data;
-    const updateData: Record<string, unknown> = {};
-
-    if (data.projectName !== undefined) updateData.project_name = data.projectName;
-    if (data.headline !== undefined) updateData.headline = data.headline;
-    if (data.description !== undefined) updateData.description = data.description;
-    if (data.geographyDisplay !== undefined) updateData.geography_display = data.geographyDisplay;
-    if (data.state !== undefined) updateData.state = data.state;
-    if (data.region !== undefined) updateData.region = data.region;
-    if (data.industry !== undefined) updateData.industry = data.industry;
-    if (data.ndaType !== undefined) updateData.nda_type = data.ndaType;
-    if (data.ndaDocumentPath !== undefined) updateData.nda_document_path = data.ndaDocumentPath;
-    if (data.cimDocumentPath !== undefined) updateData.cim_document_path = data.cimDocumentPath;
-    if (data.cimSharingPreference !== undefined) updateData.cim_sharing_preference = data.cimSharingPreference;
-    if (data.ndaVettingPreference !== undefined) updateData.nda_vetting_preference = data.ndaVettingPreference;
-    if (data.teaserDocumentPath !== undefined) updateData.teaser_document_path = data.teaserDocumentPath;
-    if (data.pointOfContactId !== undefined) updateData.point_of_contact_id = data.pointOfContactId;
-    if (data.ioiDueDate !== undefined) updateData.ioi_due_date = data.ioiDueDate;
-    if (data.loiDueDate !== undefined) updateData.loi_due_date = data.loiDueDate;
-
-    if (data.financials) {
-      const f = data.financials;
-      if (f.year1) {
-        updateData.revenue_year_1 = f.year1.revenue ?? null;
-        updateData.ebitda_year_1 = f.year1.ebitda ?? null;
+    for (const field of DEAL_DOCUMENT_FIELDS) {
+      const documentPath = data[field];
+      if (documentPath && !isValidStorageObjectKey(documentPath, { requirePdf: true, allowedPrefixes: [params.id] })) {
+        return NextResponse.json(
+          { error: `${field} must be a PDF path scoped to this deal` },
+          { status: 400 }
+        );
       }
-      if (f.year2) {
-        updateData.revenue_year_2 = f.year2.revenue ?? null;
-        updateData.ebitda_year_2 = f.year2.ebitda ?? null;
-      }
-      if (f.year3) {
-        updateData.revenue_year_3 = f.year3.revenue ?? null;
-        updateData.ebitda_year_3 = f.year3.ebitda ?? null;
-      }
-      if (f.projection) {
-        updateData.revenue_projection = f.projection.revenue ?? null;
-        updateData.ebitda_projection = f.projection.ebitda ?? null;
-      }
-      updateData.fiscal_year_labels = {
-        year_1: f.year1?.label || "",
-        year_2: f.year2?.label || "",
-        year_3: f.year3?.label || "",
-        projection: f.projection?.label || "",
-      };
     }
+
+    const updateData = mapDealUpdateDataToDb(data);
 
     const { data: deal, error } = await supabase
       .from("deals")
@@ -134,24 +160,9 @@ export async function PATCH(
       return NextResponse.json({ error: "Failed to update deal" }, { status: 500 });
     }
 
-    // When vetting preference is switched to auto, advance any engagements that are
-    // still awaiting manual review so the NDA is sent immediately.
-    if (data.ndaVettingPreference === "auto") {
-      await supabase
-        .from("deal_engagements")
-        .update({
-          stage: "nda_pending",
-          nda_status: "sent",
-          vetting_status: "approved",
-        })
-        .eq("deal_id", params.id)
-        .eq("stage", "pursued")
-        .eq("nda_status", "pending_review");
-    }
-
-    await supabase.from("deal_activity_log").insert({
-      deal_id: params.id,
-      actor_id: user.id,
+    await logDealActivity(supabase, {
+      dealId: params.id,
+      actorId: user.id,
       action: "deal_updated",
       metadata: { fields: Object.keys(updateData) },
     });

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
+import { ACTIVE_DEAL_STATUSES } from "@/lib/constants";
 
 const SRC = path.resolve(__dirname, "../../");
 
@@ -415,10 +416,9 @@ describe("Phase 4: Buyer Projects & Deal Discovery", () => {
     });
 
     it("should filter only active deal statuses", () => {
+      expect(ACTIVE_DEAL_STATUSES).toEqual(["accepting_iois", "accepting_lois", "under_loi"]);
       const content = fs.readFileSync(path.join(SRC, "lib", "matching.ts"), "utf-8");
-      expect(content).toContain("accepting_iois");
-      expect(content).toContain("accepting_lois");
-      expect(content).toContain("under_loi");
+      expect(content).toContain("ACTIVE_DEAL_STATUSES");
     });
   });
 });

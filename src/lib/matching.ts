@@ -1,6 +1,8 @@
 // Deal-to-project matching algorithm
 // Full implementation in Phase 4
 
+import { ACTIVE_DEAL_STATUSES } from "@/lib/constants";
+
 export interface MatchCriteria {
   industry?: string;
   revenueMin?: number;
@@ -29,8 +31,7 @@ export function matchDealsToProject(
   criteria: MatchCriteria
 ): DealForMatching[] {
   return deals.filter((deal) => {
-    const activeStatuses = ["accepting_iois", "accepting_lois", "under_loi"];
-    if (!activeStatuses.includes(deal.status)) return false;
+    if (!ACTIVE_DEAL_STATUSES.includes(deal.status as (typeof ACTIVE_DEAL_STATUSES)[number])) return false;
 
     if (criteria.industry && deal.industry !== criteria.industry) return false;
 

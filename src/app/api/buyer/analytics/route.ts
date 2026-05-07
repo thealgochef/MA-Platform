@@ -1,23 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { isAuthResponse, requireRole } from "@/server/auth";
 
 export async function GET() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role, status")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.role !== "buyer" || profile.status !== "approved") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const context = await requireRole("buyer");
+  if (isAuthResponse(context)) return context;
+  const { supabase, user } = context;
 
   // Fetch all engagements for this buyer with deal info
   const { data: engagements } = await supabase

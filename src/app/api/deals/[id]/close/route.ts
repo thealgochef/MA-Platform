@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { calculateFees } from "@/lib/deal-status";
 import { notifyBroker, notifyAdmin } from "@/lib/notifications";
+import { closeActionSchema, closeReportSchema, isValidStorageObjectKey } from "@/lib/validators";
 
 export async function GET(
   request: Request,
@@ -66,7 +67,7 @@ export async function POST(
     return NextResponse.json({ error: "Deal must be in closed status" }, { status: 400 });
   }
 
-  // Check engagement
+  // Check engagement. Only the buyer with the winning closed engagement can report closure.
   const { data: engagement } = await supabase
     .from("deal_engagements")
     .select("id, stage")
@@ -78,12 +79,18 @@ export async function POST(
     return NextResponse.json({ error: "No engagement found" }, { status: 400 });
   }
 
-  const body = await request.json();
-  const { enterpriseValue } = body;
+  if (engagement.stage !== "closed") {
+    return NextResponse.json({ error: "Engagement is not eligible to report closure" }, { status: 403 });
+  }
 
-  if (!enterpriseValue || typeof enterpriseValue !== "number" || enterpriseValue <= 0) {
+  const body = await request.json().catch(() => null);
+  const parsed = closeReportSchema.safeParse(body);
+
+  if (!parsed.success) {
     return NextResponse.json({ error: "Valid enterprise value is required" }, { status: 400 });
   }
+
+  const { enterpriseValue } = parsed.data;
 
   // Create deal_closures record
   const { data: closure, error } = await supabase
@@ -151,8 +158,17 @@ export async function PATCH(
     return NextResponse.json({ error: "Deal not found" }, { status: 404 });
   }
 
-  const body = await request.json();
-  const { action, disputeDocumentsPath } = body;
+  const body = await request.json().catch(() => null);
+  const parsed = closeActionSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  }
+
+  const { action, disputeDocumentsPath } = parsed.data;
+  if (disputeDocumentsPath && !isValidStorageObjectKey(disputeDocumentsPath, { requirePdf: true, allowedPrefixes: [params.id] })) {
+    return NextResponse.json({ error: "Dispute document path must be scoped to this deal" }, { status: 400 });
+  }
 
   // Fetch existing closure
   const { data: closure } = await supabase
@@ -234,6 +250,4 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, disputed: true });
   }
-
-  return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }

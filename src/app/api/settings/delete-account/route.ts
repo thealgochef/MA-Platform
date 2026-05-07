@@ -1,40 +1,26 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import * as supabaseAdmin from "@/lib/supabase/admin";
 import { notifyBuyers } from "@/lib/notifications";
+import { settingsDeleteAccountSchema } from "@/lib/validators";
+import { isAuthResponse, requireApprovedUser } from "@/server/auth";
 
 export async function POST(request: Request) {
-  const supabase = createClient();
+  const context = await requireApprovedUser();
+  if (isAuthResponse(context)) return context;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { user, profile } = context;
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
 
   // Require typing "DELETE" to confirm
-  if (body.confirmation !== "DELETE") {
+  if (!settingsDeleteAccountSchema.safeParse(body).success) {
     return NextResponse.json(
       { error: "You must type DELETE to confirm account deletion" },
       { status: 400 }
     );
   }
 
-  const adminClient = createAdminClient();
-
-  // Get user profile
-  const { data: profile } = await adminClient
-    .from("users")
-    .select("role, firm_id")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) {
-    return NextResponse.json({ error: "Profile not found" }, { status: 404 });
-  }
+  const adminClient = supabaseAdmin.createAdminClient();
 
   // Role-specific cleanup
   if (profile.role === "broker") {

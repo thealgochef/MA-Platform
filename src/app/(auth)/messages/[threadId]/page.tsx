@@ -103,15 +103,18 @@ export default function ThreadPage() {
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         );
 
-        const filePath = `${threadId}/${Date.now()}_${attachment.name}`;
+        const filePath = `${threadId}/${crypto.randomUUID()}.pdf`;
         const { error: uploadError } = await supabase.storage
           .from("message-attachments")
           .upload(filePath, attachment);
 
-        if (!uploadError) {
-          attachmentPath = filePath;
-          attachmentName = attachment.name;
+        if (uploadError) {
+          console.error("[messages/thread] Failed to upload attachment", uploadError.message);
+          return;
         }
+
+        attachmentPath = filePath;
+        attachmentName = attachment.name;
       }
 
       const res = await fetch(`/api/messages/${threadId}`, {
@@ -129,8 +132,8 @@ export default function ThreadPage() {
         setAttachment(null);
         // Message will appear via realtime subscription
       }
-    } catch {
-      // Silently handle errors
+    } catch (error) {
+      console.error("[messages/thread] Failed to send message", error);
     } finally {
       setSending(false);
     }

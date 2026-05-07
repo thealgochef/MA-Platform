@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
+import { ACTIVE_DEAL_STATUSES, FILE_CONSTRAINTS } from "@/lib/constants";
 
 const SRC = path.resolve(__dirname, "../../");
 
@@ -339,8 +340,9 @@ describe("Phase 10: Polish & Edge Cases", () => {
         path.join(SRC, "lib", "validators.ts"),
         "utf-8"
       );
-      expect(content).toContain("application/pdf");
+      expect(FILE_CONSTRAINTS.ALLOWED_TYPES).toEqual(["application/pdf"]);
       expect(content).toContain("50MB");
+      expect(content).toContain("FILE_CONSTRAINTS.ALLOWED_TYPES");
     });
 
     it("FILE_CONSTRAINTS should define 50MB max and PDF only", () => {
@@ -377,7 +379,8 @@ describe("Phase 10: Polish & Edge Cases", () => {
         path.join(SRC, "lib", "matching.ts"),
         "utf-8"
       );
-      expect(content).toContain("active");
+      expect(ACTIVE_DEAL_STATUSES).toEqual(["accepting_iois", "accepting_lois", "under_loi"]);
+      expect(content).toContain("ACTIVE_DEAL_STATUSES");
     });
   });
 

@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { settingsProfileUpdateSchema } from "@/lib/validators";
+import { isAuthResponse, requireApprovedUser } from "@/server/auth";
 
 export async function GET() {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const context = await requireApprovedUser();
+  if (isAuthResponse(context)) return context;
+  const { supabase, user } = context;
 
   // Get user profile
   const { data: profile, error: profileError } = await supabase
@@ -37,16 +33,24 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const supabase = createClient();
+  const context = await requireApprovedUser();
+  if (isAuthResponse(context)) return context;
+  const { supabase, user } = context;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let requestBody: unknown;
+  try {
+    requestBody = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const body = await request.json();
+  const parsedBody = settingsProfileUpdateSchema.safeParse(requestBody);
+
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: "Invalid profile update payload" }, { status: 400 });
+  }
+
+  const body = parsedBody.data;
 
   // Get current user profile
   const { data: profile } = await supabase
@@ -70,7 +74,20 @@ export async function PATCH(request: Request) {
   if (body.industryFocus !== undefined) userUpdate.industry_focus = body.industryFocus;
   if (body.licenseCredentials !== undefined) userUpdate.license_credentials = body.licenseCredentials;
   if (body.dealTypes !== undefined) userUpdate.deal_types = body.dealTypes;
-  if (body.buyerType !== undefined) userUpdate.buyer_type = body.buyerType;
+  if (body.buyerType !== undefined) {
+    const buyerType = body.buyerType === "" ? null : body.buyerType;
+
+    if (buyerType !== null && profile.role !== "buyer") {
+      return NextResponse.json(
+        { error: "buyerType can only be updated by buyer users" },
+        { status: 400 }
+      );
+    }
+
+    if (profile.role === "buyer") {
+      userUpdate.buyer_type = buyerType;
+    }
+  }
   if (body.aum !== undefined) userUpdate.aum = body.aum;
 
   if (Object.keys(userUpdate).length > 0) {

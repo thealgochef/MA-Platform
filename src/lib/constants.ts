@@ -56,6 +56,11 @@ export const US_STATES = [
   "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming",
 ] as const;
 
+const valuesFromReadonlyObjects = <T extends readonly { value: string }[]>(items: T) =>
+  items.map(({ value }) => value) as {
+    readonly [K in keyof T]: T[K] extends { value: infer V } ? V : never;
+  };
+
 export const BUYER_TYPES = [
   { value: "family_office", label: "Family Office" },
   { value: "pe", label: "Private Equity" },
@@ -64,7 +69,7 @@ export const BUYER_TYPES = [
   { value: "independent_sponsor", label: "Independent Sponsor" },
   { value: "holding_company", label: "Holding Company / Corporate M&A" },
   { value: "ma_advisor", label: "M&A Advisor" },
-  { value: "individual_investor", label: "Individual Investor" },
+  { value: "private_investor", label: "Private Investor" },
   { value: "other", label: "Other" },
 ] as const;
 
@@ -75,6 +80,7 @@ export const ACCREDITATIONS = [
   { value: "professional", label: "I hold a FINRA Series 7, 65, or 82 license in good standing" },
   { value: "none", label: "I am not an accredited investor" },
 ] as const;
+export const BUYER_TYPE_VALUES = valuesFromReadonlyObjects(BUYER_TYPES);
 
 export const DEAL_STATUSES = [
   "draft",
@@ -84,6 +90,12 @@ export const DEAL_STATUSES = [
   "paused",
   "closed",
   "terminated",
+] as const;
+
+export const ACTIVE_DEAL_STATUSES = [
+  "accepting_iois",
+  "accepting_lois",
+  "under_loi",
 ] as const;
 
 export const DEAL_STATUS_LABELS: Record<string, string> = {
@@ -161,6 +173,11 @@ export const FILE_CONSTRAINTS = {
   MAX_SIZE_BYTES: 50 * 1024 * 1024, // 50MB
   ALLOWED_TYPES: ["application/pdf"],
   ALLOWED_EXTENSION: ".pdf",
+} as const;
+
+export const SIGNED_NDA_ARTIFACT_CONSTRAINTS = {
+  ALLOWED_TYPE: "application/json",
+  ALLOWED_EXTENSION: ".json",
 } as const;
 
 export const FEE_RATES = {

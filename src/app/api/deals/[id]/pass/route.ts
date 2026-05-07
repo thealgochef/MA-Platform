@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { PASS_REASONS } from "@/lib/constants";
 import { notifyBroker } from "@/lib/notifications";
+import { passDealSchema } from "@/lib/validators";
 
 export async function POST(
   request: Request,
@@ -44,23 +44,23 @@ export async function POST(
     return NextResponse.json({ error: "Already passed on this deal" }, { status: 400 });
   }
 
-  const body = await request.json();
-  const { pass_reason, pass_reason_detail } = body;
+  // passDealSchema is backed by PASS_REASONS and enforces the Other detail rule.
+  const body = await request.json().catch(() => null);
+  const parsed = passDealSchema.safeParse(body);
 
-  if (!pass_reason) {
+  if (!parsed.success && !body?.pass_reason) {
     return NextResponse.json({ error: "Pass reason is required" }, { status: 400 });
   }
 
-  // Validate pass reason is from PASS_REASONS
-  const validReasons = PASS_REASONS as readonly string[];
-  if (!validReasons.includes(pass_reason)) {
+  if (!parsed.success && body?.pass_reason !== "Other") {
     return NextResponse.json({ error: "Invalid pass reason" }, { status: 400 });
   }
 
-  // If reason is "Other", detail is required
-  if (pass_reason === "Other" && !pass_reason_detail) {
+  if (!parsed.success) {
     return NextResponse.json({ error: "Detail is required when reason is Other" }, { status: 400 });
   }
+
+  const { pass_reason, pass_reason_detail } = parsed.data;
 
   // Set engagement to passed — this is final, no re-engagement
   const { error } = await supabase

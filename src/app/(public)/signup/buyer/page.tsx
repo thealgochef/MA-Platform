@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { INDUSTRIES, BUYER_TYPES, ACCREDITATIONS} from "@/lib/constants";
+import { BUYER_TYPES, ACCREDITATIONS, FILE_CONSTRAINTS, INDUSTRIES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import {
   fileValidation,
@@ -94,17 +94,12 @@ export default function BuyerSignupPage() {
     const validFiles: File[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const validation = fileValidation.safeParse({
-        size: file.size,
-        type: file.type,
-      });
-
-      if (!validation.success) {
-        setFieldErrors((prev) => ({
-          ...prev,
-          documentPaths: validation.error.flatten().formErrors,
-        }));
-        setError(validation.error.flatten().formErrors[0] || "Invalid file upload");
+      if (!FILE_CONSTRAINTS.ALLOWED_TYPES.includes(file.type as (typeof FILE_CONSTRAINTS.ALLOWED_TYPES)[number])) {
+        setError("Only PDF files are allowed");
+        return;
+      }
+      if (file.size > FILE_CONSTRAINTS.MAX_SIZE_BYTES) {
+        setError("Files must be under 50MB");
         return;
       }
 

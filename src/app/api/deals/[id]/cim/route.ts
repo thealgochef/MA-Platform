@@ -141,21 +141,39 @@ export async function PATCH(
     return NextResponse.json({ error: "Deal not found" }, { status: 404 });
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const { engagementId } = body;
 
   if (!engagementId) {
     return NextResponse.json({ error: "engagementId is required" }, { status: 400 });
   }
 
-  // Set cim_released = true
+  const { data: engagement } = await supabase
+    .from("deal_engagements")
+    .select("id, nda_status")
+    .eq("id", engagementId)
+    .eq("deal_id", params.id)
+    .single();
+
+  if (!engagement) {
+    return NextResponse.json({ error: "Engagement not found" }, { status: 404 });
+  }
+
+  if (engagement.nda_status !== "signed") {
+    return NextResponse.json({ error: "NDA must be signed before CIM release" }, { status: 403 });
+  }
+
+  // Set cim_released = true after verifying nda_status === "signed"
   const { error } = await supabase
     .from("deal_engagements")
     .update({
       cim_released: true,
       cim_released_at: new Date().toISOString(),
     })
-    .eq("id", engagementId)
+    .eq("id", engagement.id)
     .eq("deal_id", params.id);
 
   if (error) {

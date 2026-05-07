@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { browseQuerySchema, escapePostgrestLikePattern } from "@/lib/validators";
 
 export async function GET(request: Request) {
   const supabase = createClient();
@@ -10,14 +11,11 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const industry = url.searchParams.get("industry");
-  const revenueMin = url.searchParams.get("revenueMin");
-  const revenueMax = url.searchParams.get("revenueMax");
-  const ebitdaMin = url.searchParams.get("ebitdaMin");
-  const ebitdaMax = url.searchParams.get("ebitdaMax");
-  const location = url.searchParams.get("location");
-  const keyword = url.searchParams.get("keyword");
-  const cursor = url.searchParams.get("cursor");
+  const parsedQuery = browseQuerySchema.safeParse(Object.fromEntries(url.searchParams));
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: "Invalid query parameters" }, { status: 400 });
+  }
+  const { industry, revenueMin, revenueMax, ebitdaMin, ebitdaMax, location, keyword, cursor } = parsedQuery.data;
   const limit = 20;
 
   // Fetch buyer's NDA-signed deals to determine paused deal visibility
@@ -40,23 +38,24 @@ export async function GET(request: Request) {
   if (industry) {
     query = query.eq("industry", industry);
   }
-  if (revenueMin) {
-    query = query.gte("revenue_year_3", parseFloat(revenueMin));
+  if (revenueMin !== undefined) {
+    query = query.gte("revenue_year_3", revenueMin);
   }
-  if (revenueMax) {
-    query = query.lte("revenue_year_3", parseFloat(revenueMax));
+  if (revenueMax !== undefined) {
+    query = query.lte("revenue_year_3", revenueMax);
   }
-  if (ebitdaMin) {
-    query = query.gte("ebitda_year_3", parseFloat(ebitdaMin));
+  if (ebitdaMin !== undefined) {
+    query = query.gte("ebitda_year_3", ebitdaMin);
   }
-  if (ebitdaMax) {
-    query = query.lte("ebitda_year_3", parseFloat(ebitdaMax));
+  if (ebitdaMax !== undefined) {
+    query = query.lte("ebitda_year_3", ebitdaMax);
   }
   if (location) {
     query = query.eq("state", location);
   }
   if (keyword) {
-    query = query.or(`headline.ilike.%${keyword}%,description.ilike.%${keyword}%`);
+    const escapedKeyword = escapePostgrestLikePattern(keyword);
+    query = query.or(`headline.ilike.%${escapedKeyword}%,description.ilike.%${escapedKeyword}%`);
   }
 
   const { data: allDeals, error } = await query;

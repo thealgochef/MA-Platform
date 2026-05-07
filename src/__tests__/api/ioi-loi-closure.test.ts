@@ -249,6 +249,16 @@ describe("Phase 6: IOI, LOI & Deal Closure", () => {
       expect(content).toContain("buyer_confirmed");
     });
 
+    it("closure route should require the winning closed buyer engagement to report closure", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "close", "route.ts"),
+        "utf-8"
+      );
+      expect(content).toContain("Engagement is not eligible to report closure");
+      expect(content).toContain('engagement.stage !== "closed"');
+      expect(content).not.toContain('["loi_submitted", "diligence", "closed"].includes');
+    });
+
     it("closure route should handle PATCH for broker confirm/dispute", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "api", "deals", "[id]", "close", "route.ts"),
