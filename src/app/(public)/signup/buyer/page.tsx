@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { BUYER_TYPES, ACCREDITATIONS, FILE_CONSTRAINTS, INDUSTRIES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import {
-  fileValidation,
   validateBuyerSignup,
 } from "@/lib/validators";
 
