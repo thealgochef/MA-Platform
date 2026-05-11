@@ -143,7 +143,7 @@ export default function EditDealPage() {
         const data = await res.json();
         throw new Error(data.error || "Failed to save");
       }
-      router.push(`/deals/${dealId}`);
+      router.push(`/deals/${dealId}?saved=1`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

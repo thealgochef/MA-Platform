@@ -3,8 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import BrokerDealManagement from "@/components/broker/BrokerDealManagement";
 import BuyerDealWorkspace from "@/components/buyer/BuyerDealWorkspace";
 
-export default async function DealDetailPage() {
+export default async function DealDetailPage({
+  searchParams,
+}: {
+  searchParams?: { saved?: string };
+}) {
   const supabase = createClient();
+  const showSavedBanner = searchParams?.saved === "1";
 
   const {
     data: { user },
@@ -25,7 +30,7 @@ export default async function DealDetailPage() {
   }
 
   if (profile.role === "broker") {
-    return <BrokerDealManagement />;
+    return <BrokerDealManagement initialShowSavedBanner={showSavedBanner} />;
   }
 
   return <BuyerDealWorkspace />;

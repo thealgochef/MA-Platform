@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 
@@ -96,14 +96,33 @@ function getToolbarLinkClass(isActive: boolean): string {
 
 export default function ProjectDealsView({ projectId }: { projectId: string }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const viewMode = getViewModeFromPath(pathname);
+  const shouldShowSavedBanner = viewMode === "matches" && searchParams.get("saved") === "1";
   const [project, setProject] = useState<Project | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showSavedBanner, setShowSavedBanner] = useState(shouldShowSavedBanner);
+
+  useEffect(() => {
+    setShowSavedBanner(shouldShowSavedBanner);
+
+    if (!shouldShowSavedBanner) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowSavedBanner(false);
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [shouldShowSavedBanner]);
 
   const fetchDeals = useCallback(
     async (cursor?: string) => {
@@ -191,6 +210,20 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
   return (
     <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-6xl mx-auto px-4">
+        {showSavedBanner && (
+          <div className="mb-6 flex items-start justify-between gap-4 rounded-md border border-success/20 bg-success/10 px-4 py-3 text-sm text-success">
+            <p>Changes saved.</p>
+            <button
+              type="button"
+              onClick={() => setShowSavedBanner(false)}
+              className="shrink-0 text-success/80 transition-colors hover:text-success"
+              aria-label="Dismiss saved confirmation"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+        
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-primary">{project?.name || "Project"}</h1>

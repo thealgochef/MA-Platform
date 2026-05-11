@@ -61,7 +61,13 @@ interface Activity {
   actor: { full_name: string; role: string } | null;
 }
 
-export default function BrokerDealManagement() {
+interface BrokerDealManagementProps {
+  initialShowSavedBanner?: boolean;
+}
+
+export default function BrokerDealManagement({
+  initialShowSavedBanner = false,
+}: BrokerDealManagementProps) {
   const params = useParams();
   const router = useRouter();
   const dealId = params.id as string;
@@ -77,6 +83,23 @@ export default function BrokerDealManagement() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingDeal, setDeletingDeal] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showSavedBanner, setShowSavedBanner] = useState(initialShowSavedBanner);
+
+  useEffect(() => {
+    setShowSavedBanner(initialShowSavedBanner);
+
+    if (!initialShowSavedBanner) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowSavedBanner(false);
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [initialShowSavedBanner]);
 
   const fetchDeal = useCallback(async () => {
     const res = await fetch(`/api/deals/${dealId}`);
@@ -239,7 +262,20 @@ export default function BrokerDealManagement() {
   return (
     <main className="min-h-screen bg-bg-alt">
       <div className="max-w-6xl mx-auto px-4 py-8">
-        
+        {showSavedBanner && (
+          <div className="mb-6 flex items-start justify-between gap-4 rounded-md border border-success/20 bg-success/10 px-4 py-3 text-sm text-success">
+            <p>Changes saved.</p>
+            <button
+              type="button"
+              onClick={() => setShowSavedBanner(false)}
+              className="shrink-0 text-success/80 transition-colors hover:text-success"
+              aria-label="Dismiss saved confirmation"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-start justify-between">
