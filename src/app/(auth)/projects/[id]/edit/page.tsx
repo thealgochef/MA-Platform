@@ -96,7 +96,7 @@ export default function EditProjectPage() {
       <div className="max-w-2xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-primary">Edit Project</h1>
-          <a href={`/projects/${projectId}`} className="text-sm text-secondary hover:underline">Back to project</a>
+          <a href={`/projects/${projectId}`} className="text-sm text-secondary hover:underline hover:text-primary self-center">Back to project</a>
         </div>
 
         {error && (
