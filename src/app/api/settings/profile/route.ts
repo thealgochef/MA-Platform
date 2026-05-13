@@ -29,7 +29,18 @@ export async function GET() {
     firm = firmData;
   }
 
-  return NextResponse.json({ profile, firm });
+  let avatarUrl: string | null = null;
+  if (profile.avatar_path) {
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      .from("profile-pictures")
+      .createSignedUrl(profile.avatar_path, 60 * 60);
+
+    if (!signedUrlError && signedUrlData?.signedUrl) {
+      avatarUrl = signedUrlData.signedUrl;
+    }
+  }
+
+  return NextResponse.json({ profile, firm, avatar_url: avatarUrl });
 }
 
 export async function PATCH(request: Request) {

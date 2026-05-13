@@ -209,10 +209,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Deal not found" }, { status: 404 });
     }
 
-    const { data: documents } = await adminClient
+    const { data: documents, error: documentsError } = await adminClient
       .from("deal_documents")
       .select("file_path")
       .eq("deal_id", params.id);
+
+    if (documentsError) {
+      return NextResponse.json({ error: "Failed to load deal documents" }, { status: 500 });
+    }
 
     const storagePaths = [
       deal.teaser_document_path,
@@ -222,7 +226,13 @@ export async function DELETE(
     ].filter((path): path is string => Boolean(path));
 
     if (storagePaths.length > 0) {
-      await adminClient.storage.from("deal-documents").remove(storagePaths);
+      const { error: storageDeleteError } = await adminClient.storage
+        .from("deal-documents")
+        .remove(storagePaths);
+
+      if (storageDeleteError) {
+        return NextResponse.json({ error: "Failed to delete deal files" }, { status: 500 });
+      }
     }
 
     const { error: deleteError } = await adminClient

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import {
   Button,
   Card,
@@ -70,16 +69,11 @@ export default function SettingsPage() {
 
       if (profileRes.ok) {
         const { profile, firm } = await profileRes.json();
-        const supabase = createClient();
         setRole(profile.role || "");
         setFullName(profile.full_name || "");
         setTitle(profile.title || "");
         setAvatarPath(profile.avatar_path || null);
-        setAvatarUrl(
-          profile.avatar_path
-            ? supabase.storage.from("profile-pictures").getPublicUrl(profile.avatar_path).data.publicUrl
-            : null
-        );
+        setAvatarUrl(profile.avatar_url || null);
         setLocation(profile.location || "");
         setIndustryFocus(profile.industry_focus || []);
         setCredentials(profile.license_credentials || "");
@@ -138,9 +132,9 @@ export default function SettingsPage() {
         throw new Error(error || "Failed to upload profile picture.");
       }
 
-      const { avatarPath: newPath, publicUrl } = await res.json();
+      const { avatarPath: newPath, avatarUrl: newUrl } = await res.json();
       setAvatarPath(newPath);
-      setAvatarUrl(`${publicUrl}?t=${Date.now()}`);
+      setAvatarUrl(newUrl ? `${newUrl}?t=${Date.now()}` : null);
       setProfileMessage("Profile picture updated.");
     } catch (error) {
       setProfileMessage(

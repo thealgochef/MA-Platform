@@ -262,7 +262,7 @@ describe("Phase 9: Settings & Account Management", () => {
         "utf-8"
       );
       expect(content).toContain("Profile Picture");
-      expect(content).toContain("profile-pictures");
+      expect(content).toContain("/api/settings/avatar");
       expect(content).toContain("handleAvatarChange");
     });
 

@@ -21,7 +21,7 @@ import {
 interface SidebarProps {
   userName: string;
   userRole: "broker" | "buyer" | "admin";
-  avatarPath?: string;
+  avatarUrl?: string;
   unreadCount?: number;
 }
 
@@ -36,17 +36,12 @@ interface NavItem {
 export default function Sidebar({
   userName,
   userRole,
-  avatarPath,
+  avatarUrl,
   unreadCount = 0,
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const supabase = createClient();
-
-  const avatarUrl = avatarPath
-    ? supabase.storage.from("profile-pictures").getPublicUrl(avatarPath).data.publicUrl
-    : null;
 
   const handleSignOut = async () => {
     const supabase = createClient();

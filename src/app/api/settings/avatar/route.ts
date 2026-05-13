@@ -52,9 +52,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to save profile picture" }, { status: 500 });
   }
 
-  const { data: { publicUrl } } = supabase.storage
+  const { data: signedUrlData, error: signedUrlError } = await supabase.storage
     .from("profile-pictures")
-    .getPublicUrl(avatarStoragePath);
+    .createSignedUrl(avatarStoragePath, 60 * 60);
 
-  return NextResponse.json({ avatarPath: avatarStoragePath, publicUrl });
+  if (signedUrlError || !signedUrlData?.signedUrl) {
+    return NextResponse.json({ error: "Failed to access profile picture" }, { status: 500 });
+  }
+
+  return NextResponse.json({ avatarPath: avatarStoragePath, avatarUrl: signedUrlData.signedUrl });
 }

@@ -727,7 +727,7 @@ VALUES
   ('buyer-documents', 'buyer-documents', false, 52428800, ARRAY['application/pdf']),
   ('signed-ndas', 'signed-ndas', false, 52428800, ARRAY['application/pdf', 'application/json']),
   ('dispute-documents', 'dispute-documents', false, 52428800, ARRAY['application/pdf']),
-  ('profile-pictures', 'profile-pictures', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+  ('profile-pictures', 'profile-pictures', false, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for deal-documents
@@ -861,6 +861,12 @@ CREATE POLICY "Authenticated users can update their profile picture" ON storage.
     AND (storage.foldername(name))[1] = auth.uid()::text
   );
 CREATE POLICY "Authenticated users can delete their profile picture" ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'profile-pictures'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+CREATE POLICY "Authenticated users can view their own profile picture" ON storage.objects FOR SELECT
   USING (
     bucket_id = 'profile-pictures'
     AND auth.uid() IS NOT NULL

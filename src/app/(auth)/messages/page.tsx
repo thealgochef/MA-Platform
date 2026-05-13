@@ -58,7 +58,7 @@ export default function InboxPage() {
             </p>
           </div>
         ) : (
-          <div className="bg-surface-alt rounded-lg shadow-md divide-y divide-border-color">
+          <div className="bg-surface-alt rounded-lg shadow-md divide-y">
             {threads.map((thread) => (
               <Link
                 key={thread.engagementId}
