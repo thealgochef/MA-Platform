@@ -451,7 +451,7 @@ export default function BuyerSignupPage() {
                   Supporting Documents (PDF only, 50MB max)
                 </label>
                 <p className="text-xs mb-2">
-                  Required for search_fund and private_investor buyer types.
+                  Required for search_fund and individual_investor buyer types.
                   Upload credentials, track record, or other supporting
                   documentation.
                 </p>

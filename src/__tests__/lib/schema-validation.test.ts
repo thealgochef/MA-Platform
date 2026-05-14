@@ -305,8 +305,8 @@ describe("Phase 1: Database Schema Migrations", () => {
       );
 
       expect(checkConstraintValues).toEqual([...BUYER_TYPE_VALUES]);
-      expect(checkConstraintValues).toContain("private_investor");
-      expect(checkConstraintValues).not.toContain("individual_investor");
+      expect(checkConstraintValues).toContain("individual_investor");
+      expect(checkConstraintValues).not.toContain("private_investor");
     });
 
     it("should keep canonical buyer types in the destructive reset users CHECK constraint", () => {
@@ -319,10 +319,10 @@ describe("Phase 1: Database Schema Migrations", () => {
       );
 
       expect(checkConstraintValues).toEqual([...BUYER_TYPE_VALUES]);
-      expect(checkConstraintValues).not.toContain("individual_investor");
+      expect(checkConstraintValues).not.toContain("private_investor");
     });
 
-    it("should not allow legacy individual_investor in migration CHECK definitions", () => {
+    it("should not allow legacy private_investor in migration CHECK definitions", () => {
       const files = fs.readdirSync(MIGRATIONS_DIR).filter((file) => file.endsWith(".sql"));
       const checkDefinitions = files.flatMap((file) =>
         extractCheckDefinitions(fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf-8"))
@@ -330,7 +330,7 @@ describe("Phase 1: Database Schema Migrations", () => {
       );
 
       expect(
-        checkDefinitions.filter(({ definition }) => definition.includes("individual_investor"))
+        checkDefinitions.filter(({ definition }) => definition.includes("private_investor"))
       ).toEqual([]);
     });
   });
@@ -338,15 +338,15 @@ describe("Phase 1: Database Schema Migrations", () => {
 
 describe("Settings profile validation", () => {
   it("rejects invalid buyerType values before database writes", () => {
-    expect(settingsProfileUpdateSchema.safeParse({ buyerType: "individual_investor" }).success)
+    expect(settingsProfileUpdateSchema.safeParse({ buyerType: "private_investor" }).success)
       .toBe(false);
     expect(settingsProfileUpdateSchema.safeParse({ buyerType: "not_a_real_type" }).success)
       .toBe(false);
   });
 
   it("allows canonical buyerType values and empty values while preserving other keys", () => {
-    expect(settingsProfileUpdateSchema.parse({ buyerType: "private_investor" }).buyerType)
-      .toBe("private_investor");
+    expect(settingsProfileUpdateSchema.parse({ buyerType: "individual_investor" }).buyerType)
+      .toBe("individual_investor");
     expect(settingsProfileUpdateSchema.parse({ buyerType: "" }).buyerType).toBe("");
     expect(settingsProfileUpdateSchema.parse({ buyerType: null }).buyerType).toBeNull();
     expect(settingsProfileUpdateSchema.parse({ fullName: "Ada Lovelace" }).fullName)

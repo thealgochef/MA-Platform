@@ -110,7 +110,7 @@ export const buyerSignupSchema = z.object({
   documentPaths: z.array(buyerDocumentSchema).optional().default([]),
 }).superRefine((data, ctx) => {
   const requiresDocuments =
-    data.firmType === "search_fund" || data.firmType === "private_investor";
+    data.firmType === "search_fund" || data.firmType === "individual_investor";
 
   if (requiresDocuments && data.documentPaths.length === 0) {
     ctx.addIssue({

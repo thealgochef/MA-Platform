@@ -69,7 +69,7 @@ export const BUYER_TYPES = [
   { value: "independent_sponsor", label: "Independent Sponsor" },
   { value: "holding_company", label: "Holding Company / Corporate M&A" },
   { value: "ma_advisor", label: "M&A Advisor" },
-  { value: "private_investor", label: "Private Investor" },
+  { value: "individual_investor", label: "Private Investor" },
   { value: "other", label: "Other" },
 ] as const;
 

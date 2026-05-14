@@ -2,8 +2,8 @@
 -- Migration 010: Fix buyer_type CHECK constraint drift
 -- ============================================================
 
--- Preserve existing individual investor profiles under the canonical
--- private_investor value before tightening the CHECK constraint.
+-- Preserve existing private investor profiles under the canonical
+-- individual_investor value before tightening the CHECK constraint.
 DO $$
 DECLARE
   unexpected_buyer_types text;
@@ -20,8 +20,8 @@ BEGIN
       'independent_sponsor',
       'holding_company',
       'ma_advisor',
-      'private_investor',
       'individual_investor',
+      'private_investor',
       'other'
     );
 
@@ -31,8 +31,8 @@ BEGIN
 END $$;
 
 UPDATE users
-SET buyer_type = 'private_investor'
-WHERE buyer_type = 'individual_investor';
+SET buyer_type = 'individual_investor'
+WHERE buyer_type = 'private_investor';
 
 ALTER TABLE users
   DROP CONSTRAINT IF EXISTS users_buyer_type_check;
@@ -47,6 +47,6 @@ ALTER TABLE users
     'independent_sponsor',
     'holding_company',
     'ma_advisor',
-    'private_investor',
+    'individual_investor',
     'other'
   ));
