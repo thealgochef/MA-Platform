@@ -78,10 +78,20 @@ describe("Phase 2: Middleware Auth Logic", () => {
 
   describe("getRequiredRole", () => {
     it("should return 'broker' for broker routes", () => {
+      expect(getRequiredRole("/deals")).toBe("broker");
       expect(getRequiredRole("/deals/new")).toBe("broker");
       expect(getRequiredRole("/deals/123/edit")).toBe("broker");
       expect(getRequiredRole("/deals/123/preview")).toBe("broker");
       expect(getRequiredRole("/deals/123/ioi-compare")).toBe("broker");
+      expect(getRequiredRole("/deals/123/loi-compare")).toBe("broker");
+    });
+
+    it("should return null for shared deal workspace routes", () => {
+      expect(getRequiredRole("/deals/123")).toBeNull();
+      expect(getRequiredRole("/deals/123/nda")).toBeNull();
+      expect(getRequiredRole("/deals/123/ioi")).toBeNull();
+      expect(getRequiredRole("/deals/123/loi")).toBeNull();
+      expect(getRequiredRole("/deals/123/close")).toBeNull();
     });
 
     it("should return 'buyer' for buyer routes", () => {
@@ -172,6 +182,14 @@ describe("Phase 2: Middleware Auth Logic", () => {
         "/deals/new"
       );
       expect(result).toBe("/dashboard");
+    });
+
+    it("should allow approved buyer on shared deal workspace routes", () => {
+      const result = getRedirectForUser(
+        { role: "buyer", status: "approved", membership_agreement_signed: true },
+        "/deals/123"
+      );
+      expect(result).toBeNull();
     });
 
     it("should redirect non-admin away from admin routes", () => {

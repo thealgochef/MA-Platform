@@ -2,15 +2,40 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BUYER_TYPES, FILE_CONSTRAINTS, INDUSTRIES } from "@/lib/constants";
+import { BUYER_TYPES, ACCREDITATIONS, FILE_CONSTRAINTS, INDUSTRIES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
+import {
+  validateBuyerSignup,
+} from "@/lib/validators";
+
+type BuyerFormData = {
+  firstName: string;
+  lastName: string;
+  title: string;
+  phoneNumber: string;
+  linkedIn: string;
+  firmName: string;
+  firmWebsite: string;
+  location: string;
+  firmType: string;
+  firmDescription: string;
+  accreditation: string;
+  industryFocus: string[];
+  aum: string;
+  otherMembers: string;
+  membershipAgreementSigned: boolean;
+  signature: string;
+};
 
 export default function BuyerSignupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<keyof BuyerFormData | "documentPaths", string[]>>
+  >({});
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<BuyerFormData>({
     firstName: "",
     lastName: "",
     title: "",
@@ -21,6 +46,7 @@ export default function BuyerSignupPage() {
     location: "",
     firmType: "",
     firmDescription: "",
+    accreditation: "",
     industryFocus: [] as string[],
     aum: "",
     otherMembers: "",
@@ -32,7 +58,7 @@ export default function BuyerSignupPage() {
 
   const showDocumentUpload =
     formData.firmType === "search_fund" ||
-    formData.firmType === "private_investor";
+    formData.firmType === "individual_investor";
 
   const handleIndustryToggle = (industry: string) => {
     setFormData((prev) => ({
@@ -41,7 +67,24 @@ export default function BuyerSignupPage() {
         ? prev.industryFocus.filter((i) => i !== industry)
         : [...prev.industryFocus, industry],
     }));
+    setFieldErrors((prev) => ({ ...prev, industryFocus: undefined }));
   };
+
+  const updateField = <K extends keyof BuyerFormData>(
+    field: K,
+    value: BuyerFormData[K]
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const getFieldError = (field: keyof BuyerFormData | "documentPaths") =>
+    fieldErrors[field]?.[0];
+
+  const getInputClassName = (field: keyof BuyerFormData) =>
+    `w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary ${
+      getFieldError(field) ? "border-error" : "border-border-color"
+    }`;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -58,16 +101,35 @@ export default function BuyerSignupPage() {
         setError("Files must be under 50MB");
         return;
       }
+
       validFiles.push(file);
     }
     setDocuments((prev) => [...prev, ...validFiles]);
+    setFieldErrors((prev) => ({ ...prev, documentPaths: undefined }));
     setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const validation = validateBuyerSignup({
+      ...formData,
+      documentPaths: documents.map((doc) => ({
+        fileName: doc.name,
+        filePath: doc.name,
+        fileSize: doc.size,
+      })),
+    });
+
+    if (!validation.success) {
+      setFieldErrors(validation.fieldErrors);
+      setError("Please correct the highlighted fields.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    setFieldErrors({});
 
     try {
       // Upload documents to Supabase Storage first
@@ -99,6 +161,9 @@ export default function BuyerSignupPage() {
 
       if (!res.ok) {
         const data = await res.json();
+        if (data.details?.fieldErrors) {
+          setFieldErrors(data.details.fieldErrors);
+        }
         throw new Error(data.error || "Signup failed");
       }
 
@@ -127,7 +192,7 @@ export default function BuyerSignupPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} noValidate className="space-y-6">
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
               Personal
             </p>
@@ -137,13 +202,14 @@ export default function BuyerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.firstName}
-                onChange={(e) =>
-                  setFormData({ ...formData, firstName: e.target.value })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("firstName", e.target.value)}
+                aria-invalid={Boolean(getFieldError("firstName"))}
+                className={getInputClassName("firstName")}
               />
+              {getFieldError("firstName") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("firstName")}</p>
+              )}
             </div>
 
             <div>
@@ -152,13 +218,14 @@ export default function BuyerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.lastName}
-                onChange={(e) =>
-                  setFormData({ ...formData, lastName: e.target.value })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("lastName", e.target.value)}
+                aria-invalid={Boolean(getFieldError("lastName"))}
+                className={getInputClassName("lastName")}
               />
+              {getFieldError("lastName") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("lastName")}</p>
+              )}
             </div>
 
             <div>
@@ -167,13 +234,14 @@ export default function BuyerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("title", e.target.value)}
+                aria-invalid={Boolean(getFieldError("title"))}
+                className={getInputClassName("title")}
               />
+              {getFieldError("title") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("title")}</p>
+              )}
             </div>
 
             <div>
@@ -182,14 +250,15 @@ export default function BuyerSignupPage() {
               </label>
               <input
                 type="tel"
-                required
                 value={formData.phoneNumber}
-                onChange={(e) =>
-                  setFormData({ ...formData, phoneNumber: e.target.value })
-                }
+                onChange={(e) => updateField("phoneNumber", e.target.value)}
                 placeholder="e.g., (555) 123-4567"
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                aria-invalid={Boolean(getFieldError("phoneNumber"))}
+                className={getInputClassName("phoneNumber")}
               />
+              {getFieldError("phoneNumber") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("phoneNumber")}</p>
+              )}
             </div>
 
             <div>
@@ -199,12 +268,14 @@ export default function BuyerSignupPage() {
               <input
                 type="url"
                 value={formData.linkedIn}
-                onChange={(e) =>
-                  setFormData({ ...formData, linkedIn: e.target.value })
-                }
+                onChange={(e) => updateField("linkedIn", e.target.value)}
                 placeholder="https://www.linkedin.com/in/your-profile"
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                aria-invalid={Boolean(getFieldError("linkedIn"))}
+                className={getInputClassName("linkedIn")}
               />
+              {getFieldError("linkedIn") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("linkedIn")}</p>
+              )}
             </div>
 
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
@@ -216,13 +287,14 @@ export default function BuyerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.firmName}
-                onChange={(e) =>
-                  setFormData({ ...formData, firmName: e.target.value })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("firmName", e.target.value)}
+                aria-invalid={Boolean(getFieldError("firmName"))}
+                className={getInputClassName("firmName")}
               />
+              {getFieldError("firmName") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("firmName")}</p>
+              )}
             </div>
 
             <div>
@@ -232,12 +304,14 @@ export default function BuyerSignupPage() {
               <input
                 type="url"
                 value={formData.firmWebsite}
-                onChange={(e) =>
-                  setFormData({ ...formData, firmWebsite: e.target.value })
-                }
+                onChange={(e) => updateField("firmWebsite", e.target.value)}
                 placeholder="https://"
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                aria-invalid={Boolean(getFieldError("firmWebsite"))}
+                className={getInputClassName("firmWebsite")}
               />
+              {getFieldError("firmWebsite") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("firmWebsite")}</p>
+              )}
             </div>
 
             <div>
@@ -245,12 +319,10 @@ export default function BuyerSignupPage() {
                 Firm Type *
               </label>
               <select
-                required
                 value={formData.firmType}
-                onChange={(e) =>
-                  setFormData({ ...formData, firmType: e.target.value })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("firmType", e.target.value)}
+                aria-invalid={Boolean(getFieldError("firmType"))}
+                className={getInputClassName("firmType")}
               >
                 <option value="">Select firm type</option>
                 {BUYER_TYPES.map((type) => (
@@ -259,6 +331,9 @@ export default function BuyerSignupPage() {
                   </option>
                 ))}
               </select>
+              {getFieldError("firmType") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("firmType")}</p>
+              )}
             </div>
 
             <div>
@@ -267,14 +342,15 @@ export default function BuyerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.aum}
-                onChange={(e) =>
-                  setFormData({ ...formData, aum: e.target.value })
-                }
+                onChange={(e) => updateField("aum", e.target.value)}
                 placeholder="e.g., $50M"
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                aria-invalid={Boolean(getFieldError("aum"))}
+                className={getInputClassName("aum")}
               />
+              {getFieldError("aum") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("aum")}</p>
+              )}
             </div>
 
             <div>
@@ -283,13 +359,14 @@ export default function BuyerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("location", e.target.value)}
+                aria-invalid={Boolean(getFieldError("location"))}
+                className={getInputClassName("location")}
               />
+              {getFieldError("location") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("location")}</p>
+              )}
             </div>
 
             <div>
@@ -297,22 +374,47 @@ export default function BuyerSignupPage() {
                 Description *
               </label>
               <textarea
-                required
                 rows={4}
                 value={formData.firmDescription}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    firmDescription: e.target.value,
-                  })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("firmDescription", e.target.value)}
+                aria-invalid={Boolean(getFieldError("firmDescription"))}
+                className={getInputClassName("firmDescription")}
               />
+              {getFieldError("firmDescription") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("firmDescription")}</p>
+              )}
             </div>
 
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
               Credentials & Accreditations
             </p>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Basis for Accreditation *
+              </label>
+              <select
+                value={formData.accreditation}
+                onChange={(e) =>
+                  updateField(
+                    "accreditation",
+                      e.target.value
+                  )
+                }
+                aria-invalid={Boolean(getFieldError("accreditation"))}
+                className={getInputClassName("accreditation")}
+              >
+                <option value="">Select basis for accreditation</option>
+                {ACCREDITATIONS.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+              {getFieldError("accreditation") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("accreditation")}</p>
+              )}
+            </div>
 
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
               Focus
@@ -338,6 +440,9 @@ export default function BuyerSignupPage() {
                   </button>
                 ))}
               </div>
+              {getFieldError("industryFocus") && (
+                <p className="mt-2 text-sm text-error">{getFieldError("industryFocus")}</p>
+              )}
             </div>
 
             {showDocumentUpload && (
@@ -346,7 +451,7 @@ export default function BuyerSignupPage() {
                   Supporting Documents (PDF only, 50MB max)
                 </label>
                 <p className="text-xs mb-2">
-                  Required for search_fund and private_investor buyer types.
+                  Required for search_fund and individual_investor buyer types.
                   Upload credentials, track record, or other supporting
                   documentation.
                 </p>
@@ -357,6 +462,9 @@ export default function BuyerSignupPage() {
                   onChange={handleFileChange}
                   className="w-full text-sm"
                 />
+                {getFieldError("documentPaths") && (
+                  <p className="mt-2 text-sm text-error">{getFieldError("documentPaths")}</p>
+                )}
                 {documents.length > 0 && (
                   <div className="mt-2 space-y-1">
                     {documents.map((doc, i) => (
@@ -367,9 +475,13 @@ export default function BuyerSignupPage() {
                         <span>📄 {doc.name}</span>
                         <button
                           type="button"
-                          onClick={() =>
-                            setDocuments(documents.filter((_, j) => j !== i))
-                          }
+                          onClick={() => {
+                            setDocuments(documents.filter((_, j) => j !== i));
+                            setFieldErrors((prev) => ({
+                              ...prev,
+                              documentPaths: undefined,
+                            }));
+                          }}
                           className="text-error hover:underline"
                         >
                           Remove
@@ -391,11 +503,9 @@ export default function BuyerSignupPage() {
               <textarea
                 rows={3}
                 value={formData.otherMembers}
-                onChange={(e) =>
-                  setFormData({ ...formData, otherMembers: e.target.value })
-                }
+                onChange={(e) => updateField("otherMembers", e.target.value)}
                 placeholder="Email addresses, one per line"
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className={getInputClassName("otherMembers")}
               />
             </div>
 
@@ -422,10 +532,7 @@ export default function BuyerSignupPage() {
                   type="checkbox"
                   checked={formData.membershipAgreementSigned}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      membershipAgreementSigned: e.target.checked,
-                    })
+                    updateField("membershipAgreementSigned", e.target.checked as true)
                   }
                   className="mt-1"
                 />
@@ -433,6 +540,9 @@ export default function BuyerSignupPage() {
                   By submitting your application, you agree to our Terms of Service, Privacy Policy, and authorize Geneva Holdings to send you automated text messages. You can opt out at any time. *
                 </span>
               </label>
+              {getFieldError("membershipAgreementSigned") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("membershipAgreementSigned")}</p>
+              )}
 
               <div>
                 <label className="block text-md font-medium text-primary mb-1">
@@ -440,14 +550,15 @@ export default function BuyerSignupPage() {
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.signature}
-                  onChange={(e) =>
-                    setFormData({ ...formData, signature: e.target.value })
-                  }
+                  onChange={(e) => updateField("signature", e.target.value)}
                   placeholder="Type your full name as signature"
-                  className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                  aria-invalid={Boolean(getFieldError("signature"))}
+                  className={getInputClassName("signature")}
                 />
+                {getFieldError("signature") && (
+                  <p className="mt-1 text-sm text-error">{getFieldError("signature")}</p>
+                )}
               </div>
             </div>
 

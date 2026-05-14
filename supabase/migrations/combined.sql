@@ -138,10 +138,12 @@ CREATE TABLE users (
   role text NOT NULL CHECK (role IN ('broker', 'buyer', 'admin')),
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'suspended', 'banned')),
   title text,
+  avatar_path text,
   phone text,
   linkedin text,
   location text,
-  buyer_type text CHECK (buyer_type IN ('family_office', 'pe', 'vc', 'search_fund', 'independent_sponsor', 'holding_company', 'ma_advisor', 'private_investor', 'other')),
+  buyer_type text CHECK (buyer_type IN ('family_office', 'pe', 'vc', 'search_fund', 'independent_sponsor', 'holding_company', 'ma_advisor', 'individual_investor', 'other')),
+  accreditation text CHECK (accreditation IN ('income', 'net_worth', 'entity', 'professional', 'none')),
   aum text,
   license_credentials text,
   deal_types text,
@@ -724,7 +726,8 @@ VALUES
   ('message-attachments', 'message-attachments', false, 52428800, ARRAY['application/pdf']),
   ('buyer-documents', 'buyer-documents', false, 52428800, ARRAY['application/pdf']),
   ('signed-ndas', 'signed-ndas', false, 52428800, ARRAY['application/pdf', 'application/json']),
-  ('dispute-documents', 'dispute-documents', false, 52428800, ARRAY['application/pdf'])
+  ('dispute-documents', 'dispute-documents', false, 52428800, ARRAY['application/pdf']),
+  ('profile-pictures', 'profile-pictures', false, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for deal-documents
@@ -837,6 +840,37 @@ CREATE POLICY "Thread participants can read message attachments" ON storage.obje
         WHERE u.id = auth.uid() AND u.role = 'admin' AND u.status = 'approved'
       )
     )
+  );
+
+-- Storage policies for profile-pictures
+CREATE POLICY "Authenticated users can upload their profile picture" ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'profile-pictures'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+CREATE POLICY "Authenticated users can update their profile picture" ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'profile-pictures'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  )
+  WITH CHECK (
+    bucket_id = 'profile-pictures'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+CREATE POLICY "Authenticated users can delete their profile picture" ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'profile-pictures'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+CREATE POLICY "Authenticated users can view their own profile picture" ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'profile-pictures'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
 -- Storage policies for signed-ndas

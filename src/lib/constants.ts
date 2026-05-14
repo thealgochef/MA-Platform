@@ -69,10 +69,17 @@ export const BUYER_TYPES = [
   { value: "independent_sponsor", label: "Independent Sponsor" },
   { value: "holding_company", label: "Holding Company / Corporate M&A" },
   { value: "ma_advisor", label: "M&A Advisor" },
-  { value: "private_investor", label: "Private Investor" },
+  { value: "individual_investor", label: "Private Investor" },
   { value: "other", label: "Other" },
 ] as const;
 
+export const ACCREDITATIONS = [
+  { value: "income", label: "My income exceeds $200K annually (or $300K with spouse)" },
+  { value: "net_worth", label: "My net worth exceeds $1M (excluding primary residence)" },
+  { value: "entity", label: "I represent a qualified entity (trust, fund, or institution with $5M+ in assets)" },
+  { value: "professional", label: "I hold a FINRA Series 7, 65, or 82 license in good standing" },
+  { value: "none", label: "I am not an accredited investor" },
+] as const;
 export const BUYER_TYPE_VALUES = valuesFromReadonlyObjects(BUYER_TYPES);
 
 export const DEAL_STATUSES = [
@@ -112,16 +119,20 @@ export const VALID_DEAL_TRANSITIONS: Record<string, string[]> = {
 };
 
 export const ENGAGEMENT_STAGES = [
-  "pursued",
+  // pre-nda stages
+  "declined",
+  "pursued", 
+  // nda stage
   "nda_pending",
   "nda_signed",
+  // post-nda stages
   "reviewing",
+  "passed",
   "ioi_submitted",
   "loi_submitted",
   "diligence",
+  // end stages
   "closed",
-  "passed",
-  "declined",
   "terminated",
 ] as const;
 

@@ -46,8 +46,7 @@ const isValidBuyerDocumentPath = (
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { documentPaths, ...formData } = body;
-    const validation = buyerSignupSchema.safeParse(formData);
+    const validation = buyerSignupSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
@@ -71,9 +70,9 @@ export async function POST(request: Request) {
     }
 
     if (
-      documentPaths !== undefined &&
-      (!Array.isArray(documentPaths) ||
-        !documentPaths.every((doc) => isValidBuyerDocumentPath(doc, user.id)))
+      data.documentPaths !== undefined &&
+      (!Array.isArray(data.documentPaths) ||
+        !data.documentPaths.every((doc) => isValidBuyerDocumentPath(doc, user.id)))
     ) {
       return NextResponse.json(
         { error: "Invalid buyer document path" },
@@ -120,6 +119,7 @@ export async function POST(request: Request) {
         status: "approved", // ⚠️ DEV-ONLY: change back to "pending" for production
         location: data.location,
         buyer_type: data.firmType,
+        accreditation: data.accreditation,
         aum: data.aum,
         industry_focus: data.industryFocus,
         membership_agreement_signed: true,
@@ -136,8 +136,8 @@ export async function POST(request: Request) {
     }
 
     // Create buyer_documents records for uploaded files
-    if (Array.isArray(documentPaths) && documentPaths.length > 0) {
-      const docRecords = documentPaths.map((doc: BuyerDocumentPathInput) => ({
+    if (Array.isArray(data.documentPaths) && data.documentPaths.length > 0) {
+      const docRecords = data.documentPaths.map((doc: BuyerDocumentPathInput) => ({
         user_id: user.id,
         file_name: doc.fileName,
         file_path: doc.filePath,

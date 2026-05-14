@@ -3,6 +3,7 @@ import type { BUYER_TYPE_VALUES } from "@/lib/constants";
 export type UserRole = "broker" | "buyer" | "admin";
 export type UserStatus = "pending" | "approved" | "rejected" | "suspended" | "banned";
 export type BuyerType = (typeof BUYER_TYPE_VALUES)[number];
+export type BuyerAccreditation = "income" | "net_worth" | "entity" | "professional" | "none";
 export type FirmType = "broker" | "buyer";
 
 export type DealStatus = "draft" | "accepting_iois" | "accepting_lois" | "under_loi" | "paused" | "closed" | "terminated";
@@ -36,8 +37,10 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   title?: string;
+  avatar_path?: string;
   location?: string;
   buyer_type?: BuyerType;
+  accreditation?: BuyerAccreditation;
   aum?: string;
   license_credentials?: string;
   deal_types?: string;

@@ -21,6 +21,7 @@ import {
 interface SidebarProps {
   userName: string;
   userRole: "broker" | "buyer" | "admin";
+  avatarUrl?: string;
   unreadCount?: number;
 }
 
@@ -32,7 +33,12 @@ interface NavItem {
   badge?: number;
 }
 
-export default function Sidebar({ userName, userRole, unreadCount = 0 }: SidebarProps) {
+export default function Sidebar({
+  userName,
+  userRole,
+  avatarUrl,
+  unreadCount = 0,
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -87,8 +93,28 @@ export default function Sidebar({ userName, userRole, unreadCount = 0 }: Sidebar
     <>
       {/* User info */}
       <div className="p-4 border-b border-white/10">
-        <p className="text-sm font-semibold text-white truncate">{userName}</p>
-        <p className="text-xs text-white/60 mt-0.5">{roleLabel}</p>
+        <div className="flex items-center gap-3">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={`${userName} profile picture`}
+              className="h-11 w-11 rounded-full object-cover border border-white/15"
+            />
+          ) : (
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
+              {userName
+                .split(" ")
+                .map((part) => part[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{userName}</p>
+            <p className="text-xs text-white/60 mt-0.5">{roleLabel}</p>
+          </div>
+        </div>
       </div>
 
       {/* Nav links */}

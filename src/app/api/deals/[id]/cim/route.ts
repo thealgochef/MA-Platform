@@ -40,12 +40,28 @@ export async function GET(
     return NextResponse.json({ error: "CIM not released" }, { status: 403 });
   }
 
-  // Track view event
   const url = new URL(request.url);
+  const wantsJson =
+    url.searchParams.get("format") === "json" ||
+    request.headers.get("accept")?.includes("application/json");
   const action = url.searchParams.get("action");
 
+  if (!deal.cim_document_path) {
+    return NextResponse.json({ error: "CIM document missing" }, { status: 404 });
+  }
+
+  const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+    .from("deal-documents")
+    .createSignedUrl(deal.cim_document_path, 60 * 10, {
+      download: action === "download",
+    });
+
+  if (signedUrlError || !signedUrlData?.signedUrl) {
+    return NextResponse.json({ error: "Failed to access CIM document" }, { status: 500 });
+  }
+
   if (action === "download") {
-    // Track download
+    // Track download only after document access succeeds
     if (!engagement.cim_downloaded_at) {
       await supabase
         .from("deal_engagements")
@@ -60,7 +76,7 @@ export async function GET(
       metadata: { engagement_id: engagement.id },
     });
   } else {
-    // Track view
+    // Track view only after document access succeeds
     if (!engagement.cim_viewed_at) {
       await supabase
         .from("deal_engagements")
@@ -76,8 +92,13 @@ export async function GET(
     });
   }
 
+  if (!wantsJson) {
+    return NextResponse.redirect(signedUrlData.signedUrl);
+  }
+
   return NextResponse.json({
     cimPath: deal.cim_document_path,
+    cimUrl: signedUrlData.signedUrl,
     engagement: {
       cim_released: engagement.cim_released,
       cim_viewed_at: engagement.cim_viewed_at,

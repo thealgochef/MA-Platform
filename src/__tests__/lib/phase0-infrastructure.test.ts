@@ -154,8 +154,8 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
       expect(constants.US_STATES.length).toBe(50);
       expect(constants.BUYER_TYPES.length).toBe(9);
       expect(constants.BUYER_TYPE_VALUES).toEqual(constants.BUYER_TYPES.map((bt) => bt.value));
-      expect(constants.BUYER_TYPE_VALUES).toContain("private_investor");
-      expect(constants.BUYER_TYPE_VALUES).not.toContain("individual_investor");
+      expect(constants.BUYER_TYPE_VALUES).toContain("individual_investor");
+      expect(constants.BUYER_TYPE_VALUES).not.toContain("private_investor");
     });
 
     it("should export DEAL_STATUSES with correct values", async () => {
@@ -205,6 +205,7 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
         dealTypes: "Lower middle market",
         industryFocus: ["Technology"],
         membershipAgreementSigned: true as const,
+        signature: "John Doe",
       };
 
       const result = brokerSignupSchema.safeParse(validData);
@@ -233,19 +234,32 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
         location: "Chicago",
         firmType: "pe" as const,
         firmDescription: "Private equity firm",
+        accreditation: "income" as const,
         industryFocus: ["Healthcare"],
         aum: "$500M",
         membershipAgreementSigned: true as const,
+        signature: "Jane Smith",
+        documentPaths: [],
       };
 
       const result = buyerSignupSchema.safeParse(validData);
       expect(result.success).toBe(true);
 
       for (const firmType of BUYER_TYPE_VALUES) {
-        expect(buyerSignupSchema.safeParse({ ...validData, firmType }).success).toBe(true);
+        const requiresDocuments =
+          firmType === "search_fund" || firmType === "individual_investor";
+        expect(
+          buyerSignupSchema.safeParse({
+            ...validData,
+            firmType,
+            documentPaths: requiresDocuments
+              ? [{ fileName: "supporting-doc.pdf", filePath: "123e4567-e89b-12d3-a456-426614174000/supporting-doc.pdf", fileSize: 1024 }]
+              : [],
+          }).success
+        ).toBe(true);
       }
 
-      expect(buyerSignupSchema.safeParse({ ...validData, firmType: "individual_investor" }).success).toBe(false);
+      expect(buyerSignupSchema.safeParse({ ...validData, firmType: "private_investor" }).success).toBe(false);
     });
 
     it("should reject buyer signup without membership agreement", async () => {
@@ -263,6 +277,31 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
         aum: "$500M",
         membershipAgreementSigned: false,
       });
+      expect(result.success).toBe(false);
+    });
+
+    it("should require supporting documents for individual investors", async () => {
+      const { buyerSignupSchema } = await import("@/lib/validators");
+
+      const result = buyerSignupSchema.safeParse({
+        firstName: "Jane",
+        lastName: "Smith",
+        title: "Investor",
+        phoneNumber: "(555) 987-6543",
+        linkedIn: "",
+        firmName: "Smith Capital",
+        firmWebsite: "",
+        location: "Chicago",
+        firmType: "individual_investor",
+        firmDescription: "Private investor",
+        accreditation: "income",
+        industryFocus: ["Healthcare"],
+        aum: "$10M",
+        membershipAgreementSigned: true,
+        signature: "Jane Smith",
+        documentPaths: [],
+      });
+
       expect(result.success).toBe(false);
     });
   });

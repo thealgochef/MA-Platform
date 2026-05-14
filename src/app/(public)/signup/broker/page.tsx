@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { INDUSTRIES } from "@/lib/constants";
+import { type BrokerSignupInput, validateBrokerSignup } from "@/lib/validators";
 
 export default function BrokerSignupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof BrokerSignupInput, string[]>>>({});
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<BrokerSignupInput>({
     firstName: "",
     lastName: "",
     title: "",
@@ -34,12 +36,37 @@ export default function BrokerSignupPage() {
         ? prev.industryFocus.filter((i) => i !== industry)
         : [...prev.industryFocus, industry],
     }));
+    setFieldErrors((prev) => ({ ...prev, industryFocus: undefined }));
   };
+
+  const updateField = <K extends keyof BrokerSignupInput>(
+    field: K,
+    value: BrokerSignupInput[K]
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const getFieldError = (field: keyof BrokerSignupInput) => fieldErrors[field]?.[0];
+
+  const getInputClassName = (field: keyof BrokerSignupInput) =>
+    `w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary ${
+      getFieldError(field) ? "border-error" : "border-border-color"
+    }`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const validation = validateBrokerSignup(formData);
+    if (!validation.success) {
+      setFieldErrors(validation.fieldErrors);
+      setError("Please correct the highlighted fields.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    setFieldErrors({});
 
     try {
       const res = await fetch("/api/signup/broker", {
@@ -50,6 +77,9 @@ export default function BrokerSignupPage() {
 
       if (!res.ok) {
         const data = await res.json();
+        if (data.details?.fieldErrors) {
+          setFieldErrors(data.details.fieldErrors);
+        }
         throw new Error(data.error || "Signup failed");
       }
 
@@ -79,7 +109,7 @@ export default function BrokerSignupPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} noValidate className="space-y-6">
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
               Personal
             </p>
@@ -89,13 +119,14 @@ export default function BrokerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.firstName}
-                onChange={(e) =>
-                  setFormData({ ...formData, firstName: e.target.value })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("firstName", e.target.value)}
+                aria-invalid={Boolean(getFieldError("firstName"))}
+                className={getInputClassName("firstName")}
               />
+              {getFieldError("firstName") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("firstName")}</p>
+              )}
             </div>
 
             <div>
@@ -104,13 +135,14 @@ export default function BrokerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.lastName}
-                onChange={(e) =>
-                  setFormData({ ...formData, lastName: e.target.value })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("lastName", e.target.value)}
+                aria-invalid={Boolean(getFieldError("lastName"))}
+                className={getInputClassName("lastName")}
               />
+              {getFieldError("lastName") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("lastName")}</p>
+              )}
             </div>
 
             <div>
@@ -119,13 +151,14 @@ export default function BrokerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("title", e.target.value)}
+                aria-invalid={Boolean(getFieldError("title"))}
+                className={getInputClassName("title")}
               />
+              {getFieldError("title") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("title")}</p>
+              )}
             </div>
 
             <div>
@@ -134,14 +167,15 @@ export default function BrokerSignupPage() {
               </label>
               <input
                 type="tel"
-                required
                 value={formData.phoneNumber}
-                onChange={(e) =>
-                  setFormData({ ...formData, phoneNumber: e.target.value })
-                }
+                onChange={(e) => updateField("phoneNumber", e.target.value)}
                 placeholder="e.g., (555) 123-4567"
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                aria-invalid={Boolean(getFieldError("phoneNumber"))}
+                className={getInputClassName("phoneNumber")}
               />
+              {getFieldError("phoneNumber") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("phoneNumber")}</p>
+              )}
             </div>
 
             <div>
@@ -151,12 +185,14 @@ export default function BrokerSignupPage() {
               <input
                 type="url"
                 value={formData.linkedIn}
-                onChange={(e) =>
-                  setFormData({ ...formData, linkedIn: e.target.value })
-                }
+                onChange={(e) => updateField("linkedIn", e.target.value)}
                 placeholder="https://www.linkedin.com/in/your-profile"
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                aria-invalid={Boolean(getFieldError("linkedIn"))}
+                className={getInputClassName("linkedIn")}
               />
+              {getFieldError("linkedIn") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("linkedIn")}</p>
+              )}
             </div>
 
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
@@ -168,13 +204,14 @@ export default function BrokerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.firmName}
-                onChange={(e) =>
-                  setFormData({ ...formData, firmName: e.target.value })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("firmName", e.target.value)}
+                aria-invalid={Boolean(getFieldError("firmName"))}
+                className={getInputClassName("firmName")}
               />
+              {getFieldError("firmName") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("firmName")}</p>
+              )}
             </div>
 
             <div>
@@ -184,12 +221,14 @@ export default function BrokerSignupPage() {
               <input
                 type="url"
                 value={formData.firmWebsite}
-                onChange={(e) =>
-                  setFormData({ ...formData, firmWebsite: e.target.value })
-                }
+                onChange={(e) => updateField("firmWebsite", e.target.value)}
                 placeholder="https://"
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                aria-invalid={Boolean(getFieldError("firmWebsite"))}
+                className={getInputClassName("firmWebsite")}
               />
+              {getFieldError("firmWebsite") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("firmWebsite")}</p>
+              )}
             </div>
 
             <div>
@@ -198,13 +237,14 @@ export default function BrokerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("location", e.target.value)}
+                aria-invalid={Boolean(getFieldError("location"))}
+                className={getInputClassName("location")}
               />
+              {getFieldError("location") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("location")}</p>
+              )}
             </div>
 
             <div>
@@ -212,17 +252,15 @@ export default function BrokerSignupPage() {
                 Description *
               </label>
               <textarea
-                required
                 rows={4}
                 value={formData.firmDescription}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    firmDescription: e.target.value,
-                  })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("firmDescription", e.target.value)}
+                aria-invalid={Boolean(getFieldError("firmDescription"))}
+                className={getInputClassName("firmDescription")}
               />
+              {getFieldError("firmDescription") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("firmDescription")}</p>
+              )}
             </div>
 
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
@@ -234,16 +272,14 @@ export default function BrokerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.licenseCredentials}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    licenseCredentials: e.target.value,
-                  })
-                }
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                onChange={(e) => updateField("licenseCredentials", e.target.value)}
+                aria-invalid={Boolean(getFieldError("licenseCredentials"))}
+                className={getInputClassName("licenseCredentials")}
               />
+              {getFieldError("licenseCredentials") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("licenseCredentials")}</p>
+              )}
             </div>
 
 
@@ -256,14 +292,15 @@ export default function BrokerSignupPage() {
               </label>
               <input
                 type="text"
-                required
                 value={formData.dealTypes}
-                onChange={(e) =>
-                  setFormData({ ...formData, dealTypes: e.target.value })
-                }
+                onChange={(e) => updateField("dealTypes", e.target.value)}
                 placeholder="e.g., Lower middle market, $5M-$50M revenue"
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                aria-invalid={Boolean(getFieldError("dealTypes"))}
+                className={getInputClassName("dealTypes")}
               />
+              {getFieldError("dealTypes") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("dealTypes")}</p>
+              )}
             </div>
 
             <div>
@@ -286,6 +323,9 @@ export default function BrokerSignupPage() {
                   </button>
                 ))}
               </div>
+              {getFieldError("industryFocus") && (
+                <p className="mt-2 text-sm text-error">{getFieldError("industryFocus")}</p>
+              )}
             </div>
 
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
@@ -298,11 +338,9 @@ export default function BrokerSignupPage() {
               <textarea
                 rows={3}
                 value={formData.otherMembers}
-                onChange={(e) =>
-                  setFormData({ ...formData, otherMembers: e.target.value })
-                }
+                onChange={(e) => updateField("otherMembers", e.target.value)}
                 placeholder="Email addresses, one per line"
-                className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                className={getInputClassName("otherMembers")}
               />
             </div>
 
@@ -329,10 +367,7 @@ export default function BrokerSignupPage() {
                   type="checkbox"
                   checked={formData.membershipAgreementSigned}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      membershipAgreementSigned: e.target.checked,
-                    })
+                    updateField("membershipAgreementSigned", e.target.checked as true)
                   }
                   className="mt-1"
                 />
@@ -340,6 +375,9 @@ export default function BrokerSignupPage() {
                   By submitting your application, you agree to our Terms of Service, Privacy Policy, and authorize Geneva Holdings to send you automated text messages. You can opt out at any time. *
                 </span>
               </label>
+              {getFieldError("membershipAgreementSigned") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("membershipAgreementSigned")}</p>
+              )}
 
               <div>
                 <label className="block text-md font-medium text-primary mb-1">
@@ -347,14 +385,15 @@ export default function BrokerSignupPage() {
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.signature}
-                  onChange={(e) =>
-                    setFormData({ ...formData, signature: e.target.value })
-                  }
+                  onChange={(e) => updateField("signature", e.target.value)}
                   placeholder="Type your full name as signature"
-                  className="w-full border border-border-color rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary"
+                  aria-invalid={Boolean(getFieldError("signature"))}
+                  className={getInputClassName("signature")}
                 />
+                {getFieldError("signature") && (
+                  <p className="mt-1 text-sm text-error">{getFieldError("signature")}</p>
+                )}
               </div>
             </div>
 

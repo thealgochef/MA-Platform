@@ -29,7 +29,18 @@ export async function GET() {
     firm = firmData;
   }
 
-  return NextResponse.json({ profile, firm });
+  let avatarUrl: string | null = null;
+  if (profile.avatar_path) {
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      .from("profile-pictures")
+      .createSignedUrl(profile.avatar_path, 60 * 60);
+
+    if (!signedUrlError && signedUrlData?.signedUrl) {
+      avatarUrl = signedUrlData.signedUrl;
+    }
+  }
+
+  return NextResponse.json({ profile, firm, avatar_url: avatarUrl });
 }
 
 export async function PATCH(request: Request) {
@@ -55,7 +66,7 @@ export async function PATCH(request: Request) {
   // Get current user profile
   const { data: profile } = await supabase
     .from("users")
-    .select("role, firm_id")
+    .select("role, firm_id, avatar_path")
     .eq("id", user.id)
     .single();
 
@@ -67,6 +78,7 @@ export async function PATCH(request: Request) {
   const userUpdate: Record<string, unknown> = {};
   if (body.fullName !== undefined) userUpdate.full_name = body.fullName;
   if (body.title !== undefined) userUpdate.title = body.title;
+  if (body.avatarPath !== undefined) userUpdate.avatar_path = body.avatarPath;
   if (body.phone !== undefined) userUpdate.phone = body.phone;
   if (body.linkedIn !== undefined) userUpdate.linkedin = body.linkedIn;
   if (body.location !== undefined) userUpdate.location = body.location;
@@ -98,6 +110,10 @@ export async function PATCH(request: Request) {
     if (userError) {
       return NextResponse.json({ error: userError.message }, { status: 500 });
     }
+  }
+
+  if (body.avatarPath === null && profile.avatar_path) {
+    await supabase.storage.from("profile-pictures").remove([profile.avatar_path]);
   }
 
   // Update firm fields

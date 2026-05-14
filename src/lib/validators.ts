@@ -79,6 +79,13 @@ export const brokerSignupSchema = z.object({
   membershipAgreementSigned: z.literal(true, {
     errorMap: () => ({ message: "You must sign the membership agreement" }),
   }),
+  signature: z.string().trim().min(1, "Electronic signature is required"),
+});
+
+export const buyerDocumentSchema = z.object({
+  fileName: z.string().min(1, "Document file name is required"),
+  filePath: z.string().min(1, "Document path is required"),
+  fileSize: z.number().max(FILE_CONSTRAINTS.MAX_SIZE_BYTES, "File must be under 50MB"),
 });
 
 export const buyerSignupSchema = z.object({
@@ -92,17 +99,69 @@ export const buyerSignupSchema = z.object({
   location: z.string().min(1, "Location is required"),
   firmType: z.enum(buyerTypeValues),
   firmDescription: z.string().min(1, "Firm description is required"),
+  accreditation: z.enum(["income", "net_worth", "entity", "professional", "none"]),
   industryFocus: z.array(z.string()).min(1, "Select at least one industry"),
   aum: z.string().min(1, "Assets under management is required"),
   otherMembers: z.string().optional(),
   membershipAgreementSigned: z.literal(true, {
     errorMap: () => ({ message: "You must sign the membership agreement" }),
   }),
+  signature: z.string().trim().min(1, "Electronic signature is required"),
+  documentPaths: z.array(buyerDocumentSchema).optional().default([]),
+}).superRefine((data, ctx) => {
+  const requiresDocuments =
+    data.firmType === "search_fund" || data.firmType === "individual_investor";
+
+  if (requiresDocuments && data.documentPaths.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["documentPaths"],
+      message: "Upload at least one supporting document for this buyer type",
+    });
+  }
 });
 
 export type BrokerSignupData = z.infer<typeof brokerSignupSchema>;
 export type BuyerSignupData = z.infer<typeof buyerSignupSchema>;
 
+export type BrokerSignupInput = Omit<BrokerSignupData, "membershipAgreementSigned"> & {
+  membershipAgreementSigned: boolean;
+};
+
+export type BuyerSignupInput = Omit<
+  BuyerSignupData,
+  "membershipAgreementSigned" | "firmType" | "accreditation"
+> & {
+  membershipAgreementSigned: boolean;
+  firmType: string;
+  accreditation: string;
+};
+
+export const validateBrokerSignup = (data: BrokerSignupInput) => {
+  const result = brokerSignupSchema.safeParse(data);
+
+  if (result.success) {
+    return { success: true as const, data: result.data, fieldErrors: {} };
+  }
+
+  return {
+    success: false as const,
+    fieldErrors: result.error.flatten().fieldErrors,
+  };
+};
+
+export const validateBuyerSignup = (data: BuyerSignupInput) => {
+  const result = buyerSignupSchema.safeParse(data);
+
+  if (result.success) {
+    return { success: true as const, data: result.data, fieldErrors: {} };
+  }
+
+  return {
+    success: false as const,
+    fieldErrors: result.error.flatten().fieldErrors,
+  };
+};
 export const settingsProfileUpdateSchema = z.object({
   buyerType: z.union([z.enum(buyerTypeValues), z.literal(""), z.null()]).optional(),
 }).passthrough();

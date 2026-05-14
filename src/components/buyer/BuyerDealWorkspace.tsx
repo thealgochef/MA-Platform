@@ -76,22 +76,26 @@ export default function BuyerDealWorkspace() {
   }
 
   const stage = engagement?.stage;
+  const ndaSent = engagement?.nda_status === "sent";
   const ndaSigned = engagement?.nda_status === "signed";
   const cimReleased = engagement?.cim_released === true;
 
   return (
     <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-4xl mx-auto px-4">
+
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-primary">{deal.headline}</h1>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            deal.status === "paused" ? "bg-warning/10 text-warning" :
-            deal.status === "terminated" ? "bg-error/10 text-error" :
-            deal.status === "closed" ? "bg-text-secondary/10 text-text-secondary" :
-            "bg-success/10 text-success"
-          }`}>
-            {DEAL_STATUS_LABELS[deal.status]}
-          </span>
+          <div className="flex gap-2">
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+              deal.status === "paused" ? "bg-warning/10 text-warning" :
+              deal.status === "terminated" ? "bg-error/10 text-error" :
+              deal.status === "closed" ? "bg-text-secondary/10 text-text-secondary" :
+              "bg-success/10 text-success"
+            }`}>
+              {DEAL_STATUS_LABELS[deal.status]}
+            </span>
+          </div>
         </div>
 
         {/* Deal Overview */}
@@ -105,7 +109,7 @@ export default function BuyerDealWorkspace() {
             </div>
             <div>
               <p className="text-text-secondary">Geography</p>
-              <p className="font-medium text-text">{deal.geography_display}</p>
+              <p className="font-medium text-text capitalize">{deal.geography_display}</p>
             </div>
           </div>
         </div>
@@ -146,13 +150,13 @@ export default function BuyerDealWorkspace() {
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <span className="text-sm text-text-secondary">Stage:</span>
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-info/10 text-info">
+                <span className="px-2 py-1 rounded-full text-xs font-medium bg-subtle text-primary">
                   {stage}
                 </span>
               </div>
-
+            
               <div className="flex flex-wrap gap-3">
-                {!ndaSigned && stage !== "declined" && stage !== "passed" && stage !== "terminated" && (
+                {!ndaSigned && ndaSent && stage !== "declined" && stage !== "passed" && stage !== "terminated" && (
                   <Link
                     href={`/deals/${dealId}/nda`}
                     className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
@@ -203,7 +207,7 @@ export default function BuyerDealWorkspace() {
                 <div className="pt-3 border-t border-border-gray">
                   <Link
                     href={`/messages/${engagement.id}`}
-                    className="text-sm text-primary hover:underline"
+                    className="text-sm text-secondary hover:underline hover:text-primary"
                   >
                     Message Broker
                   </Link>
@@ -214,6 +218,7 @@ export default function BuyerDealWorkspace() {
             <p className="text-text-secondary">No active engagement with this deal.</p>
           )}
         </div>
+
       </div>
     </main>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { DEAL_STATUS_LABELS, INDUSTRIES, US_STATES } from "@/lib/constants";
 
@@ -24,6 +25,7 @@ interface Deal {
 }
 
 export default function BrowseDealsPage() {
+  const router = useRouter();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -122,6 +124,10 @@ export default function BrowseDealsPage() {
     return deal.status === "closed" || deal.status === "paused";
   };
 
+  const navigateToDeal = (dealId: string) => {
+    router.push(`/deals/${dealId}`);
+  };
+
   return (
     <main className="min-h-screen bg-bg-alt py-8">
       <div className="max-w-6xl mx-auto px-4">
@@ -214,8 +220,21 @@ export default function BrowseDealsPage() {
                   const isDeclined = deal.engagement?.stage === "declined";
 
                   return (
-                    <tr key={deal.id} className={`border-t border-border-gray ${notClickable ? "opacity-60" : ""}`}>
-                      <td className="px-4 py-3 font-medium text-primary">{deal.headline}</td>
+                    <tr
+                      key={deal.id}
+                      className={`border-t border-border-gray cursor-pointer hover:bg-border-gray transition-colors ${notClickable ? "opacity-60" : ""}`}
+                      onClick={() => navigateToDeal(deal.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          navigateToDeal(deal.id);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Open deal ${deal.headline}`}
+                    >
+                      <td className="px-4 py-3 font-medium text-primary hover:underline">{deal.headline}</td>
                       <td className="px-4 py-3 text-text-secondary">{deal.industry}</td>
                       <td className="px-4 py-3 text-text-secondary">{getGeography(deal) || "—"}</td>
                       <td className="px-4 py-3">{deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}</td>
@@ -237,14 +256,20 @@ export default function BrowseDealsPage() {
                         ) : !isEngaged && !isDeclined ? (
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handlePursue(deal.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handlePursue(deal.id);
+                              }}
                               disabled={actionLoading === deal.id}
                               className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
                             >
                               Pursue
                             </button>
                             <button
-                              onClick={() => handleDecline(deal.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleDecline(deal.id);
+                              }}
                               disabled={actionLoading === deal.id}
                               className="px-3 py-1 bg-surface-alt border border-border-gray text-text-secondary rounded text-xs hover:bg-bg-alt disabled:opacity-50"
                             >
@@ -253,7 +278,10 @@ export default function BrowseDealsPage() {
                           </div>
                         ) : isDeclined ? (
                           <button
-                            onClick={() => handlePursue(deal.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handlePursue(deal.id);
+                            }}
                             disabled={actionLoading === deal.id}
                             className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
                           >
