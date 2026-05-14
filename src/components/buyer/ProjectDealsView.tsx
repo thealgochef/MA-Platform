@@ -236,7 +236,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         minWidth: 130,
         valueGetter: (_, row) => row.revenue_year_3,
         renderCell: (params) =>
-          params.row.revenue_year_3 != null ? formatCurrency(params.row.revenue_year_3) : "—",
+          params.row.revenue_year_3 != null ? formatCurrency(params.row.revenue_year_3) + "M": "—",
       },
       {
         field: "ebitda_year_3",
@@ -245,7 +245,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         minWidth: 130,
         valueGetter: (_, row) => row.ebitda_year_3,
         renderCell: (params) =>
-          params.row.ebitda_year_3 != null ? formatCurrency(params.row.ebitda_year_3) : "—",
+          params.row.ebitda_year_3 != null ? formatCurrency(params.row.ebitda_year_3) + "M": "—",
       },
       {
         field: "status",

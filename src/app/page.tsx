@@ -4,7 +4,7 @@ export default function HomePage() {
   const navLinkClass = "text-sm font-medium text-secondary transition-colors hover:text-primary";
   const valuePropCardClass = "rounded-lg bg-surface p-6 shadow-md";
   const valuePropTitleClass = "mb-3 font-display text-xl font-semibold text-primary";
-  const howItWorksCardClass = "rounded-lg bg-bg p-6 border border-border-color";
+  const howItWorksCardClass = "flex h-full flex-col rounded-lg border border-border-color bg-bg p-6";
   const footerLinkClass = "font-medium text-secondary transition-colors hover:text-primary";
 
   return (
@@ -105,7 +105,7 @@ export default function HomePage() {
                 Create acquisition criteria projects, get matched with relevant deals,
                 and manage the entire pursuit process from NDA to close.
               </p>
-              <Link href="/for-buyers" className="mt-3 inline-block text-sm text-primary hover:underline">
+              <Link href="/for-buyers" className="mt-auto inline-block pt-3 text-sm text-secondary hover:text-primary hover:underline">
                 Learn more
               </Link>
             </div>
@@ -115,7 +115,7 @@ export default function HomePage() {
                 Post deals for free, reach vetted buyers, manage your pipeline,
                 and earn an incentive on every successful close.
               </p>
-              <Link href="/for-brokers" className="mt-3 inline-block text-sm text-primary hover:underline">
+              <Link href="/for-brokers" className="mt-auto inline-block pt-3 text-sm text-secondary hover:text-primary hover:underline">
                 Learn more
               </Link>
             </div>
