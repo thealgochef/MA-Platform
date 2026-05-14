@@ -8,6 +8,9 @@ export function PrimaryTabs(props: TabsProps) {
         "& .MuiTab-root.Mui-selected": {
           color: "var(--color-primary)",
         },
+        "& .MuiTab-root .MuiTouchRipple-child": {
+          backgroundColor: "var(--color-secondary)",
+        },
         "& .MuiTabs-indicator": {
           backgroundColor: "var(--color-primary)",
         },

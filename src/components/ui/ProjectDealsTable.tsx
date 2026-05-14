@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Box, Paper, TablePagination } from "@mui/material";
 import {
   DataGrid,
@@ -32,6 +32,10 @@ interface ProjectDealsTableProps<T extends DealLike> {
   onPageChange: (page: number) => void;
   onRowsPerPageChange: (pageSize: number) => void;
 }
+
+const HEADLINE_COLUMN_WIDTH = 400;
+const SELECTION_COLUMN_WIDTH = 50;
+const HEADLINE_GRID_WIDTH = HEADLINE_COLUMN_WIDTH + SELECTION_COLUMN_WIDTH;
 
 const sharedGridSx = {
   borderTop: "none",
@@ -89,6 +93,17 @@ export function ProjectDealsTable<T extends DealLike>({
 }: ProjectDealsTableProps<T>) {
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
 
+  const fixedHeadlineColumn = useMemo<GridColDef<T>>(
+    () => ({
+      ...headlineColumn,
+      width: HEADLINE_COLUMN_WIDTH,
+      minWidth: HEADLINE_COLUMN_WIDTH,
+      maxWidth: HEADLINE_COLUMN_WIDTH,
+      flex: undefined,
+    }),
+    [headlineColumn]
+  );
+
   const handleRowClick = (params: GridRowParams<T>) => {
     onRowClick?.(params.row);
   };
@@ -105,7 +120,7 @@ export function ProjectDealsTable<T extends DealLike>({
       <Box sx={{ width: "100%", display: "flex", border: "0px"}}>
 
         <Box
-          sx={{ width: 288, flexShrink: 0, border: "0px" }}
+          sx={{ width: HEADLINE_GRID_WIDTH, minWidth: HEADLINE_GRID_WIDTH, maxWidth: HEADLINE_GRID_WIDTH, flexShrink: 0, border: "0px" }}
           onMouseMove={e => {
             const row = (e.target as HTMLElement).closest('[data-id]');
             if (row) setHoveredRowId(row.getAttribute('data-id') || null);
@@ -114,7 +129,7 @@ export function ProjectDealsTable<T extends DealLike>({
         >
           <DataGrid
             rows={rows}
-            columns={[headlineColumn]}
+            columns={[fixedHeadlineColumn]}
             getRowId={row => row.id}
             disableRowSelectionOnClick
             disableColumnSorting

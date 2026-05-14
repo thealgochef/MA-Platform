@@ -428,94 +428,100 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
   }
 
   return (
-    <main className="min-h-screen bg-bg-alt py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        {showSavedBanner && (
-          <div className="mb-6 flex items-start justify-between gap-4 rounded-md border border-success/20 bg-success/10 px-4 py-3 text-sm text-success">
-            <p>Changes saved.</p>
-            <button
-              type="button"
-              onClick={() => setShowSavedBanner(false)}
-              className="shrink-0 text-success/80 transition-colors hover:text-success"
-              aria-label="Dismiss saved confirmation"
-            >
-              Dismiss
-            </button>
+    <main className="min-h-screen bg-bg-alt">
+      <div className="bg-bg pt-8 border-b border-border-gray">
+        <div className="max-w-6xl mx-auto px-4">
+          {showSavedBanner && (
+            <div className="mb-6 flex items-start justify-between gap-4 rounded-md border border-success/20 bg-success/10 px-4 py-3 text-sm text-success">
+              <p>Changes saved.</p>
+              <button
+                type="button"
+                onClick={() => setShowSavedBanner(false)}
+                className="shrink-0 text-success/80 transition-colors hover:text-success"
+                aria-label="Dismiss saved confirmation"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-primary">{project?.name || "Project"}</h1>
+              <p className="text-sm text-text-secondary">
+                {visibleDeals.length} {viewMode === "matches" ? "matched" : viewMode} deal
+                {visibleDeals.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Link
+                href={`/projects/${projectId}/edit`}
+                className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-md text-sm hover:bg-bg-alt"
+              >
+                Edit
+              </Link>
+              <Link href="/dashboard" className="text-sm text-secondary hover:underline hover:text-primary self-center">
+                Dashboard
+              </Link>
+            </div>
           </div>
-        )}
-        
-        <div className="flex items-center justify-between mb-6">
+
           <div>
-            <h1 className="text-2xl font-bold text-primary">{project?.name || "Project"}</h1>
-            <p className="text-sm text-text-secondary">
-              {visibleDeals.length} {viewMode === "matches" ? "matched" : viewMode} deal
-              {visibleDeals.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-
-          <div className="flex gap-2">
-            <Link
-              href={`/projects/${projectId}/edit`}
-              className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-md text-sm hover:bg-bg-alt"
+            <PrimaryTabs
+              value={viewMode}
+              onChange={(_, newValue) => {
+                const routes: Record<ProjectDealsViewMode, string> = {
+                  matches: `/projects/${projectId}`,
+                  active: `/projects/${projectId}/active`,
+                  archive: `/projects/${projectId}/archive`,
+                };
+                router.push(routes[newValue as ProjectDealsViewMode]);
+              }}
             >
-              Edit
-            </Link>
-            <Link href="/dashboard" className="text-sm text-secondary hover:underline hover:text-primary self-center">
-              Dashboard
-            </Link>
+              <Tab label="Matches" value="matches" />
+              <Tab label="Active" value="active" />
+              <Tab label="Archived" value="archive" />
+            </PrimaryTabs>
           </div>
         </div>
+      </div>
 
-        <div className="mb-6">
-          <PrimaryTabs
-            value={viewMode}
-            onChange={(_, newValue) => {
-              const routes: Record<ProjectDealsViewMode, string> = {
-                matches: `/projects/${projectId}`,
-                active: `/projects/${projectId}/active`,
-                archive: `/projects/${projectId}/archive`,
-              };
-              router.push(routes[newValue as ProjectDealsViewMode]);
-            }}
-          >
-            <Tab label="Matches" value="matches" />
-            <Tab label="Active" value="active" />
-            <Tab label="Archived" value="archive" />
-          </PrimaryTabs>
+      <div className="max-w-6xl mx-auto px-4 pb-8">
+        <div className="pt-4">
+          {visibleDeals.length === 0 ? (
+            <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center text-text-secondary">
+              {emptyStateMessage}
+            </div>
+          ) : (
+            <ProjectDealsTable
+              rows={pagedDeals}
+              headlineColumn={headlineColumn}
+              detailColumns={detailColumns}
+              rowSelectionModel={rowSelectionModel}
+              onRowSelectionModelChange={setRowSelectionModel}
+              sortModel={sortModel}
+              onSortModelChange={setSortModel}
+              onRowClick={(row) => router.push(`/deals/${row.id}`)}
+              sortedCount={sortedDeals.length}
+              paginationModel={paginationModel}
+              onPageChange={(page) => setPaginationModel((prev) => ({ ...prev, page }))}
+              onRowsPerPageChange={(pageSize) => setPaginationModel({ page: 0, pageSize })}
+            />
+          )}
+
+          {viewMode === "matches" && nextCursor && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => void loadMore()}
+                disabled={loadingMore}
+                className="px-6 py-2 bg-surface-alt border border-border-gray rounded-md text-sm hover:bg-bg-alt disabled:opacity-50"
+              >
+                {loadingMore ? "Loading..." : "Load More"}
+              </button>
+            </div>
+          )}
         </div>
-
-        {visibleDeals.length === 0 ? (
-          <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center text-text-secondary">
-            {emptyStateMessage}
-          </div>
-        ) : (
-          <ProjectDealsTable
-            rows={pagedDeals}
-            headlineColumn={headlineColumn}
-            detailColumns={detailColumns}
-            rowSelectionModel={rowSelectionModel}
-            onRowSelectionModelChange={setRowSelectionModel}
-            sortModel={sortModel}
-            onSortModelChange={setSortModel}
-            onRowClick={(row) => router.push(`/deals/${row.id}`)}
-            sortedCount={sortedDeals.length}
-            paginationModel={paginationModel}
-            onPageChange={(page) => setPaginationModel((prev) => ({ ...prev, page }))}
-            onRowsPerPageChange={(pageSize) => setPaginationModel({ page: 0, pageSize })}
-          />
-        )}
-
-        {viewMode === "matches" && nextCursor && (
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => void loadMore()}
-              disabled={loadingMore}
-              className="px-6 py-2 bg-surface-alt border border-border-gray rounded-md text-sm hover:bg-bg-alt disabled:opacity-50"
-            >
-              {loadingMore ? "Loading..." : "Load More"}
-            </button>
-          </div>
-        )}
       </div>
     </main>
   );
