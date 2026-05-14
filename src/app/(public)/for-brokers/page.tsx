@@ -60,7 +60,7 @@ export default function ForBrokersPage() {
                 No subscriptions, no per-listing charges.
               </p>
             </div>
-            <div className="bg-surface rounded-lg p-6">
+            <div className="bg-surface border border-primary rounded-lg p-6">
               <h3 className="text-xl font-display font-bold text-primary mb-3">0.25% Broker Incentive</h3>
               <p className="text-sm">
                 Unlike platforms like Axial that take fees without giving back,
