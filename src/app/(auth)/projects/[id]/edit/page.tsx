@@ -75,7 +75,7 @@ export default function EditProjectPage() {
         const data = await res.json();
         throw new Error(data.error || "Failed to save");
       }
-      router.push(`/projects/${projectId}`);
+      router.push(`/projects/${projectId}?saved=1`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
