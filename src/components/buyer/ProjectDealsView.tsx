@@ -5,8 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
-import { ProjectDealsTable } from "@/components/buyer/ProjectDealsTable";
-import { Box, Button, Chip, Stack } from "@mui/material";
+import { ProjectDealsTable } from "@/components/ui/ProjectDealsTable";
+import { Box, Button, Chip, Stack, Tab } from "@mui/material";
+import { PrimaryTabs } from "@/components/ui/PrimaryTabs";
 import {
   GridColDef,
   GridPaginationModel,
@@ -91,15 +92,6 @@ function getEmptyStateMessage(viewMode: ProjectDealsViewMode): string {
   }
 
   return "No matching deals found. Try adjusting your project criteria.";
-}
-
-function getToolbarLinkClass(isActive: boolean): string {
-  return [
-    "px-3 py-1 border rounded-2xl text-sm transition-colors",
-    isActive
-      ? "bg-primary border-primary text-white"
-      : "bg-surface-alt border-border-gray text-text hover:text-bg-alt hover:bg-primary hover:border-primary",
-  ].join(" ");
 }
 
 export default function ProjectDealsView({ projectId }: { projectId: string }) {
@@ -462,18 +454,6 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
           </div>
 
           <div className="flex gap-2">
-            <Link href={`/projects/${projectId}`} className={getToolbarLinkClass(viewMode === "matches")}>
-              Matches
-            </Link>
-            <Link href={`/projects/${projectId}/active`} className={getToolbarLinkClass(viewMode === "active")}>
-              Active
-            </Link>
-            <Link href={`/projects/${projectId}/archive`} className={getToolbarLinkClass(viewMode === "archive")}>
-              Archive
-            </Link>
-          </div>
-
-          <div className="flex gap-2">
             <Link
               href={`/projects/${projectId}/edit`}
               className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-md text-sm hover:bg-bg-alt"
@@ -484,6 +464,24 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
               Dashboard
             </Link>
           </div>
+        </div>
+
+        <div className="mb-6">
+          <PrimaryTabs
+            value={viewMode}
+            onChange={(_, newValue) => {
+              const routes: Record<ProjectDealsViewMode, string> = {
+                matches: `/projects/${projectId}`,
+                active: `/projects/${projectId}/active`,
+                archive: `/projects/${projectId}/archive`,
+              };
+              router.push(routes[newValue as ProjectDealsViewMode]);
+            }}
+          >
+            <Tab label="Matches" value="matches" />
+            <Tab label="Active" value="active" />
+            <Tab label="Archived" value="archive" />
+          </PrimaryTabs>
         </div>
 
         {visibleDeals.length === 0 ? (

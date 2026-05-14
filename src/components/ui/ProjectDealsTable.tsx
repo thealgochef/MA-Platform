@@ -101,7 +101,7 @@ export function ProjectDealsTable<T extends DealLike>({
   };
 
   return (
-    <Paper elevation={2} sx={{ borderRadius: 1, overflow: "hidden", border: "1px solid #CFCFCF" }}>
+    <Paper elevation={0} sx={{ borderRadius: 1, overflow: "hidden", border: "1px solid #CFCFCF" }}>
       <Box sx={{ width: "100%", display: "flex", border: "0px"}}>
 
         <Box
