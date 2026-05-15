@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Paper, TablePagination } from "@mui/material";
 import {
   DataGrid,
@@ -92,6 +92,18 @@ export function ProjectDealsTable<T extends DealLike>({
   onRowsPerPageChange,
 }: ProjectDealsTableProps<T>) {
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
+  const tableContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!tableContainerRef.current) {
+      return;
+    }
+
+    const columnHeaders = tableContainerRef.current.querySelectorAll<HTMLElement>("[role='columnheader']");
+    columnHeaders.forEach((header) => {
+      header.tabIndex = 0;
+    });
+  });
 
   const fixedHeadlineColumn = useMemo<GridColDef<T>>(
     () => ({
@@ -108,6 +120,81 @@ export function ProjectDealsTable<T extends DealLike>({
     onRowClick?.(params.row);
   };
 
+  const headlineSortableFields = useMemo(() => [fixedHeadlineColumn.field], [fixedHeadlineColumn.field]);
+
+  const detailSortableFields = useMemo(
+    () => detailColumns.filter((column) => column.sortable !== false).map((column) => column.field),
+    [detailColumns]
+  );
+
+  const getGridSortModel = (sortableFields: string[]): GridSortModel => {
+    const activeSort = sortModel[0];
+    if (!activeSort?.field || !activeSort.sort || !sortableFields.includes(activeSort.field)) {
+      return [];
+    }
+
+    return [activeSort];
+  };
+
+  const handleGridSortModelChange = (nextModel: GridSortModel, sortableFields: string[]) => {
+    const nextSort = nextModel.find((item) => item.sort && sortableFields.includes(item.field));
+    const activeSort = sortModel[0];
+
+    if (!nextSort) {
+      if (activeSort?.field && sortableFields.includes(activeSort.field)) {
+        onSortModelChange([]);
+      }
+      return;
+    }
+
+    if (activeSort?.field === nextSort.field && activeSort.sort === nextSort.sort) {
+      return;
+    }
+
+    onSortModelChange([nextSort]);
+  };
+
+  const getClosestRowId = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) {
+      return null;
+    }
+
+    const rowElement = target.closest("[data-id]");
+    return rowElement?.getAttribute("data-id") ?? null;
+  };
+
+  const handleGridMouseOver = (event: React.MouseEvent<HTMLElement>) => {
+    const nextHoveredRowId = getClosestRowId(event.target);
+    if (nextHoveredRowId === null) {
+      return;
+    }
+
+    const previousHoveredRowId = getClosestRowId(event.relatedTarget);
+    if (previousHoveredRowId === nextHoveredRowId) {
+      return;
+    }
+
+    setHoveredRowId((currentHoveredRowId) =>
+      currentHoveredRowId === nextHoveredRowId ? currentHoveredRowId : nextHoveredRowId
+    );
+  };
+
+  const handleGridMouseOut = (event: React.MouseEvent<HTMLElement>) => {
+    const exitedRowId = getClosestRowId(event.target);
+    if (exitedRowId === null) {
+      return;
+    }
+
+    const nextRowId = getClosestRowId(event.relatedTarget);
+    if (nextRowId === exitedRowId) {
+      return;
+    }
+
+    setHoveredRowId((currentHoveredRowId) =>
+      currentHoveredRowId === exitedRowId ? null : currentHoveredRowId
+    );
+  };
+
   const getRowClassName = (params: { id: string | number; row: T }) => {
     let classes = "";
     if (params.row.engagement?.stage === "declined") classes += "deal-row-declined ";
@@ -117,29 +204,27 @@ export function ProjectDealsTable<T extends DealLike>({
 
   return (
     <Paper elevation={0} sx={{ borderRadius: 1, overflow: "hidden", border: "1px solid #CFCFCF" }}>
-      <Box sx={{ width: "100%", display: "flex", border: "0px"}}>
+      <Box ref={tableContainerRef} sx={{ width: "100%", display: "flex", border: "0px"}}>
 
         <Box
           sx={{ width: HEADLINE_GRID_WIDTH, minWidth: HEADLINE_GRID_WIDTH, maxWidth: HEADLINE_GRID_WIDTH, flexShrink: 0, border: "0px" }}
-          onMouseMove={e => {
-            const row = (e.target as HTMLElement).closest('[data-id]');
-            if (row) setHoveredRowId(row.getAttribute('data-id') || null);
-          }}
-          onMouseLeave={() => setHoveredRowId(null)}
+          onMouseOver={handleGridMouseOver}
+          onMouseOut={handleGridMouseOut}
         >
           <DataGrid
             rows={rows}
             columns={[fixedHeadlineColumn]}
             getRowId={row => row.id}
             disableRowSelectionOnClick
-            disableColumnSorting
             hideFooter
             checkboxSelection
             rowSelectionModel={rowSelectionModel}
             onRowSelectionModelChange={onRowSelectionModelChange}
             sortingMode="server"
-            sortModel={sortModel}
-            onSortModelChange={onSortModelChange}
+            sortModel={getGridSortModel(headlineSortableFields)}
+            onSortModelChange={(nextModel) =>
+              handleGridSortModelChange(nextModel, headlineSortableFields)
+            }
             onRowClick={handleRowClick}
             autoHeight
             columnHeaderHeight={40}
@@ -176,11 +261,8 @@ export function ProjectDealsTable<T extends DealLike>({
 
         <Box
           sx={{ minWidth: 0, flex: 1, border: "0px" }}
-          onMouseMove={e => {
-            const row = (e.target as HTMLElement).closest('[data-id]');
-            if (row) setHoveredRowId(row.getAttribute('data-id') || null);
-          }}
-          onMouseLeave={() => setHoveredRowId(null)}
+          onMouseOver={handleGridMouseOver}
+          onMouseOut={handleGridMouseOut}
         >
           <DataGrid
             rows={rows}
@@ -191,8 +273,10 @@ export function ProjectDealsTable<T extends DealLike>({
             rowSelectionModel={rowSelectionModel}
             onRowSelectionModelChange={onRowSelectionModelChange}
             sortingMode="server"
-            sortModel={sortModel}
-            onSortModelChange={onSortModelChange}
+            sortModel={getGridSortModel(detailSortableFields)}
+            onSortModelChange={(nextModel) =>
+              handleGridSortModelChange(nextModel, detailSortableFields)
+            }
             onRowClick={handleRowClick}
             autoHeight
             columnHeaderHeight={40}

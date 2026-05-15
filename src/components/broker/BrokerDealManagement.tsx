@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DEAL_STATUS_LABELS, VALID_DEAL_TRANSITIONS, BUYER_TYPES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
+import { useAutoDismissFlag } from "@/lib/useAutoDismissFlag";
 
 type Tab = "Overview" | "Pipeline" | "Offers" | "Documents" | "Messaging" | "Analytics" | "Timeline";
 
@@ -83,23 +84,7 @@ export default function BrokerDealManagement({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingDeal, setDeletingDeal] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showSavedBanner, setShowSavedBanner] = useState(initialShowSavedBanner);
-
-  useEffect(() => {
-    setShowSavedBanner(initialShowSavedBanner);
-
-    if (!initialShowSavedBanner) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setShowSavedBanner(false);
-    }, 4000);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [initialShowSavedBanner]);
+  const { isVisible: showSavedBanner, setIsVisible: setShowSavedBanner } = useAutoDismissFlag(initialShowSavedBanner);
 
   const fetchDeal = useCallback(async () => {
     const res = await fetch(`/api/deals/${dealId}`);

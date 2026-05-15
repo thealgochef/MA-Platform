@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
+import { useAutoDismissFlag } from "@/lib/useAutoDismissFlag";
 import { ProjectDealsTable } from "@/components/ui/ProjectDealsTable";
 import { Box, Button, Chip, Stack, Tab } from "@mui/material";
 import { PrimaryTabs } from "@/components/ui/PrimaryTabs";
@@ -106,7 +107,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [showSavedBanner, setShowSavedBanner] = useState(shouldShowSavedBanner);
+  const { isVisible: showSavedBanner, setIsVisible: setShowSavedBanner } = useAutoDismissFlag(shouldShowSavedBanner);
   const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>({
     type: "include",
     ids: new Set(),
@@ -116,22 +117,6 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
     page: 0,
     pageSize: 10,
   });
-
-  useEffect(() => {
-    setShowSavedBanner(shouldShowSavedBanner);
-
-    if (!shouldShowSavedBanner) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setShowSavedBanner(false);
-    }, 4000);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [shouldShowSavedBanner]);
 
   const fetchDeals = useCallback(
     async (cursor?: string) => {
@@ -210,7 +195,20 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
       headerName: "Headline",
       width: 240,
       minWidth: 220,
-      renderCell: (params) => <Box sx={{ color: "#111827" }}>{params.row.headline}</Box>,
+      renderCell: (params) => (
+        <Box sx={{ color: "#111827" }}>
+          <Link
+            href={`/deals/${params.row.id}`}
+            tabIndex={params.hasFocus ? 0 : -1}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+            className="rounded-sm text-text hover:underline focus-visible:outline-none focus-visible:underline"
+          >
+            {params.row.headline}
+          </Link>
+        </Box>
+      ),
     };
   }, []);
 
@@ -476,7 +474,22 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
                   active: `/projects/${projectId}/active`,
                   archive: `/projects/${projectId}/archive`,
                 };
-                router.push(routes[newValue as ProjectDealsViewMode]);
+
+                if (newValue !== "matches" && newValue !== "active" && newValue !== "archive") {
+                  return;
+                }
+
+                if (newValue === "matches") {
+                  router.push(routes.matches);
+                  return;
+                }
+
+                if (newValue === "active") {
+                  router.push(routes.active);
+                  return;
+                }
+
+                router.push(routes.archive);
               }}
             >
               <Tab label="Matches" value="matches" />
