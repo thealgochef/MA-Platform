@@ -195,15 +195,16 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
       headerName: "Headline",
       width: 240,
       minWidth: 220,
+      cellClassName: "row-hover-text",
       renderCell: (params) => (
-        <Box sx={{ color: "#111827" }}>
+        <Box sx={{ color: "inherit" }}>
           <Link
             href={`/deals/${params.row.id}`}
             tabIndex={params.hasFocus ? 0 : -1}
             onClick={(event) => {
               event.stopPropagation();
             }}
-            className="rounded-sm text-text hover:underline focus-visible:outline-none focus-visible:underline"
+            className="rounded-sm text-inherit focus-visible:outline-none focus-visible:underline"
           >
             {params.row.headline}
           </Link>
@@ -215,23 +216,18 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
   const detailColumns = useMemo<GridColDef<Deal>[]>(() => {
     return [
       {
-        field: "industry",
-        headerName: "Industry",
-        flex: 1,
-        minWidth: 140,
-      },
-      {
-        field: "geography",
-        headerName: "Geography",
+        field: "date_received",
+        headerName: "Date Received",
         flex: 0.9,
         minWidth: 130,
-        valueGetter: (_, row) => getGeography(row) || "—",
+        cellClassName: "row-hover-text",
       },
       {
         field: "revenue_year_3",
         headerName: "Revenue",
         flex: 0.9,
-        minWidth: 130,
+        minWidth: 120,
+        cellClassName: "row-hover-text",
         valueGetter: (_, row) => row.revenue_year_3,
         renderCell: (params) =>
           params.row.revenue_year_3 != null ? formatCurrency(params.row.revenue_year_3) + "M": "—",
@@ -240,16 +236,32 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "ebitda_year_3",
         headerName: "EBITDA",
         flex: 0.9,
-        minWidth: 130,
+        minWidth: 120,
+        cellClassName: "row-hover-text",
         valueGetter: (_, row) => row.ebitda_year_3,
         renderCell: (params) =>
           params.row.ebitda_year_3 != null ? formatCurrency(params.row.ebitda_year_3) + "M": "—",
       },
       {
+        field: "industry",
+        headerName: "Industry",
+        flex: 1,
+        minWidth: 140,
+        cellClassName: "row-hover-text",
+      },
+      {
+        field: "geography",
+        headerName: "Geography",
+        flex: 0.9,
+        minWidth: 130,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => getGeography(row) || "—",
+      },
+      {
         field: "status",
         headerName: "Deal Status",
         flex: 1,
-        minWidth: 160,
+        minWidth: 130,
         sortable: false,
         renderCell: (params) => (
           <Chip
@@ -263,7 +275,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "engagement_status",
         headerName: "Engagement Status",
         flex: 1,
-        minWidth: 170,
+        minWidth: 160,
         sortable: false,
         renderCell: (params) =>
           params.row.engagement ? (
@@ -281,7 +293,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "actions",
         headerName: "Actions",
         flex: 1.2,
-        minWidth: 220,
+        minWidth: 200,
         sortable: false,
         filterable: false,
         renderCell: (params) => {

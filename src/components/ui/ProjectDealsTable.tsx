@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, Paper, TablePagination } from "@mui/material";
 import {
   DataGrid,
@@ -36,6 +36,7 @@ interface ProjectDealsTableProps<T extends DealLike> {
 const HEADLINE_COLUMN_WIDTH = 400;
 const SELECTION_COLUMN_WIDTH = 50;
 const HEADLINE_GRID_WIDTH = HEADLINE_COLUMN_WIDTH + SELECTION_COLUMN_WIDTH;
+const SCROLLBAR_IDLE_MS = 300;
 
 const sharedGridSx = {
   borderTop: "none",
@@ -73,7 +74,13 @@ const sharedGridSx = {
     opacity: 0.6,
   },
   "& .row-hovered": {
-    backgroundColor: "rgba(107, 114, 128, 0.08) !important",
+    backgroundColor: "#eff2f5 !important",
+  },
+  "& .row-hovered .row-hover-text": {
+    color: "var(--color-primary)",
+  },
+  "& .row-focused .row-hover-text": {
+    color: "var(--color-primary)",
   },
 };
 
@@ -92,7 +99,31 @@ export function ProjectDealsTable<T extends DealLike>({
   onRowsPerPageChange,
 }: ProjectDealsTableProps<T>) {
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
+  const [focusedHeadlineRowId, setFocusedHeadlineRowId] = useState<string | null>(null);
+  const [isScrollbarActive, setIsScrollbarActive] = useState(false);
   const tableContainerRef = useRef<HTMLDivElement | null>(null);
+  const hideScrollbarTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const markScrollbarActive = useCallback(() => {
+    setIsScrollbarActive(true);
+
+    if (hideScrollbarTimeoutRef.current) {
+      clearTimeout(hideScrollbarTimeoutRef.current);
+    }
+
+    hideScrollbarTimeoutRef.current = setTimeout(() => {
+      setIsScrollbarActive(false);
+      hideScrollbarTimeoutRef.current = null;
+    }, SCROLLBAR_IDLE_MS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (hideScrollbarTimeoutRef.current) {
+        clearTimeout(hideScrollbarTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!tableContainerRef.current) {
@@ -104,6 +135,23 @@ export function ProjectDealsTable<T extends DealLike>({
       header.tabIndex = 0;
     });
   });
+
+  useEffect(() => {
+    if (!tableContainerRef.current) {
+      return;
+    }
+
+    const scrollers = tableContainerRef.current.querySelectorAll<HTMLElement>(".MuiDataGrid-virtualScroller");
+    scrollers.forEach((scroller) => {
+      scroller.addEventListener("scroll", markScrollbarActive, { passive: true });
+    });
+
+    return () => {
+      scrollers.forEach((scroller) => {
+        scroller.removeEventListener("scroll", markScrollbarActive);
+      });
+    };
+  }, [detailColumns, markScrollbarActive, rows]);
 
   const fixedHeadlineColumn = useMemo<GridColDef<T>>(
     () => ({
@@ -195,21 +243,70 @@ export function ProjectDealsTable<T extends DealLike>({
     );
   };
 
+  const isWithinHeadlineCell = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+
+    return target.closest("[data-field='headline']") !== null;
+  };
+
+  const handleHeadlineFocusIn = (event: React.FocusEvent<HTMLElement>) => {
+    if (!isWithinHeadlineCell(event.target)) {
+      return;
+    }
+
+    const nextFocusedRowId = getClosestRowId(event.target);
+    if (nextFocusedRowId === null) {
+      return;
+    }
+
+    setFocusedHeadlineRowId((currentFocusedRowId) =>
+      currentFocusedRowId === nextFocusedRowId ? currentFocusedRowId : nextFocusedRowId
+    );
+  };
+
+  const handleHeadlineFocusOut = (event: React.FocusEvent<HTMLElement>) => {
+    if (!isWithinHeadlineCell(event.target)) {
+      return;
+    }
+
+    const nextFocusedRowId = getClosestRowId(event.relatedTarget);
+    if (nextFocusedRowId !== null && isWithinHeadlineCell(event.relatedTarget)) {
+      setFocusedHeadlineRowId((currentFocusedRowId) =>
+        currentFocusedRowId === nextFocusedRowId ? currentFocusedRowId : nextFocusedRowId
+      );
+      return;
+    }
+
+    setFocusedHeadlineRowId(null);
+  };
+
   const getRowClassName = (params: { id: string | number; row: T }) => {
     let classes = "";
     if (params.row.engagement?.stage === "declined") classes += "deal-row-declined ";
     if (String(params.id) === hoveredRowId) classes += "row-hovered";
+    if (String(params.id) === focusedHeadlineRowId) classes += `${classes ? " " : ""}row-focused`;
     return classes;
   };
 
   return (
     <Paper elevation={0} sx={{ borderRadius: 1, overflow: "hidden", border: "1px solid #CFCFCF" }}>
-      <Box ref={tableContainerRef} sx={{ width: "100%", display: "flex", border: "0px"}}>
+      <Box
+        ref={tableContainerRef}
+        sx={{ width: "100%", display: "flex", border: "0px" }}
+        // onMouseMove={markScrollbarActive}
+        onWheel={markScrollbarActive}
+        onTouchMove={markScrollbarActive}
+        onKeyDown={markScrollbarActive}
+      >
 
         <Box
           sx={{ width: HEADLINE_GRID_WIDTH, minWidth: HEADLINE_GRID_WIDTH, maxWidth: HEADLINE_GRID_WIDTH, flexShrink: 0, border: "0px" }}
           onMouseOver={handleGridMouseOver}
           onMouseOut={handleGridMouseOut}
+          onFocus={handleHeadlineFocusIn}
+          onBlur={handleHeadlineFocusOut}
         >
           <DataGrid
             rows={rows}
@@ -297,10 +394,15 @@ export function ProjectDealsTable<T extends DealLike>({
               "& .MuiDataGrid-columnSeparator svg": {
                 color: "#6B7280",
               },
+              "& .MuiDataGrid-scrollbar": {
+                opacity: isScrollbarActive ? 1 : 0,
+                pointerEvents: isScrollbarActive ? "auto" : "none",
+                transition: "opacity 100ms ease",
+              },
               "& .MuiDataGrid-cell[data-field='actions']": {
-              display: "flex",
-              alignItems: "center",
-              }
+                display: "flex",
+                alignItems: "center",
+              },
             }}
           />
         </Box>
@@ -310,7 +412,6 @@ export function ProjectDealsTable<T extends DealLike>({
         sx={{
           width: "100%",
           borderTop: "1px solid #CFCFCF",
-          backgroundColor: "var(--color-surface-alt)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",

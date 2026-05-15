@@ -45,6 +45,7 @@ vi.mock("@mui/x-data-grid", () => {
               id: rowId,
               row,
             }) ?? "";
+          const cellField = gridType === "headline" ? "headline" : "industry";
 
           return (
             <div
@@ -59,7 +60,11 @@ vi.mock("@mui/x-data-grid", () => {
                   row,
                 })
               }
-            />
+            >
+              <button type="button" data-testid={`cell-${rowId}-${gridType}`} data-field={cellField}>
+                {cellField}
+              </button>
+            </div>
           );
         })}
       </div>
@@ -222,6 +227,22 @@ describe("ProjectDealsTable", () => {
 
     expect(screen.getByTestId("row-deal-1-headline").className).not.toContain("row-hovered");
     expect(screen.getByTestId("row-deal-1-detail").className).not.toContain("row-hovered");
+  });
+
+  it("syncs focus class from headline cell and clears on blur", () => {
+    renderTable();
+
+    const headlineCell = screen.getByTestId("cell-deal-1-headline");
+
+    fireEvent.focus(headlineCell);
+
+    expect(screen.getByTestId("row-deal-1-headline").className).toContain("row-focused");
+    expect(screen.getByTestId("row-deal-1-detail").className).toContain("row-focused");
+
+    fireEvent.blur(headlineCell, { relatedTarget: null });
+
+    expect(screen.getByTestId("row-deal-1-headline").className).not.toContain("row-focused");
+    expect(screen.getByTestId("row-deal-1-detail").className).not.toContain("row-focused");
   });
 
   it("updates sort model for sortable headers and ignores non-sortable headers", () => {
