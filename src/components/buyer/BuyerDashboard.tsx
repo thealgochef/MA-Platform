@@ -117,25 +117,25 @@ export default function BuyerDashboard() {
             <div className="bg-surface-alt rounded-lg shadow-md p-4">
               <p className="text-xs text-text-secondary">Avg Revenue (Pursued)</p>
               <p className="text-lg font-bold text-primary">
-                {analytics.avgRevenue != null ? formatCurrency(analytics.avgRevenue) : "—"}
+                {analytics.avgRevenue != null ? formatCurrency(analytics.avgRevenue) + "M" : "—"}
               </p>
             </div>
             <div className="bg-surface-alt rounded-lg shadow-md p-4">
               <p className="text-xs text-text-secondary">Avg EBITDA (Pursued)</p>
               <p className="text-lg font-bold text-primary">
-                {analytics.avgEbitda != null ? formatCurrency(analytics.avgEbitda) : "—"}
+                {analytics.avgEbitda != null ? formatCurrency(analytics.avgEbitda) + "M" : "—"}
               </p>
             </div>
             <div className="bg-surface-alt rounded-lg shadow-md p-4">
               <p className="text-xs text-text-secondary">Avg Revenue (Matched)</p>
               <p className="text-lg font-bold text-primary">
-                {analytics.avgMatchedRevenue != null ? formatCurrency(analytics.avgMatchedRevenue) : "—"}
+                {analytics.avgMatchedRevenue != null ? formatCurrency(analytics.avgMatchedRevenue) + "M" : "—"}  
               </p>
             </div>
             <div className="bg-surface-alt rounded-lg shadow-md p-4">
               <p className="text-xs text-text-secondary">Avg EBITDA (Matched)</p>
               <p className="text-lg font-bold text-primary">
-                {analytics.avgMatchedEbitda != null ? formatCurrency(analytics.avgMatchedEbitda) : "—"}
+                {analytics.avgMatchedEbitda != null ? formatCurrency(analytics.avgMatchedEbitda) + "M" : "—"}
               </p>
             </div>
           </div>

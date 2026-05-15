@@ -170,7 +170,7 @@ export default function ThreadPage() {
           <div className="text-right">
             <a
               href={`/deals/${thread.engagement.deal_id}`}
-              className="text-sm text-secondary hover:underline"
+              className="text-sm text-secondary hover:underline hover:text-primary"
             >
               {thread.engagement.headline}
             </a>

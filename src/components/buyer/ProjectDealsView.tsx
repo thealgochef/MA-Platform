@@ -1,10 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
+import { useAutoDismissFlag } from "@/lib/useAutoDismissFlag";
+import { ProjectDealsTable } from "@/components/ui/ProjectDealsTable";
+import { Box, Button, Chip, Stack, Tab } from "@mui/material";
+import { PrimaryTabs } from "@/components/ui/PrimaryTabs";
+import {
+  GridColDef,
+  GridPaginationModel,
+  GridRowSelectionModel,
+  GridSortModel,
+} from "@mui/x-data-grid";
 
 type ProjectDealsViewMode = "matches" | "active" | "archive";
 
@@ -85,25 +95,28 @@ function getEmptyStateMessage(viewMode: ProjectDealsViewMode): string {
   return "No matching deals found. Try adjusting your project criteria.";
 }
 
-function getToolbarLinkClass(isActive: boolean): string {
-  return [
-    "px-3 py-1 border rounded-2xl text-sm transition-colors",
-    isActive
-      ? "bg-primary border-primary text-white"
-      : "bg-surface-alt border-border-gray text-text hover:text-bg-alt hover:bg-primary hover:border-primary",
-  ].join(" ");
-}
-
 export default function ProjectDealsView({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const viewMode = getViewModeFromPath(pathname);
+  const shouldShowSavedBanner = viewMode === "matches" && searchParams.get("saved") === "1";
   const [project, setProject] = useState<Project | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const { isVisible: showSavedBanner, setIsVisible: setShowSavedBanner } = useAutoDismissFlag(shouldShowSavedBanner);
+  const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>({
+    type: "include",
+    ids: new Set(),
+  });
+  const [sortModel, setSortModel] = useState<GridSortModel>([]);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 10,
+  });
 
   const fetchDeals = useCallback(
     async (cursor?: string) => {
@@ -143,7 +156,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
     setLoadingMore(false);
   };
 
-  const handlePursue = async (dealId: string) => {
+  const handlePursue = useCallback(async (dealId: string) => {
     setActionLoading(dealId);
     const res = await fetch(`/api/deals/${dealId}/pursue`, {
       method: "POST",
@@ -155,9 +168,9 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
       setDeals((prev) => prev.map((deal) => (deal.id === dealId ? { ...deal, engagement } : deal)));
     }
     setActionLoading(null);
-  };
+  }, [projectId]);
 
-  const handleDecline = async (dealId: string) => {
+  const handleDecline = useCallback(async (dealId: string) => {
     setActionLoading(dealId);
     const res = await fetch(`/api/deals/${dealId}/decline`, {
       method: "POST",
@@ -167,18 +180,254 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
       setDeals((prev) => prev.map((deal) => (deal.id === dealId ? { ...deal, engagement } : deal)));
     }
     setActionLoading(null);
-  };
+  }, []);
 
   const getGeography = (deal: Deal) => {
     return deal.geography_display === "state" ? deal.state : deal.region;
   };
 
-  const navigateToDeal = (dealId: string) => {
-    router.push(`/deals/${dealId}`);
-  };
-
   const visibleDeals = getVisibleDeals(deals, viewMode);
   const emptyStateMessage = getEmptyStateMessage(viewMode);
+
+  const headlineColumn = useMemo<GridColDef<Deal>>(() => {
+    return {
+      field: "headline",
+      headerName: "Headline",
+      width: 240,
+      minWidth: 220,
+      cellClassName: "row-hover-text",
+      renderCell: (params) => (
+        <Box sx={{ color: "inherit" }}>
+          <Link
+            href={`/deals/${params.row.id}`}
+            tabIndex={params.hasFocus ? 0 : -1}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+            className="rounded-sm text-inherit focus-visible:outline-none focus-visible:underline"
+          >
+            {params.row.headline}
+          </Link>
+        </Box>
+      ),
+    };
+  }, []);
+
+  const detailColumns = useMemo<GridColDef<Deal>[]>(() => {
+    return [
+      {
+        field: "date_received",
+        headerName: "Date Received",
+        flex: 0.9,
+        minWidth: 130,
+        cellClassName: "row-hover-text",
+      },
+      {
+        field: "revenue_year_3",
+        headerName: "Revenue",
+        flex: 0.9,
+        minWidth: 120,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => row.revenue_year_3,
+        renderCell: (params) =>
+          params.row.revenue_year_3 != null ? formatCurrency(params.row.revenue_year_3) + "M": "—",
+      },
+      {
+        field: "ebitda_year_3",
+        headerName: "EBITDA",
+        flex: 0.9,
+        minWidth: 120,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => row.ebitda_year_3,
+        renderCell: (params) =>
+          params.row.ebitda_year_3 != null ? formatCurrency(params.row.ebitda_year_3) + "M": "—",
+      },
+      {
+        field: "industry",
+        headerName: "Industry",
+        flex: 1,
+        minWidth: 140,
+        cellClassName: "row-hover-text",
+      },
+      {
+        field: "geography",
+        headerName: "Geography",
+        flex: 0.9,
+        minWidth: 130,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => getGeography(row) || "—",
+      },
+      {
+        field: "status",
+        headerName: "Deal Status",
+        flex: 1,
+        minWidth: 130,
+        sortable: false,
+        renderCell: (params) => (
+          <Chip
+            label={DEAL_STATUS_LABELS[params.row.status] || params.row.status}
+            size="small"
+            sx={{ backgroundColor: "#10B9811A", color: "#10B981", fontWeight: 500 }}
+          />
+        ),
+      },
+      {
+        field: "engagement_status",
+        headerName: "Engagement Status",
+        flex: 1,
+        minWidth: 160,
+        sortable: false,
+        renderCell: (params) =>
+          params.row.engagement ? (
+            <Chip
+              label={params.row.engagement.stage.replace(/_/g, " ")}
+              size="small"
+              sx={{ textTransform: "capitalize" }}
+              variant="outlined"
+            />
+          ) : (
+            <span style={{ color: "#9CA3AF" }}>—</span>
+          ),
+      },
+      {
+        field: "actions",
+        headerName: "Actions",
+        flex: 1.2,
+        minWidth: 200,
+        sortable: false,
+        filterable: false,
+        renderCell: (params) => {
+          const isEngaged = Boolean(params.row.engagement) && params.row.engagement?.stage !== "declined";
+          const isDeclined = params.row.engagement?.stage === "declined";
+
+          return (
+            <>
+              {!isEngaged && !isDeclined && (
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    sx={{
+                    textTransform: "none",
+                    borderRadius: 1,
+                    px: 1.75,
+                    fontWeight: 600,
+                    backgroundColor: "var(--color-primary)",
+                    "&:hover": { backgroundColor: "var(--color-btn-hover)" }
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handlePursue(params.row.id);
+                    }}
+                    disabled={actionLoading === params.row.id}
+                  >
+                    Pursue
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                    textTransform: "none",
+                    borderRadius: 1,
+                    px: 1.75,
+                    fontWeight: 600,
+                    borderColor: "var(--color-border)",
+                    color: "var(--color-secondary)",
+                    "&:hover": {
+                      borderColor: "var(--color-secondary)",
+                      backgroundColor: "var(--color-faint)",
+                    },
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleDecline(params.row.id);
+                    }}
+                    disabled={actionLoading === params.row.id}
+                  >
+                    Decline
+                  </Button>
+                </Stack>
+              )}
+              {isDeclined && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{
+                    textTransform: "none",
+                    borderRadius: 1,
+                    px: 1.75,
+                    fontWeight: 600,
+                    backgroundColor: "var(--color-primary)",
+                    "&:hover": { backgroundColor: "var(--color-btn-hover)" }
+                    }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handlePursue(params.row.id);
+                  }}
+                  disabled={actionLoading === params.row.id}
+                >
+                  Pursue
+                </Button>
+              )}
+            </>
+          );
+        },
+      },
+    ];
+  }, [actionLoading, handleDecline, handlePursue]);
+
+  const sortedDeals = useMemo(() => {
+    const activeSort = sortModel[0];
+    if (!activeSort?.field || !activeSort?.sort) {
+      return visibleDeals;
+    }
+
+    const direction = activeSort.sort === "asc" ? 1 : -1;
+    const getValue = (deal: Deal) => {
+      switch (activeSort.field) {
+        case "headline":
+          return deal.headline;
+        case "industry":
+          return deal.industry;
+        case "geography":
+          return getGeography(deal) || "";
+        case "revenue_year_3":
+          return deal.revenue_year_3 ?? Number.NEGATIVE_INFINITY;
+        case "ebitda_year_3":
+          return deal.ebitda_year_3 ?? Number.NEGATIVE_INFINITY;
+        default:
+          return "";
+      }
+    };
+
+    return [...visibleDeals].sort((a, b) => {
+      const aValue = getValue(a);
+      const bValue = getValue(b);
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return (aValue - bValue) * direction;
+      }
+
+      return (
+        String(aValue).localeCompare(String(bValue), undefined, {
+          sensitivity: "base",
+          numeric: true,
+        }) * direction
+      );
+    });
+  }, [sortModel, visibleDeals]);
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedDeals.length / paginationModel.pageSize) - 1);
+    if (paginationModel.page > maxPage) {
+      setPaginationModel((prev) => ({ ...prev, page: maxPage }));
+    }
+  }, [sortedDeals.length, paginationModel.page, paginationModel.pageSize]);
+
+  const pagedDeals = useMemo(() => {
+    const start = paginationModel.page * paginationModel.pageSize;
+    return sortedDeals.slice(start, start + paginationModel.pageSize);
+  }, [paginationModel.page, paginationModel.pageSize, sortedDeals]);
 
   if (loading) {
     return (
@@ -189,158 +438,115 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
   }
 
   return (
-    <main className="min-h-screen bg-bg-alt py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-6">
+    <main className="min-h-screen bg-bg-alt">
+      <div className="bg-bg pt-8 border-b border-border-gray">
+        <div className="max-w-6xl mx-auto px-4">
+          {showSavedBanner && (
+            <div className="mb-6 flex items-start justify-between gap-4 rounded-md border border-success/20 bg-success/10 px-4 py-3 text-sm text-success">
+              <p>Changes saved.</p>
+              <button
+                type="button"
+                onClick={() => setShowSavedBanner(false)}
+                className="shrink-0 text-success/80 transition-colors hover:text-success"
+                aria-label="Dismiss saved confirmation"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-primary">{project?.name || "Project"}</h1>
+              <p className="text-sm text-text-secondary">
+                {visibleDeals.length} {viewMode === "matches" ? "matched" : viewMode} deal
+                {visibleDeals.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Link
+                href={`/projects/${projectId}/edit`}
+                className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-md text-sm hover:bg-bg-alt"
+              >
+                Edit
+              </Link>
+              <Link href="/dashboard" className="text-sm text-secondary hover:underline hover:text-primary self-center">
+                Dashboard
+              </Link>
+            </div>
+          </div>
+
           <div>
-            <h1 className="text-2xl font-bold text-primary">{project?.name || "Project"}</h1>
-            <p className="text-sm text-text-secondary">
-              {visibleDeals.length} {viewMode === "matches" ? "matched" : viewMode} deal
-              {visibleDeals.length !== 1 ? "s" : ""}
-            </p>
-          </div>
+            <PrimaryTabs
+              value={viewMode}
+              onChange={(_, newValue) => {
+                const routes: Record<ProjectDealsViewMode, string> = {
+                  matches: `/projects/${projectId}`,
+                  active: `/projects/${projectId}/active`,
+                  archive: `/projects/${projectId}/archive`,
+                };
 
-          <div className="flex gap-2">
-            <Link href={`/projects/${projectId}`} className={getToolbarLinkClass(viewMode === "matches")}>
-              Matches
-            </Link>
-            <Link href={`/projects/${projectId}/active`} className={getToolbarLinkClass(viewMode === "active")}>
-              Active
-            </Link>
-            <Link href={`/projects/${projectId}/archive`} className={getToolbarLinkClass(viewMode === "archive")}>
-              Archive
-            </Link>
-          </div>
+                if (newValue !== "matches" && newValue !== "active" && newValue !== "archive") {
+                  return;
+                }
 
-          <div className="flex gap-2">
-            <Link
-              href={`/projects/${projectId}/edit`}
-              className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-md text-sm hover:bg-bg-alt"
+                if (newValue === "matches") {
+                  router.push(routes.matches);
+                  return;
+                }
+
+                if (newValue === "active") {
+                  router.push(routes.active);
+                  return;
+                }
+
+                router.push(routes.archive);
+              }}
             >
-              Edit
-            </Link>
-            <Link href="/dashboard" className="text-sm text-secondary hover:underline hover:text-primary self-center">
-              Dashboard
-            </Link>
+              <Tab label="Matches" value="matches" />
+              <Tab label="Active" value="active" />
+              <Tab label="Archived" value="archive" />
+            </PrimaryTabs>
           </div>
         </div>
+      </div>
 
-        <div className="bg-surface-alt rounded-lg shadow-md overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border-gray bg-bg-alt">
-                <th className="px-4 py-3 text-left font-medium text-text-secondary">Headline</th>
-                <th className="px-4 py-3 text-left font-medium text-text-secondary">Industry</th>
-                <th className="px-4 py-3 text-left font-medium text-text-secondary">Geography</th>
-                <th className="px-4 py-3 text-left font-medium text-text-secondary">Revenue</th>
-                <th className="px-4 py-3 text-left font-medium text-text-secondary">EBITDA</th>
-                <th className="px-4 py-3 text-left font-medium text-text-secondary">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-text-secondary">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleDeals.map((deal) => {
-                const stage = deal.engagement?.stage;
-                const isEngaged = Boolean(stage) && stage !== "declined";
-                const isDeclined = stage === "declined";
+      <div className="max-w-6xl mx-auto px-4 pb-8">
+        <div className="pt-4">
+          {visibleDeals.length === 0 ? (
+            <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center text-text-secondary">
+              {emptyStateMessage}
+            </div>
+          ) : (
+            <ProjectDealsTable
+              rows={pagedDeals}
+              headlineColumn={headlineColumn}
+              detailColumns={detailColumns}
+              rowSelectionModel={rowSelectionModel}
+              onRowSelectionModelChange={setRowSelectionModel}
+              sortModel={sortModel}
+              onSortModelChange={setSortModel}
+              onRowClick={(row) => router.push(`/deals/${row.id}`)}
+              sortedCount={sortedDeals.length}
+              paginationModel={paginationModel}
+              onPageChange={(page) => setPaginationModel((prev) => ({ ...prev, page }))}
+              onRowsPerPageChange={(pageSize) => setPaginationModel({ page: 0, pageSize })}
+            />
+          )}
 
-                return (
-                  <tr
-                    key={deal.id}
-                    className={`border-t border-border-gray cursor-pointer hover:bg-border-gray transition-colors ${isDeclined ? "opacity-60" : ""}`}
-                    onClick={() => navigateToDeal(deal.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        navigateToDeal(deal.id);
-                      }
-                    }}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Open match ${deal.headline}`}
-                  >
-                    <td className="px-4 py-3 font-medium text-primary hover:underline">{deal.headline}</td>
-                    <td className="px-4 py-3 text-text-secondary">{deal.industry}</td>
-                    <td className="px-4 py-3 text-text-secondary">{getGeography(deal) || "—"}</td>
-                    <td className="px-4 py-3">
-                      {deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      {deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
-                        {DEAL_STATUS_LABELS[deal.status] || deal.status}
-                      </span>
-                      {deal.engagement && (
-                        <span className="ml-1 px-2 py-1 rounded-full text-xs font-medium bg-subtle text-primary capitalize">
-                          {deal.engagement.stage.replace(/_/g, " ")}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {!isEngaged && !isDeclined && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void handlePursue(deal.id);
-                            }}
-                            disabled={actionLoading === deal.id}
-                            className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
-                          >
-                            Pursue
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void handleDecline(deal.id);
-                            }}
-                            disabled={actionLoading === deal.id}
-                            className="px-3 py-1 bg-surface-alt border border-border-gray text-text-secondary rounded text-xs hover:bg-bg-alt disabled:opacity-50"
-                          >
-                            Decline
-                          </button>
-                        </div>
-                      )}
-                      {isDeclined && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void handlePursue(deal.id);
-                          }}
-                          disabled={actionLoading === deal.id}
-                          className="px-3 py-1 bg-primary text-white rounded text-xs font-medium hover:bg-btn-hover disabled:opacity-50"
-                        >
-                          Pursue
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {visibleDeals.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-text-secondary">
-                    {emptyStateMessage}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          {viewMode === "matches" && nextCursor && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => void loadMore()}
+                disabled={loadingMore}
+                className="px-6 py-2 bg-surface-alt border border-border-gray rounded-md text-sm hover:bg-bg-alt disabled:opacity-50"
+              >
+                {loadingMore ? "Loading..." : "Load More"}
+              </button>
+            </div>
+          )}
         </div>
-
-        {viewMode === "matches" && nextCursor && (
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => void loadMore()}
-              disabled={loadingMore}
-              className="px-6 py-2 bg-surface-alt border border-border-gray rounded-md text-sm hover:bg-bg-alt disabled:opacity-50"
-            >
-              {loadingMore ? "Loading..." : "Load More"}
-            </button>
-          </div>
-        )}
       </div>
     </main>
   );

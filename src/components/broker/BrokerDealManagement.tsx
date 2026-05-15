@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DEAL_STATUS_LABELS, VALID_DEAL_TRANSITIONS, BUYER_TYPES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
+import { useAutoDismissFlag } from "@/lib/useAutoDismissFlag";
 
 type Tab = "Overview" | "Pipeline" | "Offers" | "Documents" | "Messaging" | "Analytics" | "Timeline";
 
@@ -61,7 +62,13 @@ interface Activity {
   actor: { full_name: string; role: string } | null;
 }
 
-export default function BrokerDealManagement() {
+interface BrokerDealManagementProps {
+  initialShowSavedBanner?: boolean;
+}
+
+export default function BrokerDealManagement({
+  initialShowSavedBanner = false,
+}: BrokerDealManagementProps) {
   const params = useParams();
   const router = useRouter();
   const dealId = params.id as string;
@@ -77,6 +84,7 @@ export default function BrokerDealManagement() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingDeal, setDeletingDeal] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { isVisible: showSavedBanner, setIsVisible: setShowSavedBanner } = useAutoDismissFlag(initialShowSavedBanner);
 
   const fetchDeal = useCallback(async () => {
     const res = await fetch(`/api/deals/${dealId}`);
@@ -239,7 +247,20 @@ export default function BrokerDealManagement() {
   return (
     <main className="min-h-screen bg-bg-alt">
       <div className="max-w-6xl mx-auto px-4 py-8">
-        
+        {showSavedBanner && (
+          <div className="mb-6 flex items-start justify-between gap-4 rounded-md border border-success/20 bg-success/10 px-4 py-3 text-sm text-success">
+            <p>Changes saved.</p>
+            <button
+              type="button"
+              onClick={() => setShowSavedBanner(false)}
+              className="shrink-0 text-success/80 transition-colors hover:text-success"
+              aria-label="Dismiss saved confirmation"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-start justify-between">

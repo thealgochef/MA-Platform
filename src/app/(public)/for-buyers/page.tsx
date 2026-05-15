@@ -64,7 +64,7 @@ export default function ForBuyersPage() {
                 <p className="text-sm font-medium text-primary mb-1">Traditional Lehman Formula</p>
                 <p className="text-sm">5% of first $1M, 4% of second $1M, etc. Complex and expensive.</p>
               </div>
-              <div className="bg-bg rounded-md p-4 border-2 border-secondary">
+              <div className="bg-bg rounded-md p-4 border-2 border-primary">
                 <p className="text-sm font-medium text-primary mb-1">Geneva Holdings</p>
                 <p className="text-sm">Flat 1.25% on total enterprise value. Simple, transparent, fair.</p>
               </div>
