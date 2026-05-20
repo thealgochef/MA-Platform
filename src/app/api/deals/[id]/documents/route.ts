@@ -1,16 +1,29 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { dealDocumentCreateSchema, isValidStorageObjectKey } from "@/lib/validators";
+import {
+  isAuthResponse,
+  requireApprovedUser,
+  requireBrokerDealAccess,
+} from "@/server/auth";
 
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const context = await requireApprovedUser();
+  if (isAuthResponse(context)) {
+    return context;
+  }
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { supabase, profile } = context;
+
+  if (profile.role === "broker") {
+    const brokerDeal = await requireBrokerDealAccess(supabase, profile, params.id, "id");
+    if (isAuthResponse(brokerDeal)) {
+      return brokerDeal;
+    }
+  } else if (profile.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { data: documents, error } = await supabase
@@ -31,32 +44,20 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const context = await requireApprovedUser();
+    if (isAuthResponse(context)) {
+      return context;
     }
 
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role, status, firm_id")
-      .eq("id", user.id)
-      .single();
+    const { supabase, user, profile } = context;
 
-    if (!profile || profile.role !== "broker" || profile.status !== "approved") {
+    if (profile.role !== "broker") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Verify deal belongs to broker's firm
-    const { data: deal } = await supabase
-      .from("deals")
-      .select("firm_id")
-      .eq("id", params.id)
-      .single();
-
-    if (!deal || deal.firm_id !== profile.firm_id) {
-      return NextResponse.json({ error: "Deal not found" }, { status: 404 });
+    const brokerDeal = await requireBrokerDealAccess(supabase, profile, params.id, "id");
+    if (isAuthResponse(brokerDeal)) {
+      return brokerDeal;
     }
 
     // PDF-only validation (application/pdf equivalent) is centralized in dealDocumentCreateSchema.

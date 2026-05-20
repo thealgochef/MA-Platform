@@ -255,6 +255,21 @@ describe("Phase 3: Deal Creation & Management", () => {
       expect(content).toContain("application/pdf");
     });
 
+    it("deal documents GET should require approved context and enforce broker ownership/admin gate", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "documents", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("requireApprovedUser");
+      expect(content).toContain("isAuthResponse(context)");
+      expect(content).toContain("requireBrokerDealAccess");
+      expect(content).toContain('profile.role === "broker"');
+      expect(content).toContain("isAuthResponse(brokerDeal)");
+      expect(content).toContain('profile.role !== "admin"');
+      expect(content).toContain('error: "Forbidden"');
+    });
+
     it("deal timeline route should query deal_activity_log", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "api", "deals", "[id]", "timeline", "route.ts"),

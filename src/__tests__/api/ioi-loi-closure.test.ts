@@ -310,6 +310,27 @@ describe("Phase 6: IOI, LOI & Deal Closure", () => {
       );
       expect(content).toContain("export async function GET");
     });
+
+    it("closure GET route should require approved context and buyer/broker role-scoped closure query", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "close", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("requireApprovedUser");
+      expect(content).toContain("isAuthResponse(context)");
+      expect(content).toContain('profile.role === "buyer"');
+      expect(content).toContain('closureQuery = closureQuery.eq("buyer_user_id", user.id)');
+      expect(content).toContain('profile.role === "broker"');
+      expect(content).toContain("if (!profile.firm_id)");
+      expect(content).toContain('closureQuery = closureQuery.eq("broker_firm_id", profile.firm_id)');
+      expect(content).toContain('profile.role !== "admin"');
+      expect(content).toContain("closureError");
+      expect(content).toContain('closureError.code === "PGRST116"');
+      expect(content).toContain('error: "Failed to fetch closure record"');
+      expect(content).toContain('error: "No closure record found"');
+      expect(content).toContain("if (!closure)");
+    });
   });
 
   // ─── Buyer Pass (Post-NDA) API Route ─────────────────────────────
