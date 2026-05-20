@@ -296,4 +296,25 @@ describe("ProjectDealsView", () => {
       expect(screen.queryByText("Changes saved.")).not.toBeInTheDocument();
     });
   });
+
+  it("uses full-width header wrapper classes instead of max-width container classes", async () => {
+    render(<ProjectDealsView projectId="project-1" />);
+
+    const heading = await screen.findByRole("heading", { name: "Project Orion" });
+    const headerContainer = heading.closest("div.w-full");
+
+    expect(headerContainer).toHaveClass("w-full", "px-5", "sm:px-6");
+    expect(headerContainer).not.toHaveClass("max-w-6xl", "mx-auto");
+    expect(headerContainer).not.toHaveClass("px-4");
+  });
+
+  it("uses full-width content wrapper classes for the deals table section", async () => {
+    render(<ProjectDealsView projectId="project-1" />);
+
+    const openFirstRowButton = await screen.findByRole("button", { name: "Open first row" });
+    const contentWrapper = openFirstRowButton.closest("div.w-full.px-4.pb-8");
+
+    expect(contentWrapper).toHaveClass("w-full", "px-4", "pb-8");
+    expect(contentWrapper).not.toHaveClass("max-w-6xl", "mx-auto");
+  });
 });

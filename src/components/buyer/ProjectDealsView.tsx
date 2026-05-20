@@ -462,7 +462,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
   return (
     <main className="min-h-screen bg-bg-alt">
       <div className="bg-bg pt-8 border-b border-border-gray">
-        <div className="max-w-6xl mx-auto px-4">
+        <div className="w-full px-5 sm:px-6">
           {showSavedBanner && (
             <div className="mb-6 flex items-start justify-between gap-4 rounded-md border border-success/20 bg-success/10 px-4 py-3 text-sm text-success">
               <p>Changes saved.</p>
@@ -534,7 +534,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 pb-8">
+      <div className="w-full px-4 pb-8">
         <div className="pt-4">
           {visibleDeals.length === 0 ? (
             <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center text-text-secondary">
