@@ -158,8 +158,8 @@ export default function NDASigningPage() {
             <div className="bg-bg-alt rounded-md p-4 mb-4">
               <p className="text-sm text-text-secondary">Custom NDA document uploaded by broker.</p>
               <a
-                href={`/api/deals/${dealId}/documents?path=${encodeURIComponent(deal.nda_document_path)}`}
-                className="text-sm text-secondary hover:underline"
+                href={`/api/deals/${dealId}/nda/document`}
+                className="text-sm text-secondary hover:text-primary hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
