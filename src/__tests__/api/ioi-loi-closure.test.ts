@@ -73,7 +73,8 @@ describe("Phase 6: IOI, LOI & Deal Closure", () => {
         path.join(SRC, "app", "api", "deals", "[id]", "ioi", "route.ts"),
         "utf-8"
       );
-      expect(content).toContain("Unauthorized");
+      expect(content).toContain("requireApprovedUser");
+      expect(content).toContain("isAuthResponse");
       expect(content).toContain("buyer");
     });
 
@@ -82,7 +83,8 @@ describe("Phase 6: IOI, LOI & Deal Closure", () => {
         path.join(SRC, "app", "api", "deals", "[id]", "ioi", "route.ts"),
         "utf-8"
       );
-      expect(content).toContain("accepting_iois");
+      expect(content).toContain("canBuyerAccessIoiWorkflow");
+      expect(content).toContain("@/lib/buyer-workflow-gating");
     });
 
     it("IOI route should check buyer has NDA signed and CIM viewed", () => {
@@ -91,8 +93,8 @@ describe("Phase 6: IOI, LOI & Deal Closure", () => {
         "utf-8"
       );
       expect(content).toContain("nda_status");
-      expect(content).toContain("signed");
       expect(content).toContain("cim_released");
+      expect(content).toContain("canBuyerAccessIoiWorkflow");
     });
 
     it("IOI route should insert into iois table", () => {
@@ -168,7 +170,8 @@ describe("Phase 6: IOI, LOI & Deal Closure", () => {
         path.join(SRC, "app", "api", "deals", "[id]", "loi", "route.ts"),
         "utf-8"
       );
-      expect(content).toContain("accepting_lois");
+      expect(content).toContain("canBuyerAccessLoiWorkflow");
+      expect(content).toContain("@/lib/buyer-workflow-gating");
     });
 
     it("LOI route should check buyer has IOI submitted", () => {
@@ -176,7 +179,8 @@ describe("Phase 6: IOI, LOI & Deal Closure", () => {
         path.join(SRC, "app", "api", "deals", "[id]", "loi", "route.ts"),
         "utf-8"
       );
-      expect(content).toContain("ioi_submitted");
+      expect(content).toContain("canBuyerAccessLoiWorkflow");
+      expect(content).toContain("stage");
     });
 
     it("LOI route should insert into lois table", () => {
@@ -212,6 +216,19 @@ describe("Phase 6: IOI, LOI & Deal Closure", () => {
         "utf-8"
       );
       expect(content).toContain("loiSubmitSchema");
+    });
+  });
+
+  describe("Buyer workflow gating library", () => {
+    it("should have buyer workflow gating helper in lib", () => {
+      expect(fs.existsSync(path.join(SRC, "lib", "buyer-workflow-gating.ts"))).toBe(true);
+    });
+
+    it("should include IOI/LOI/close workflow predicates", () => {
+      const content = fs.readFileSync(path.join(SRC, "lib", "buyer-workflow-gating.ts"), "utf-8");
+      expect(content).toContain("canBuyerAccessIoiWorkflow");
+      expect(content).toContain("canBuyerAccessLoiWorkflow");
+      expect(content).toContain("canBuyerAccessCloseWorkflow");
     });
   });
 

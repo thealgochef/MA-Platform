@@ -1,17 +1,43 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { loiSubmitSchema } from "@/lib/validators";
 import { notifyBroker } from "@/lib/notifications";
+import { canBuyerAccessLoiWorkflow } from "@/lib/buyer-workflow-gating";
+import { isAuthResponse, requireApprovedUser } from "@/server/auth";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const context = await requireApprovedUser();
+  if (isAuthResponse(context)) {
+    return context;
+  }
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { supabase, user, profile } = context;
+
+  if (profile.role !== "buyer") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { data: deal } = await supabase
+    .from("deals")
+    .select("id, status")
+    .eq("id", params.id)
+    .single();
+
+  if (!deal) {
+    return NextResponse.json({ error: "Deal not found" }, { status: 404 });
+  }
+
+  const { data: engagement } = await supabase
+    .from("deal_engagements")
+    .select("id, stage, nda_status")
+    .eq("deal_id", params.id)
+    .eq("buyer_user_id", user.id)
+    .maybeSingle();
+
+  if (!canBuyerAccessLoiWorkflow({ isApprovedBuyer: true, dealStatus: deal.status, engagement })) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Fetch LOIs for this deal by the current buyer
@@ -29,20 +55,14 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const context = await requireApprovedUser();
+  if (isAuthResponse(context)) {
+    return context;
   }
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role, status, firm_id")
-    .eq("id", user.id)
-    .single();
+  const { supabase, user, profile } = context;
 
-  if (!profile || profile.role !== "buyer" || profile.status !== "approved") {
+  if (profile.role !== "buyer") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -57,11 +77,6 @@ export async function POST(
     return NextResponse.json({ error: "Deal not found" }, { status: 404 });
   }
 
-  if (deal.status !== "accepting_lois") {
-    return NextResponse.json({ error: "Deal is not accepting LOIs" }, { status: 400 });
-  }
-
-  // Check engagement — buyer must have IOI submitted
   const { data: engagement } = await supabase
     .from("deal_engagements")
     .select("id, stage, nda_status")
@@ -69,12 +84,12 @@ export async function POST(
     .eq("buyer_user_id", user.id)
     .single();
 
-  if (!engagement) {
-    return NextResponse.json({ error: "No engagement found" }, { status: 400 });
+  if (!canBuyerAccessLoiWorkflow({ isApprovedBuyer: true, dealStatus: deal.status, engagement })) {
+    return NextResponse.json({ error: "LOI workflow is not available" }, { status: 403 });
   }
 
-  if (engagement.stage !== "ioi_submitted" && engagement.stage !== "loi_submitted") {
-    return NextResponse.json({ error: "IOI must be submitted before submitting LOI" }, { status: 400 });
+  if (!engagement) {
+    return NextResponse.json({ error: "LOI workflow is not available" }, { status: 403 });
   }
 
   // Parse and validate body

@@ -7,10 +7,18 @@ const authMocks = vi.hoisted(() => ({
   isAuthResponse: vi.fn((value: unknown) => value instanceof Response),
 }));
 
+const notificationMocks = vi.hoisted(() => ({
+  notifyBroker: vi.fn(),
+  notifyAdmin: vi.fn(),
+}));
+
 vi.mock("@/server/auth", () => authMocks);
+vi.mock("@/lib/notifications", () => notificationMocks);
 
 import { GET as getDealDocuments } from "@/app/api/deals/[id]/documents/route";
 import { GET as getDealClosure } from "@/app/api/deals/[id]/close/route";
+import { GET as getIoi, POST as postIoi } from "@/app/api/deals/[id]/ioi/route";
+import { GET as getLoi, POST as postLoi } from "@/app/api/deals/[id]/loi/route";
 
 type QueryResult<T> = { data: T | null; error: unknown };
 
@@ -41,6 +49,204 @@ function createClosureSupabase(result: QueryResult<Record<string, unknown>>) {
       from: vi.fn().mockReturnValue(query),
     },
     query,
+  };
+}
+
+function createIoiGetSupabase({
+  dealStatus,
+  engagement,
+  iois,
+}: {
+  dealStatus: string;
+  engagement: Record<string, unknown> | null;
+  iois: unknown[];
+}) {
+  const dealsQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { id: "deal-1", status: dealStatus }, error: null }),
+  };
+
+  const engagementsQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: engagement, error: null }),
+  };
+
+  const ioiQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockResolvedValue({ data: iois, error: null }),
+  };
+
+  return {
+    supabase: {
+      from: vi.fn((table: string) => {
+        if (table === "deals") return dealsQuery;
+        if (table === "deal_engagements") return engagementsQuery;
+        if (table === "iois") return ioiQuery;
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    },
+    dealsQuery,
+    engagementsQuery,
+    ioiQuery,
+  };
+}
+
+function createIoiPostSupabase({
+  dealStatus,
+  engagement,
+  insertedIoi,
+}: {
+  dealStatus: string;
+  engagement: Record<string, unknown> | null;
+  insertedIoi: Record<string, unknown>;
+}) {
+  const tableCalls: Record<string, number> = {};
+
+  const dealsQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { id: "deal-1", status: dealStatus }, error: null }),
+  };
+
+  const engagementSelectQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: engagement, error: null }),
+  };
+
+  const ioiInsertQuery = {
+    insert: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: insertedIoi, error: null }),
+  };
+
+  const engagementUpdateQuery = {
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+
+  const activityLogQuery = {
+    insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+
+  return {
+    supabase: {
+      from: vi.fn((table: string) => {
+        tableCalls[table] = (tableCalls[table] ?? 0) + 1;
+        if (table === "deals") return dealsQuery;
+        if (table === "deal_engagements") {
+          return tableCalls[table] === 1 ? engagementSelectQuery : engagementUpdateQuery;
+        }
+        if (table === "iois") return ioiInsertQuery;
+        if (table === "deal_activity_log") return activityLogQuery;
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    },
+    dealsQuery,
+    engagementSelectQuery,
+    ioiInsertQuery,
+  };
+}
+
+function createLoiGetSupabase({
+  dealStatus,
+  engagement,
+  lois,
+}: {
+  dealStatus: string;
+  engagement: Record<string, unknown> | null;
+  lois: unknown[];
+}) {
+  const dealsQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { id: "deal-1", status: dealStatus }, error: null }),
+  };
+
+  const engagementsQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: engagement, error: null }),
+  };
+
+  const loiQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockResolvedValue({ data: lois, error: null }),
+  };
+
+  return {
+    supabase: {
+      from: vi.fn((table: string) => {
+        if (table === "deals") return dealsQuery;
+        if (table === "deal_engagements") return engagementsQuery;
+        if (table === "lois") return loiQuery;
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    },
+    dealsQuery,
+    engagementsQuery,
+    loiQuery,
+  };
+}
+
+function createLoiPostSupabase({
+  dealStatus,
+  engagement,
+  insertedLoi,
+}: {
+  dealStatus: string;
+  engagement: Record<string, unknown> | null;
+  insertedLoi: Record<string, unknown>;
+}) {
+  const tableCalls: Record<string, number> = {};
+
+  const dealsQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { id: "deal-1", status: dealStatus }, error: null }),
+  };
+
+  const engagementSelectQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: engagement, error: null }),
+  };
+
+  const loiInsertQuery = {
+    insert: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: insertedLoi, error: null }),
+  };
+
+  const engagementUpdateQuery = {
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+
+  const activityLogQuery = {
+    insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+
+  return {
+    supabase: {
+      from: vi.fn((table: string) => {
+        tableCalls[table] = (tableCalls[table] ?? 0) + 1;
+        if (table === "deals") return dealsQuery;
+        if (table === "deal_engagements") {
+          return tableCalls[table] === 1 ? engagementSelectQuery : engagementUpdateQuery;
+        }
+        if (table === "lois") return loiInsertQuery;
+        if (table === "deal_activity_log") return activityLogQuery;
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    },
+    dealsQuery,
+    engagementSelectQuery,
+    loiInsertQuery,
   };
 }
 
@@ -347,6 +553,345 @@ describe("runtime route auth tests for hardened GET endpoints", () => {
       expect(response.status).toBe(404);
       await expect(response.json()).resolves.toEqual({ error: "No closure record found" });
       expect(query.single).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("/api/deals/[id]/ioi runtime gating", () => {
+    it("GET passes through auth response", async () => {
+      const authResponse = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      authMocks.requireApprovedUser.mockResolvedValue(authResponse);
+
+      const response = await getIoi(new Request("http://localhost/api/deals/deal-1/ioi"), {
+        params: { id: "deal-1" },
+      });
+
+      expect(response).toBe(authResponse);
+      expect(response.status).toBe(401);
+    });
+
+    it("GET returns 403 for non-buyer users", async () => {
+      const supabase = { from: vi.fn() };
+      authMocks.requireApprovedUser.mockResolvedValue({
+        supabase,
+        user: { id: "user-1" },
+        profile: { role: "broker" },
+      });
+
+      const response = await getIoi(new Request("http://localhost/api/deals/deal-1/ioi"), {
+        params: { id: "deal-1" },
+      });
+
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({ error: "Forbidden" });
+      expect(supabase.from).not.toHaveBeenCalled();
+    });
+
+    it("GET returns 403 when buyer is authenticated but workflow gating denies access", async () => {
+      const { supabase, dealsQuery, engagementsQuery, ioiQuery } = createIoiGetSupabase({
+        dealStatus: "accepting_lois",
+        engagement: { id: "eng-1", nda_status: "signed", cim_released: true, stage: "nda_signed" },
+        iois: [],
+      });
+
+      authMocks.requireApprovedUser.mockResolvedValue({
+        supabase,
+        user: { id: "buyer-1" },
+        profile: { role: "buyer" },
+      });
+
+      const response = await getIoi(new Request("http://localhost/api/deals/deal-1/ioi"), {
+        params: { id: "deal-1" },
+      });
+
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({ error: "Forbidden" });
+      expect(dealsQuery.eq).toHaveBeenCalledWith("id", "deal-1");
+      expect(engagementsQuery.eq).toHaveBeenCalledWith("deal_id", "deal-1");
+      expect(engagementsQuery.eq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+      expect(ioiQuery.order).not.toHaveBeenCalled();
+    });
+
+    it("GET returns IOIs for eligible buyer and applies buyer filter", async () => {
+      const iois = [{ id: "ioi-1", deal_id: "deal-1" }];
+      const { supabase, ioiQuery } = createIoiGetSupabase({
+        dealStatus: "accepting_iois",
+        engagement: { id: "eng-1", nda_status: "signed", cim_released: true, stage: "nda_signed" },
+        iois,
+      });
+
+      authMocks.requireApprovedUser.mockResolvedValue({
+        supabase,
+        user: { id: "buyer-1" },
+        profile: { role: "buyer" },
+      });
+
+      const response = await getIoi(new Request("http://localhost/api/deals/deal-1/ioi"), {
+        params: { id: "deal-1" },
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({ iois });
+      expect(ioiQuery.eq).toHaveBeenCalledWith("deal_id", "deal-1");
+      expect(ioiQuery.eq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+      expect(ioiQuery.order).toHaveBeenCalledWith("submitted_at", { ascending: false });
+    });
+
+    it("POST returns 403 when gating fails for authenticated buyer", async () => {
+      const { supabase, dealsQuery, engagementSelectQuery, ioiInsertQuery } = createIoiPostSupabase({
+        dealStatus: "accepting_lois",
+        engagement: { id: "eng-1", nda_status: "signed", cim_released: true, stage: "nda_signed" },
+        insertedIoi: { id: "ioi-1" },
+      });
+
+      authMocks.requireApprovedUser.mockResolvedValue({
+        supabase,
+        user: { id: "buyer-1" },
+        profile: { role: "buyer", firm_id: "buyer-firm-1" },
+      });
+
+      const request = new Request("http://localhost/api/deals/deal-1/ioi", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+
+      const response = await postIoi(request, { params: { id: "deal-1" } });
+
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({ error: "IOI workflow is not available" });
+      expect(dealsQuery.eq).toHaveBeenCalledWith("id", "deal-1");
+      expect(engagementSelectQuery.eq).toHaveBeenCalledWith("deal_id", "deal-1");
+      expect(engagementSelectQuery.eq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+      expect(ioiInsertQuery.insert).not.toHaveBeenCalled();
+    });
+
+    it("POST inserts IOI when gating allows eligible buyer", async () => {
+      const { supabase, ioiInsertQuery } = createIoiPostSupabase({
+        dealStatus: "accepting_iois",
+        engagement: { id: "eng-1", nda_status: "signed", cim_released: true, stage: "nda_signed" },
+        insertedIoi: { id: "ioi-1", deal_id: "deal-1" },
+      });
+
+      authMocks.requireApprovedUser.mockResolvedValue({
+        supabase,
+        user: { id: "buyer-1" },
+        profile: { role: "buyer", firm_id: "buyer-firm-1" },
+      });
+
+      const request = new Request("http://localhost/api/deals/deal-1/ioi", {
+        method: "POST",
+        body: JSON.stringify({
+          offerPrice: 100,
+          multiple: 4,
+          earnout: "none",
+          rollover: "10%",
+          cashAtClose: 90,
+          timeToClose: "60 days",
+          isPlatform: true,
+          isAddon: false,
+        }),
+      });
+
+      const response = await postIoi(request, { params: { id: "deal-1" } });
+
+      expect(response.status).toBe(201);
+      await expect(response.json()).resolves.toEqual({ ioi: { id: "ioi-1", deal_id: "deal-1" } });
+      expect(ioiInsertQuery.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deal_id: "deal-1",
+          engagement_id: "eng-1",
+          buyer_user_id: "buyer-1",
+          buyer_firm_id: "buyer-firm-1",
+          offer_price: 100,
+        })
+      );
+    });
+  });
+
+  describe("/api/deals/[id]/loi runtime gating", () => {
+    it("GET passes through auth response", async () => {
+      const authResponse = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      authMocks.requireApprovedUser.mockResolvedValue(authResponse);
+
+      const response = await getLoi(new Request("http://localhost/api/deals/deal-1/loi"), {
+        params: { id: "deal-1" },
+      });
+
+      expect(response).toBe(authResponse);
+      expect(response.status).toBe(401);
+    });
+
+    it("GET returns 403 for non-buyer users", async () => {
+      const supabase = { from: vi.fn() };
+      authMocks.requireApprovedUser.mockResolvedValue({
+        supabase,
+        user: { id: "user-1" },
+        profile: { role: "broker" },
+      });
+
+      const response = await getLoi(new Request("http://localhost/api/deals/deal-1/loi"), {
+        params: { id: "deal-1" },
+      });
+
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({ error: "Forbidden" });
+      expect(supabase.from).not.toHaveBeenCalled();
+    });
+
+    it("POST passes through auth response", async () => {
+      const authResponse = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      authMocks.requireApprovedUser.mockResolvedValue(authResponse);
+
+      const request = new Request("http://localhost/api/deals/deal-1/loi", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+
+      const response = await postLoi(request, { params: { id: "deal-1" } });
+
+      expect(response).toBe(authResponse);
+      expect(response.status).toBe(401);
+    });
+
+    it("POST returns 403 for non-buyer users", async () => {
+      const supabase = { from: vi.fn() };
+      authMocks.requireApprovedUser.mockResolvedValue({
+        supabase,
+        user: { id: "user-1" },
+        profile: { role: "broker" },
+      });
+
+      const request = new Request("http://localhost/api/deals/deal-1/loi", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+
+      const response = await postLoi(request, { params: { id: "deal-1" } });
+
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({ error: "Forbidden" });
+      expect(supabase.from).not.toHaveBeenCalled();
+    });
+
+    it("GET returns 403 when LOI gating denies access", async () => {
+      const { supabase, dealsQuery, engagementsQuery, loiQuery } = createLoiGetSupabase({
+        dealStatus: "accepting_iois",
+        engagement: { id: "eng-1", nda_status: "signed", stage: "ioi_submitted" },
+        lois: [],
+      });
+
+      authMocks.requireApprovedUser.mockResolvedValue({
+        supabase,
+        user: { id: "buyer-1" },
+        profile: { role: "buyer" },
+      });
+
+      const response = await getLoi(new Request("http://localhost/api/deals/deal-1/loi"), {
+        params: { id: "deal-1" },
+      });
+
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({ error: "Forbidden" });
+      expect(dealsQuery.eq).toHaveBeenCalledWith("id", "deal-1");
+      expect(engagementsQuery.eq).toHaveBeenCalledWith("deal_id", "deal-1");
+      expect(engagementsQuery.eq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+      expect(loiQuery.order).not.toHaveBeenCalled();
+    });
+
+    it("GET returns LOIs for eligible buyer and applies buyer filter", async () => {
+      const lois = [{ id: "loi-1", deal_id: "deal-1" }];
+      const { supabase, loiQuery } = createLoiGetSupabase({
+        dealStatus: "accepting_lois",
+        engagement: { id: "eng-1", nda_status: "signed", stage: "ioi_submitted" },
+        lois,
+      });
+
+      authMocks.requireApprovedUser.mockResolvedValue({
+        supabase,
+        user: { id: "buyer-1" },
+        profile: { role: "buyer" },
+      });
+
+      const response = await getLoi(new Request("http://localhost/api/deals/deal-1/loi"), {
+        params: { id: "deal-1" },
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({ lois });
+      expect(loiQuery.eq).toHaveBeenCalledWith("deal_id", "deal-1");
+      expect(loiQuery.eq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+      expect(loiQuery.order).toHaveBeenCalledWith("submitted_at", { ascending: false });
+    });
+
+    it("POST returns 403 when LOI gating fails", async () => {
+      const { supabase, dealsQuery, engagementSelectQuery, loiInsertQuery } = createLoiPostSupabase({
+        dealStatus: "accepting_iois",
+        engagement: { id: "eng-1", nda_status: "signed", stage: "ioi_submitted" },
+        insertedLoi: { id: "loi-1" },
+      });
+
+      authMocks.requireApprovedUser.mockResolvedValue({
+        supabase,
+        user: { id: "buyer-1" },
+        profile: { role: "buyer", firm_id: "buyer-firm-1" },
+      });
+
+      const request = new Request("http://localhost/api/deals/deal-1/loi", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+
+      const response = await postLoi(request, { params: { id: "deal-1" } });
+
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({ error: "LOI workflow is not available" });
+      expect(dealsQuery.eq).toHaveBeenCalledWith("id", "deal-1");
+      expect(engagementSelectQuery.eq).toHaveBeenCalledWith("deal_id", "deal-1");
+      expect(engagementSelectQuery.eq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+      expect(loiInsertQuery.insert).not.toHaveBeenCalled();
+    });
+
+    it("POST inserts LOI when gating allows eligible buyer", async () => {
+      const { supabase, loiInsertQuery } = createLoiPostSupabase({
+        dealStatus: "accepting_lois",
+        engagement: { id: "eng-1", nda_status: "signed", stage: "ioi_submitted" },
+        insertedLoi: { id: "loi-1", deal_id: "deal-1" },
+      });
+
+      authMocks.requireApprovedUser.mockResolvedValue({
+        supabase,
+        user: { id: "buyer-1" },
+        profile: { role: "buyer", firm_id: "buyer-firm-1" },
+      });
+
+      const request = new Request("http://localhost/api/deals/deal-1/loi", {
+        method: "POST",
+        body: JSON.stringify({
+          offerPrice: 100,
+          multiple: 4,
+          escrow: "10%",
+          timing: "45 days",
+          earnout: "none",
+          rollover: "10%",
+          workingCapitalPeg: "normal",
+          cashAtClose: 90,
+          isPlatform: true,
+          isAddon: false,
+        }),
+      });
+
+      const response = await postLoi(request, { params: { id: "deal-1" } });
+
+      expect(response.status).toBe(201);
+      await expect(response.json()).resolves.toEqual({ loi: { id: "loi-1", deal_id: "deal-1" } });
+      expect(loiInsertQuery.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deal_id: "deal-1",
+          engagement_id: "eng-1",
+          buyer_user_id: "buyer-1",
+          buyer_firm_id: "buyer-firm-1",
+          offer_price: 100,
+        })
+      );
     });
   });
 });
