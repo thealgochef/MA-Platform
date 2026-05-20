@@ -297,12 +297,34 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         sortable: false,
         filterable: false,
         renderCell: (params) => {
-          const isEngaged = Boolean(params.row.engagement) && params.row.engagement?.stage !== "declined";
-          const isDeclined = params.row.engagement?.stage === "declined";
+          const stage = params.row.engagement?.stage;
+          const isNdaPending = stage === "nda_pending";
+          const isEngaged = Boolean(params.row.engagement) && stage !== "declined";
+          const isDeclined = stage === "declined";
 
           return (
             <>
-              {!isEngaged && !isDeclined && (
+              {isNdaPending && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{
+                    textTransform: "none",
+                    borderRadius: 1,
+                    px: 1.75,
+                    fontWeight: 600,
+                    backgroundColor: "var(--color-primary)",
+                    "&:hover": { backgroundColor: "var(--color-btn-hover)" }
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    router.push(`/deals/${params.row.id}/nda`);
+                  }}
+                >
+                  Sign NDA
+                </Button>
+              )}
+              {!isNdaPending && !isEngaged && !isDeclined && (
                 <Stack direction="row" spacing={1}>
                   <Button
                     variant="contained"
@@ -348,7 +370,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
                   </Button>
                 </Stack>
               )}
-              {isDeclined && (
+              {!isNdaPending && isDeclined && (
                 <Button
                   variant="contained"
                   size="small"
@@ -374,7 +396,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         },
       },
     ];
-  }, [actionLoading, handleDecline, handlePursue]);
+  }, [actionLoading, handleDecline, handlePursue, router]);
 
   const sortedDeals = useMemo(() => {
     const activeSort = sortModel[0];

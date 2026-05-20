@@ -466,37 +466,44 @@ describe("API request validation schemas", () => {
     expect(browseQuerySchema.safeParse({ keyword: "foo),id.eq.1" }).success).toBe(false);
   });
 
-  it("requires signature fields only for NDA sign actions", () => {
-    expect(ndaActionSchema.safeParse({ action: "decline" }).success).toBe(true);
-    expect(ndaActionSchema.safeParse({
+  it("validates NDA actions and rejects unknown keys for strict sign/decline payloads", () => {
+    // Arrange
+    const validDeclinePayload = { action: "decline" };
+    const validSignPayload = {
       action: "sign",
       signatureName: "Ada Lovelace",
       signatureTitle: "Partner",
       signatureCompany: "Example Capital",
-      signatureDate: "2026-05-05",
-    }).success).toBe(true);
-    expect(ndaActionSchema.safeParse({ action: "sign", signatureName: "Ada" }).success).toBe(false);
-    expect(ndaActionSchema.safeParse({
+    };
+    const signPayloadWithUnexpectedSignatureDate = {
+      ...validSignPayload,
+      signatureDate: "2026-01-01",
+    };
+    const declinePayloadWithUnexpectedKey = {
+      ...validDeclinePayload,
+      reason: "Not interested",
+    };
+
+    // Act
+    const validDeclineResult = ndaActionSchema.safeParse(validDeclinePayload);
+    const validSignResult = ndaActionSchema.safeParse(validSignPayload);
+    const invalidMissingSignFieldsResult = ndaActionSchema.safeParse({ action: "sign", signatureName: "Ada" });
+    const invalidSignNameLengthResult = ndaActionSchema.safeParse({
       action: "sign",
       signatureName: "A".repeat(121),
       signatureTitle: "Partner",
       signatureCompany: "Example Capital",
-      signatureDate: "2026-05-05",
-    }).success).toBe(false);
-    expect(ndaActionSchema.safeParse({
-      action: "sign",
-      signatureName: "Ada Lovelace",
-      signatureTitle: "Partner",
-      signatureCompany: "Example Capital",
-      signatureDate: "05/05/2026",
-    }).success).toBe(false);
-    expect(ndaActionSchema.safeParse({
-      action: "sign",
-      signatureName: "Ada Lovelace",
-      signatureTitle: "Partner",
-      signatureCompany: "Example Capital",
-      signatureDate: "2026-02-31",
-    }).success).toBe(false);
+    });
+    const invalidSignUnexpectedKeyResult = ndaActionSchema.safeParse(signPayloadWithUnexpectedSignatureDate);
+    const invalidDeclineUnexpectedKeyResult = ndaActionSchema.safeParse(declinePayloadWithUnexpectedKey);
+
+    // Assert
+    expect(validDeclineResult.success).toBe(true);
+    expect(validSignResult.success).toBe(true);
+    expect(invalidMissingSignFieldsResult.success).toBe(false);
+    expect(invalidSignNameLengthResult.success).toBe(false);
+    expect(invalidSignUnexpectedKeyResult.success).toBe(false);
+    expect(invalidDeclineUnexpectedKeyResult.success).toBe(false);
   });
 
   it("requires realistic finite positive close enterprise values", () => {

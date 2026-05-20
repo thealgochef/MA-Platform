@@ -278,29 +278,14 @@ export const browseQuerySchema = z.object({
 
 export const escapePostgrestLikePattern = (value: string) => value.replace(/[%_]/g, (match) => `\\${match}`);
 
-const signatureDateSchema = z.string().trim().refine((value) => {
-  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (dateOnlyMatch) {
-    const [, year, month, day] = dateOnlyMatch;
-    const parsedDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-    return parsedDate.getUTCFullYear() === Number(year) &&
-      parsedDate.getUTCMonth() === Number(month) - 1 &&
-      parsedDate.getUTCDate() === Number(day);
-  }
-  if (!/^\d{4}-\d{2}-\d{2}T[\d:.+-]+Z?$/.test(value)) return false;
-  const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp);
-}, "signatureDate must be an ISO date string");
-
 export const ndaActionSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("decline") }),
+  z.object({ action: z.literal("decline") }).strict(),
   z.object({
     action: z.literal("sign"),
     signatureName: z.string().trim().min(1).max(120),
     signatureTitle: z.string().trim().min(1).max(120),
     signatureCompany: z.string().trim().min(1).max(160),
-    signatureDate: signatureDateSchema,
-  }),
+  }).strict(),
 ]);
 
 export const vettingActionSchema = z.object({

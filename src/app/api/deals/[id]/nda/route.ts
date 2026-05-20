@@ -25,7 +25,7 @@ export async function GET(
     .single();
 
   if (!deal) {
-    return NextResponse.json({ error: "Deal not found" }, { status: 404 });
+    return NextResponse.json({ error: "NDA not available" }, { status: 403 });
   }
 
   // Fetch engagement to verify buyer has access to NDA
@@ -40,7 +40,9 @@ export async function GET(
     return NextResponse.json({ error: "NDA not available" }, { status: 403 });
   }
 
-  return NextResponse.json({ deal, engagement });
+  const serverDate = new Date().toISOString().split("T")[0];
+
+  return NextResponse.json({ deal, engagement, serverDate });
 }
 
 export async function POST(
@@ -104,7 +106,8 @@ export async function POST(
   }
 
   // Sign NDA
-  const { signatureName, signatureTitle, signatureCompany, signatureDate } = parsed.data;
+  const { signatureName, signatureTitle, signatureCompany } = parsed.data;
+  const signatureDate = new Date().toISOString().split("T")[0];
 
   // Store signed NDA record in signed-ndas bucket
   const signedNdaData = JSON.stringify({

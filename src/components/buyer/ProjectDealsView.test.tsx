@@ -21,6 +21,7 @@ type MockDeal = {
 const mockPush = vi.fn();
 let mockPathname = "/projects/project-1";
 let mockSearchParams = new URLSearchParams();
+let mockDeals: MockDeal[] = [];
 
 const sampleDeals: MockDeal[] = [
   {
@@ -68,6 +69,7 @@ vi.mock("@/components/ui/ProjectDealsTable", () => ({
   ProjectDealsTable: ({
     rows,
     headlineColumn,
+    detailColumns,
     onRowClick,
   }: {
     rows: MockDeal[];
@@ -80,21 +82,35 @@ vi.mock("@/components/ui/ProjectDealsTable", () => ({
         value: string;
       }) => React.ReactNode;
     };
+    detailColumns?: Array<{
+      field: string;
+      renderCell?: (params: { row: MockDeal }) => React.ReactNode;
+    }>;
     onRowClick?: (row: MockDeal) => void;
-  }) => (
-    <div>
-      <button type="button" onClick={() => onRowClick?.(rows[0])}>
-        Open first row
-      </button>
-      {rows[0] && headlineColumn.renderCell?.({
-        row: rows[0],
-        id: rows[0].id,
-        field: "headline",
-        hasFocus: true,
-        value: rows[0].headline,
-      })}
-    </div>
-  ),
+  }) => {
+    const actionsColumn = detailColumns?.find((column) => column.field === "actions");
+    const firstRow = rows[0];
+
+    return (
+      <div>
+        <button type="button" onClick={() => firstRow && onRowClick?.(firstRow)}>
+          Open first row
+        </button>
+        {firstRow && (
+          <div role="button" tabIndex={0} onClick={() => onRowClick?.(firstRow)}>
+            {headlineColumn.renderCell?.({
+              row: firstRow,
+              id: firstRow.id,
+              field: "headline",
+              hasFocus: true,
+              value: firstRow.headline,
+            })}
+            {actionsColumn?.renderCell?.({ row: firstRow })}
+          </div>
+        )}
+      </div>
+    );
+  },
 }));
 
 describe("ProjectDealsView", () => {
@@ -102,6 +118,7 @@ describe("ProjectDealsView", () => {
     vi.clearAllMocks();
     mockPathname = "/projects/project-1";
     mockSearchParams = new URLSearchParams();
+    mockDeals = sampleDeals;
 
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
       const url = String(input);
@@ -118,7 +135,7 @@ describe("ProjectDealsView", () => {
       if (url.startsWith("/api/projects/project-1/matches")) {
         return {
           ok: true,
-          json: async () => ({ deals: sampleDeals, nextCursor: null }),
+          json: async () => ({ deals: mockDeals, nextCursor: null }),
         };
       }
 
@@ -171,6 +188,99 @@ describe("ProjectDealsView", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
     expect(mockPush).toHaveBeenCalledWith("/deals/deal-1");
+  });
+
+  it("renders Sign NDA action for deals with nda_pending engagement", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-nda",
+        headline: "NDA Target",
+        engagement: {
+          id: "engagement-1",
+          stage: "nda_pending",
+          nda_status: "pending",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByRole("button", { name: "Sign NDA" })).toBeInTheDocument();
+  });
+
+  it("navigates to deal NDA page when Sign NDA is clicked", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-nda",
+        headline: "NDA Target",
+        engagement: {
+          id: "engagement-1",
+          stage: "nda_pending",
+          nda_status: "pending",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Sign NDA" }));
+
+    expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-nda");
+    expect(mockPush).toHaveBeenCalledWith("/deals/deal-nda/nda");
+  });
+
+  it("shows Pursue and Decline (and not Sign NDA) when engagement is null", async () => {
+    render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByRole("button", { name: "Pursue" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Decline" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
+  });
+
+  it("shows Pursue (and not Sign NDA) when engagement stage is declined", async () => {
+    mockPathname = "/projects/project-1/archive";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-declined",
+        headline: "Declined Target",
+        engagement: {
+          id: "engagement-declined",
+          stage: "declined",
+          nda_status: "not_signed",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByRole("button", { name: "Pursue" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
+  });
+
+  it("does not show Sign NDA for engaged non-declined stages", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-ioi",
+        headline: "IOI Target",
+        engagement: {
+          id: "engagement-ioi",
+          stage: "ioi_submitted",
+          nda_status: "signed",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    await screen.findByRole("button", { name: "Open first row" });
+    expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
   });
 
   it("shows and dismisses saved banner from query param", async () => {

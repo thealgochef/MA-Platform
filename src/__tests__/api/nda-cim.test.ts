@@ -113,6 +113,28 @@ describe("Phase 5: NDA Flow & CIM Access", () => {
       expect(content).toContain("signatureName");
       expect(content).toContain("signatureTitle");
     });
+
+    it("NDA sign should set signatureDate from server current date, not request payload", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "nda", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("const { signatureName, signatureTitle, signatureCompany } = parsed.data");
+      expect(content).toContain("const signatureDate = new Date().toISOString().split(\"T\")[0]");
+      expect(content).not.toContain("const { signatureName, signatureTitle, signatureCompany, signatureDate }");
+      expect(content).not.toContain("parsed.data.signatureDate");
+    });
+
+    it("NDA GET should include serverDate for client display", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "[id]", "nda", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("const serverDate = new Date().toISOString().split(\"T\")[0]");
+      expect(content).toContain("serverDate");
+    });
   });
 
   describe("Vetting API Route", () => {
@@ -267,7 +289,57 @@ describe("Phase 5: NDA Flow & CIM Access", () => {
       expect(content).toContain("signatureName");
       expect(content).toContain("signatureTitle");
       expect(content).toContain("signatureCompany");
-      expect(content).toContain("signatureDate");
+      expect(content).toContain("serverDate");
+    });
+
+    it("NDA page should render date as read-only text instead of editable input", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "deals", "[id]", "nda", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain("Date *");
+      expect(content).toContain("<p className=\"w-full border border-border-gray rounded-md px-3 py-2 text-sm bg-bg-alt text-text\">");
+      expect(content).not.toContain("type=\"date\"");
+    });
+
+    it("NDA page should display server-sourced date and avoid client-side new Date fallback", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "deals", "[id]", "nda", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain("const [serverDate, setServerDate] = useState<string | null>(null)");
+      expect(content).toContain("const displayDate = serverDate ?? \"Server date unavailable\"");
+      expect(content).toContain("setServerDate(data.serverDate ?? null)");
+      expect(content).not.toContain("const displayDate = serverDate ?? new Date()");
+      expect(content).not.toContain("displayDate = new Date(");
+    });
+
+    it("NDA page should show explicit messaging when server date is unavailable", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "deals", "[id]", "nda", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain("Server date unavailable");
+      expect(content).toContain("Server signing date is currently unavailable.");
+    });
+
+    it("NDA page fetchNDA should use try/catch/finally and set user-facing fetch errors", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "deals", "[id]", "nda", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain("const fetchNDA = async () => {");
+      expect(content).toContain("try {");
+      expect(content).toContain("} catch (err) {");
+      expect(content).toContain("} finally {");
+      expect(content).toContain("setError(\"Unable to load NDA right now. Please try again.\")");
+      expect(content).toContain("setLoading(false)");
+      expect(content.indexOf("try {")).toBeLessThan(content.indexOf("} catch (err) {") );
+      expect(content.indexOf("} catch (err) {")).toBeLessThan(content.indexOf("} finally {") );
     });
 
     it("NDA page should have Sign NDA and Decline NDA buttons", () => {
