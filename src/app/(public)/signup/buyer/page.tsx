@@ -570,7 +570,7 @@ export default function BuyerSignupPage() {
                 formData.industryFocus.length === 0 ||
                 !formData.firmType
               }
-              className="w-full py-3 btn-primary rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-primary text-bg rounded-md font-medium hover:bg-btn-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Submitting..." : "Submit Application"}
             </button>

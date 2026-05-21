@@ -5,6 +5,21 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
+  Avatar,
+  Badge,
+  Box,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import {
   LayoutDashboard,
   Search,
   FolderKanban,
@@ -16,6 +31,8 @@ import {
   LogOut,
   Menu,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -39,14 +56,31 @@ export default function Sidebar({
   avatarUrl,
   unreadCount = 0,
 }: SidebarProps) {
+  const drawerWidth = 268;
+  const miniDrawerWidth = 84;
+
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopOpen, setDesktopOpen] = useState(true);
+  const mobileNavigationId = "mobile-sidebar-navigation";
 
-  const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/");
+  const handleSignOut = async (): Promise<boolean> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error("Failed to sign out", error);
+        return false;
+      }
+
+      router.push("/");
+      return true;
+    } catch (error) {
+      console.error("Failed to sign out", error);
+      return false;
+    }
   };
 
   const commonItems: NavItem[] = [
@@ -80,107 +114,340 @@ export default function Sidebar({
 
   const allItems = [...commonItems, ...roleItems, ...bottomItems];
 
-  const isActive = (item: NavItem) => {
-    if (item.matchPrefix) {
-      return pathname.startsWith(item.matchPrefix);
+  const matchesPathPrefix = (path: string, prefix: string) =>
+    path === prefix || path.startsWith(`${prefix}/`);
+
+  const getMatchSpecificity = (item: NavItem) => {
+    if (pathname === item.href) {
+      return item.href.length + 1000;
     }
-    return pathname === item.href;
+
+    if (item.matchPrefix && matchesPathPrefix(pathname, item.matchPrefix)) {
+      return item.matchPrefix.length;
+    }
+
+    return -1;
   };
 
+  const activeItemHref = allItems.reduce<string | null>((currentBestHref, item) => {
+    const currentBestItem = currentBestHref
+      ? allItems.find((candidate) => candidate.href === currentBestHref) ?? null
+      : null;
+
+    if (!currentBestItem) {
+      return getMatchSpecificity(item) >= 0 ? item.href : null;
+    }
+
+    return getMatchSpecificity(item) > getMatchSpecificity(currentBestItem)
+      ? item.href
+      : currentBestHref;
+  }, null);
+
+  const isActive = (item: NavItem) => item.href === activeItemHref;
+
   const roleLabel = userRole.charAt(0).toUpperCase() + userRole.slice(1);
+  const initials =
+    userName
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "U";
 
-  const navContent = (
-    <>
-      {/* User info */}
-      <div className="p-4 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={`${userName} profile picture`}
-              className="h-11 w-11 rounded-full object-cover border border-white/15"
-            />
-          ) : (
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
-              {userName
-                .split(" ")
-                .map((part) => part[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
-            </div>
-          )}
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{userName}</p>
-            <p className="text-xs text-white/60 mt-0.5">{roleLabel}</p>
-          </div>
-        </div>
-      </div>
+  const renderNavItem = (item: NavItem, expanded: boolean, onAction?: () => void) => {
+    const selected = isActive(item);
 
-      {/* Nav links */}
-      <div className="flex-1 py-3 px-2 space-y-1">
-        {allItems.map((item) => (
-          <Link
-            key={item.href}
+    return (
+      <ListItem key={item.href} disablePadding sx={{ display: "block" }}>
+        <Tooltip title={item.label} placement="right" disableHoverListener={expanded}>
+          <ListItemButton
+            component={Link}
             href={item.href}
-            onClick={() => setMobileOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              isActive(item)
-                ? "bg-secondary text-white"
-                : "text-white/70 hover:bg-surface-alt/10 hover:text-white"
-            }`}
+            onClick={onAction}
+            aria-label={item.label}
+            aria-current={selected ? "page" : undefined}
+            sx={{
+              minHeight: 46,
+              mx: 1,
+              my: 0.25,
+              px: 1.5,
+              borderRadius: 1.5,
+              justifyContent: expanded ? "initial" : "center",
+              color: selected ? "var(--color-bg)" : "rgba(255, 255, 255, 0.76)",
+              bgcolor: selected ? "var(--color-secondary)" : "transparent",
+              "&:hover": {
+                bgcolor: selected ? "var(--color-secondary)" : "rgba(255, 255, 255, 0.1)",
+                color: "var(--color-bg)",
+              },
+            }}
           >
-            {item.icon}
-            <span>{item.label}</span>
-            {item.badge != null && (
-              <span className="ml-auto bg-surface-alt text-primary text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                {item.badge}
-              </span>
-            )}
-          </Link>
-        ))}
-      </div>
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                mr: expanded ? 1.75 : 0,
+                justifyContent: "center",
+                color: "inherit",
+              }}
+            >
+              {item.badge != null ? (
+                <Badge
+                  badgeContent={item.badge}
+                  sx={{
+                    "& .MuiBadge-badge": {
+                      bgcolor: "var(--color-surface-alt)",
+                      color: "var(--color-primary)",
+                      fontWeight: 700,
+                      fontSize: "0.65rem",
+                      minWidth: 18,
+                      height: 18,
+                    },
+                  }}
+                >
+                  {item.icon}
+                </Badge>
+              ) : (
+                item.icon
+              )}
+            </ListItemIcon>
+            {expanded ? (
+              <ListItemText
+                primary={item.label}
+                slotProps={{
+                  primary: {
+                    sx: {
+                      fontSize: 14,
+                      fontWeight: 600,
+                    },
+                  },
+                }}
+              />
+            ) : null}
+          </ListItemButton>
+        </Tooltip>
+      </ListItem>
+    );
+  };
 
-      {/* Sign out */}
-      <div className="p-3 border-t border-white/10">
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium text-white/70 hover:bg-surface-alt/10 hover:text-white transition-colors"
+  const drawerContent = (
+    expanded: boolean,
+    onAction?: () => void,
+    allowCollapse?: boolean,
+    asNavigation?: boolean,
+    navigationId?: string,
+    navigationLabel?: string,
+  ) => (
+    <Box
+      component={asNavigation ? "nav" : "div"}
+      role={asNavigation ? "navigation" : undefined}
+      id={asNavigation ? navigationId : undefined}
+      aria-label={asNavigation ? navigationLabel : undefined}
+      sx={{ height: "100%", display: "flex", flexDirection: "column" }}
+    >
+      <Box sx={{ p: 1.5, borderBottom: "1px solid rgba(255, 255, 255, 0.12)" }}>
+        {allowCollapse ? (
+          <Box sx={{ display: "flex", justifyContent: expanded ? "flex-end" : "center", mb: 1 }}>
+            <IconButton
+              aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+              onClick={() => setDesktopOpen((current) => !current)}
+              sx={{
+                color: "rgba(255, 255, 255, 0.8)",
+                bgcolor: "rgba(255, 255, 255, 0.08)",
+                "&:hover": {
+                  bgcolor: "rgba(255, 255, 255, 0.16)",
+                  color: "var(--color-bg)",
+                },
+              }}
+            >
+              {expanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+            </IconButton>
+          </Box>
+        ) : null}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: expanded ? "flex-start" : "center",
+            gap: 1.5,
+          }}
         >
-          <LogOut size={20} />
-          <span>Sign Out</span>
-        </button>
-      </div>
-    </>
+          <Avatar
+            src={avatarUrl}
+            alt={`${userName} profile picture`}
+            sx={{
+              width: 44,
+              height: 44,
+              bgcolor: "rgba(255, 255, 255, 0.15)",
+              color: "var(--color-bg)",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+            {initials}
+          </Avatar>
+          {expanded ? (
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ color: "var(--color-bg)", fontSize: 14, fontWeight: 700 }} noWrap>
+                {userName}
+              </Typography>
+              <Typography sx={{ color: "rgba(255, 255, 255, 0.62)", fontSize: 12 }}>
+                {roleLabel}
+              </Typography>
+            </Box>
+          ) : null}
+        </Box>
+      </Box>
+
+      <Box sx={{ flex: 1, py: 1 }}>
+        <List sx={{ px: 0.5 }}>{allItems.map((item) => renderNavItem(item, expanded, onAction))}</List>
+      </Box>
+
+      <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.12)" }} />
+
+      <List sx={{ px: 0.5, py: 1.25 }}>
+        <ListItem disablePadding sx={{ display: "block" }}>
+          <Tooltip title="Sign Out" placement="right" disableHoverListener={expanded}>
+            <ListItemButton
+              onClick={async () => {
+                const didSignOut = await handleSignOut();
+
+                if (didSignOut) {
+                  onAction?.();
+                }
+              }}
+              aria-label="Sign Out"
+              sx={{
+                minHeight: 46,
+                mx: 1,
+                px: 1.5,
+                borderRadius: 1.5,
+                justifyContent: expanded ? "initial" : "center",
+                color: "rgba(255, 255, 255, 0.76)",
+                "&:hover": {
+                  bgcolor: "rgba(255, 255, 255, 0.1)",
+                  color: "var(--color-bg)",
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: expanded ? 1.75 : 0,
+                  justifyContent: "center",
+                  color: "inherit",
+                }}
+              >
+                <LogOut size={20} />
+              </ListItemIcon>
+              {expanded ? (
+                <ListItemText
+                  primary="Sign Out"
+                  slotProps={{
+                    primary: {
+                      sx: {
+                        fontSize: 14,
+                        fontWeight: 600,
+                      },
+                    },
+                  }}
+                />
+              ) : null}
+            </ListItemButton>
+          </Tooltip>
+        </ListItem>
+      </List>
+    </Box>
   );
 
   return (
     <>
-      {/* Mobile toggle button */}
-      <button
+      <IconButton
         aria-label="Toggle menu"
+        aria-expanded={mobileOpen}
+        aria-controls={mobileNavigationId}
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="fixed top-4 left-4 z-50 p-2 bg-primary text-white rounded-md lg:hidden"
+        sx={{
+          position: "fixed",
+          top: 16,
+          left: 16,
+          zIndex: (theme) => theme.zIndex.drawer + 2,
+          display: { xs: "inline-flex", lg: "none" },
+          bgcolor: "var(--color-primary)",
+          color: "var(--color-bg)",
+          borderRadius: 1.5,
+          boxShadow: "0 10px 24px rgba(0, 0, 0, 0.24)",
+          "&:hover": {
+            bgcolor: "var(--color-btn-hover)",
+          },
+        }}
       >
         {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
+      </IconButton>
 
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* Sidebar nav */}
-      <nav
-        role="navigation"
-        className={`fixed top-0 left-0 z-40 h-screen w-64 bg-primary flex flex-col transition-transform duration-200 ${mobileOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 lg:static lg:flex`}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        sx={{
+          display: { xs: "block", lg: "none" },
+          "& .MuiBackdrop-root": {
+            backgroundColor: "rgba(0, 0, 0, 0.45)",
+          },
+          "& .MuiDrawer-paper": {
+            width: drawerWidth,
+            bgcolor: "var(--color-primary)",
+            color: "var(--color-bg)",
+            borderRight: "1px solid rgba(255, 255, 255, 0.12)",
+            boxSizing: "border-box",
+          },
+        }}
       >
-        {navContent}
-      </nav>
+        {drawerContent(
+          true,
+          () => setMobileOpen(false),
+          false,
+          true,
+          mobileNavigationId,
+          "Mobile sidebar navigation",
+        )}
+      </Drawer>
+
+      <Drawer
+        variant="permanent"
+        open={desktopOpen}
+        sx={{
+          display: { xs: "none", lg: "block" },
+          width: desktopOpen ? drawerWidth : miniDrawerWidth,
+          flexShrink: 0,
+          whiteSpace: "nowrap",
+          boxSizing: "border-box",
+          "& .MuiDrawer-paper": {
+            width: desktopOpen ? drawerWidth : miniDrawerWidth,
+            overflowX: "hidden",
+            bgcolor: "var(--color-primary)",
+            color: "var(--color-bg)",
+            borderRight: "1px solid rgba(255, 255, 255, 0.12)",
+            boxSizing: "border-box",
+            transition: (theme) =>
+              theme.transitions.create("width", {
+                easing: theme.transitions.easing.sharp,
+                duration: desktopOpen
+                  ? theme.transitions.duration.enteringScreen
+                  : theme.transitions.duration.leavingScreen,
+              }),
+          },
+        }}
+      >
+        {drawerContent(
+          desktopOpen,
+          undefined,
+          true,
+          true,
+          undefined,
+          "Desktop sidebar navigation",
+        )}
+      </Drawer>
     </>
   );
 }

@@ -4,24 +4,55 @@ import { NextResponse } from "next/server";
 import { calculateFees } from "@/lib/deal-status";
 import { notifyBroker, notifyAdmin } from "@/lib/notifications";
 import { closeActionSchema, closeReportSchema, isValidStorageObjectKey } from "@/lib/validators";
+import { isAuthResponse, requireApprovedUser } from "@/server/auth";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const context = await requireApprovedUser();
+  if (isAuthResponse(context)) {
+    return context;
   }
 
-  // Fetch closure record for this deal
-  const { data: closure } = await supabase
+  const { supabase, user, profile } = context;
+
+  let closureQuery = supabase
     .from("deal_closures")
     .select("*")
-    .eq("deal_id", params.id)
-    .single();
+    .eq("deal_id", params.id);
+
+  if (profile.role === "buyer") {
+    closureQuery = closureQuery.eq("buyer_user_id", user.id);
+  } else if (profile.role === "broker") {
+    if (!profile.firm_id) {
+      return NextResponse.json({ error: "No closure record found" }, { status: 404 });
+    }
+    closureQuery = closureQuery.eq("broker_firm_id", profile.firm_id);
+  } else if (profile.role !== "admin") {
+    return NextResponse.json({ error: "No closure record found" }, { status: 404 });
+  }
+
+  const { data: closure, error: closureError } = await closureQuery.single();
+
+  if (closureError) {
+    const closureErrorText = `${closureError.message ?? ""} ${closureError.details ?? ""}`.toLowerCase();
+    const isNoRowError =
+      closureError.code === "PGRST116" &&
+      (closureErrorText.includes("0 rows") || closureErrorText.includes("no rows"));
+
+    if (isNoRowError) {
+      return NextResponse.json({ error: "No closure record found" }, { status: 404 });
+    }
+
+    console.error("Failed to fetch closure record", {
+      dealId: params.id,
+      userId: user.id,
+      role: profile.role,
+      error: closureError,
+    });
+    return NextResponse.json({ error: "Failed to fetch closure record" }, { status: 500 });
+  }
 
   if (!closure) {
     return NextResponse.json({ error: "No closure record found" }, { status: 404 });

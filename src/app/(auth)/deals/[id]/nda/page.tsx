@@ -16,6 +16,12 @@ interface Engagement {
   nda_status: string;
 }
 
+interface NDAResponse {
+  deal: DealNDA;
+  engagement: Engagement;
+  serverDate?: string;
+}
+
 export default function NDASigningPage() {
   const params = useParams();
   const router = useRouter();
@@ -29,27 +35,38 @@ export default function NDASigningPage() {
   const [signatureName, setSignatureName] = useState("");
   const [signatureTitle, setSignatureTitle] = useState("");
   const [signatureCompany, setSignatureCompany] = useState("");
-  const [signatureDate, setSignatureDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [serverDate, setServerDate] = useState<string | null>(null);
+
+  const displayDate = serverDate ?? "Server date unavailable";
 
   useEffect(() => {
     const fetchNDA = async () => {
-      const res = await fetch(`/api/deals/${dealId}/nda`);
-      if (res.ok) {
-        const data = await res.json();
-        setDeal(data.deal);
-        setEngagement(data.engagement);
-      } else {
-        setError("NDA not available for this deal.");
+      setError(null);
+      try {
+        const res = await fetch(`/api/deals/${dealId}/nda`);
+        if (res.ok) {
+          const data: NDAResponse = await res.json();
+          setDeal(data.deal);
+          setEngagement(data.engagement);
+          setServerDate(data.serverDate ?? null);
+          if (!data.serverDate) {
+            setError("Server signing date is currently unavailable.");
+          }
+        } else {
+          setError("NDA not available for this deal.");
+        }
+      } catch (err) {
+        console.error("Failed to fetch NDA details", { dealId, error: err });
+        setError("Unable to load NDA right now. Please try again.");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchNDA();
   }, [dealId]);
 
   const handleSign = async () => {
-    if (!signatureName || !signatureTitle || !signatureCompany || !signatureDate) {
+    if (!signatureName || !signatureTitle || !signatureCompany) {
       setError("Please fill in all signature fields.");
       return;
     }
@@ -65,7 +82,6 @@ export default function NDASigningPage() {
           signatureName,
           signatureTitle,
           signatureCompany,
-          signatureDate,
         }),
       });
       if (!res.ok) {
@@ -142,8 +158,8 @@ export default function NDASigningPage() {
             <div className="bg-bg-alt rounded-md p-4 mb-4">
               <p className="text-sm text-text-secondary">Custom NDA document uploaded by broker.</p>
               <a
-                href={`/api/deals/${dealId}/documents?path=${encodeURIComponent(deal.nda_document_path)}`}
-                className="text-sm text-secondary hover:underline"
+                href={`/api/deals/${dealId}/nda/document`}
+                className="text-sm text-secondary hover:text-primary hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -209,12 +225,9 @@ export default function NDASigningPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-text mb-1">Date *</label>
-              <input
-                type="date"
-                value={signatureDate}
-                onChange={(e) => setSignatureDate(e.target.value)}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
-              />
+              <p className="w-full border border-border-gray rounded-md px-3 py-2 text-sm bg-bg-alt text-text">
+                {displayDate}
+              </p>
             </div>
           </div>
         </div>

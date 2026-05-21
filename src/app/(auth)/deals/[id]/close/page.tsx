@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { canBuyerAccessCloseWorkflow } from "@/lib/buyer-workflow-gating";
 
 interface Closure {
   id: string;
@@ -21,18 +22,63 @@ export default function DealClosurePage() {
 
   const [closure, setClosure] = useState<Closure | null>(null);
   const [loading, setLoading] = useState(true);
+  const [blocked, setBlocked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enterpriseValue, setEnterpriseValue] = useState<number | "">("");
 
   useEffect(() => {
     const fetchClosure = async () => {
-      const res = await fetch(`/api/deals/${dealId}/close`);
-      if (res.ok) {
-        const data = await res.json();
-        setClosure(data.closure);
+      setError(null);
+      try {
+        const closureRes = await fetch(`/api/deals/${dealId}/close`);
+
+        if (closureRes.ok) {
+          const data = await closureRes.json();
+          setClosure(data.closure);
+          setBlocked(false);
+          return;
+        }
+
+        if (closureRes.status !== 404) {
+          const errorPayload = await closureRes.json().catch(() => null);
+          setBlocked(true);
+          setError(
+            typeof errorPayload?.error === "string"
+              ? errorPayload.error
+              : "Unable to load closure workflow right now."
+          );
+          return;
+        }
+
+        const dealRes = await fetch(`/api/deals/${dealId}`);
+
+        if (!dealRes.ok) {
+          setBlocked(true);
+          setError("Deal not found.");
+          return;
+        }
+
+        const dealData = await dealRes.json();
+        const eligibleToReportClosure = canBuyerAccessCloseWorkflow({
+          isApprovedBuyer: true,
+          dealStatus: dealData?.deal?.status,
+          engagement: dealData?.engagement,
+        });
+
+        if (!eligibleToReportClosure) {
+          setBlocked(true);
+          setError("Closure report is not available for this deal at your current stage.");
+          return;
+        }
+
+        setBlocked(false);
+      } catch {
+        setBlocked(true);
+        setError("Unable to load closure workflow right now.");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchClosure();
   }, [dealId]);
@@ -115,6 +161,19 @@ export default function DealClosurePage() {
               Back to Dashboard
             </button>
           </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (blocked) {
+    return (
+      <main className="min-h-screen bg-bg-alt p-8">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-error">{error || "Closure report is not available."}</p>
+          <a href={`/deals/${dealId}`} className="text-sm text-secondary hover:underline mt-4 inline-block">
+            Back to deal
+          </a>
         </div>
       </main>
     );

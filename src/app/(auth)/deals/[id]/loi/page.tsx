@@ -27,6 +27,7 @@ export default function LOISubmissionPage() {
 
   const [previousLOIs, setPreviousLOIs] = useState<LOI[]>([]);
   const [loading, setLoading] = useState(true);
+  const [blocked, setBlocked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,10 +46,21 @@ export default function LOISubmissionPage() {
 
   useEffect(() => {
     const fetchLOIs = async () => {
-      const res = await fetch(`/api/deals/${dealId}/loi`);
-      if (res.ok) {
-        const data = await res.json();
-        setPreviousLOIs(data.lois);
+      setError(null);
+      try {
+        const res = await fetch(`/api/deals/${dealId}/loi`);
+        if (res.ok) {
+          const data = await res.json();
+          setPreviousLOIs(data.lois);
+          setBlocked(false);
+        } else {
+          setBlocked(true);
+          const data = await res.json().catch(() => null);
+          setError(data?.error || "LOI workflow is not available for this deal.");
+        }
+      } catch {
+        setBlocked(true);
+        setError("Unable to load LOI workflow right now.");
       }
       setLoading(false);
     };
@@ -97,6 +109,19 @@ export default function LOISubmissionPage() {
     return (
       <main className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading...</p>
+      </main>
+    );
+  }
+
+  if (blocked) {
+    return (
+      <main className="min-h-screen bg-bg-alt p-8">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-error">{error || "LOI workflow is not available for this deal."}</p>
+          <a href={`/deals/${dealId}`} className="text-sm text-secondary hover:underline mt-4 inline-block">
+            Back to deal
+          </a>
+        </div>
       </main>
     );
   }

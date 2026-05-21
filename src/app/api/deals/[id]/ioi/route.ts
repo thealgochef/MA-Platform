@@ -1,17 +1,43 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { ioiSubmitSchema } from "@/lib/validators";
 import { notifyBroker } from "@/lib/notifications";
+import { canBuyerAccessIoiWorkflow } from "@/lib/buyer-workflow-gating";
+import { isAuthResponse, requireApprovedUser } from "@/server/auth";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const context = await requireApprovedUser();
+  if (isAuthResponse(context)) {
+    return context;
+  }
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { supabase, user, profile } = context;
+
+  if (profile.role !== "buyer") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { data: deal } = await supabase
+    .from("deals")
+    .select("id, status")
+    .eq("id", params.id)
+    .single();
+
+  if (!deal) {
+    return NextResponse.json({ error: "Deal not found" }, { status: 404 });
+  }
+
+  const { data: engagement } = await supabase
+    .from("deal_engagements")
+    .select("id, nda_status, cim_released, stage")
+    .eq("deal_id", params.id)
+    .eq("buyer_user_id", user.id)
+    .maybeSingle();
+
+  if (!canBuyerAccessIoiWorkflow({ isApprovedBuyer: true, dealStatus: deal.status, engagement })) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Fetch IOIs for this deal by the current buyer
@@ -29,20 +55,14 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const context = await requireApprovedUser();
+  if (isAuthResponse(context)) {
+    return context;
   }
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role, status, firm_id")
-    .eq("id", user.id)
-    .single();
+  const { supabase, user, profile } = context;
 
-  if (!profile || profile.role !== "buyer" || profile.status !== "approved") {
+  if (profile.role !== "buyer") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -57,11 +77,6 @@ export async function POST(
     return NextResponse.json({ error: "Deal not found" }, { status: 404 });
   }
 
-  if (deal.status !== "accepting_iois") {
-    return NextResponse.json({ error: "Deal is not accepting IOIs" }, { status: 400 });
-  }
-
-  // Check engagement — buyer must have NDA signed and CIM released
   const { data: engagement } = await supabase
     .from("deal_engagements")
     .select("id, nda_status, cim_released, stage")
@@ -69,16 +84,12 @@ export async function POST(
     .eq("buyer_user_id", user.id)
     .single();
 
+  if (!canBuyerAccessIoiWorkflow({ isApprovedBuyer: true, dealStatus: deal.status, engagement })) {
+    return NextResponse.json({ error: "IOI workflow is not available" }, { status: 403 });
+  }
+
   if (!engagement) {
-    return NextResponse.json({ error: "No engagement found" }, { status: 400 });
-  }
-
-  if (engagement.nda_status !== "signed") {
-    return NextResponse.json({ error: "NDA must be signed before submitting IOI" }, { status: 400 });
-  }
-
-  if (!engagement.cim_released) {
-    return NextResponse.json({ error: "CIM must be released before submitting IOI" }, { status: 400 });
+    return NextResponse.json({ error: "IOI workflow is not available" }, { status: 403 });
   }
 
   // Parse and validate body

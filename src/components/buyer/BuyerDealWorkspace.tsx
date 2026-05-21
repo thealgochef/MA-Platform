@@ -5,6 +5,11 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
+import {
+  canBuyerAccessCloseWorkflow,
+  canBuyerAccessIoiWorkflow,
+  canBuyerAccessLoiWorkflow,
+} from "@/lib/buyer-workflow-gating";
 
 interface Deal {
   id: string;
@@ -79,6 +84,21 @@ export default function BuyerDealWorkspace() {
   const ndaSent = engagement?.nda_status === "sent";
   const ndaSigned = engagement?.nda_status === "signed";
   const cimReleased = engagement?.cim_released === true;
+  const canAccessIoiWorkflow = canBuyerAccessIoiWorkflow({
+    isApprovedBuyer: true,
+    dealStatus: deal.status,
+    engagement,
+  });
+  const canAccessLoiWorkflow = canBuyerAccessLoiWorkflow({
+    isApprovedBuyer: true,
+    dealStatus: deal.status,
+    engagement,
+  });
+  const canReportClosure = canBuyerAccessCloseWorkflow({
+    isApprovedBuyer: true,
+    dealStatus: deal.status,
+    engagement,
+  });
 
   return (
     <main className="min-h-screen bg-bg-alt py-8">
@@ -174,7 +194,7 @@ export default function BuyerDealWorkspace() {
                   </Link>
                 )}
 
-                {ndaSigned && (stage === "nda_signed" || stage === "ioi_submitted") && (
+                {canAccessIoiWorkflow && (
                   <Link
                     href={`/deals/${dealId}/ioi`}
                     className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
@@ -183,7 +203,7 @@ export default function BuyerDealWorkspace() {
                   </Link>
                 )}
 
-                {ndaSigned && (stage === "ioi_submitted" || stage === "loi_submitted") && (
+                {canAccessLoiWorkflow && (
                   <Link
                     href={`/deals/${dealId}/loi`}
                     className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
@@ -192,7 +212,7 @@ export default function BuyerDealWorkspace() {
                   </Link>
                 )}
 
-                {ndaSigned && stage !== "passed" && stage !== "terminated" && (
+                {canReportClosure && (
                   <Link
                     href={`/deals/${dealId}/close`}
                     className="px-4 py-2 border border-border-gray text-text rounded-md text-sm font-medium hover:bg-bg-alt transition-colors"

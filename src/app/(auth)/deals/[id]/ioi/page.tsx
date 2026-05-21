@@ -27,6 +27,7 @@ export default function IOISubmissionPage() {
 
   const [previousIOIs, setPreviousIOIs] = useState<IOI[]>([]);
   const [loading, setLoading] = useState(true);
+  const [blocked, setBlocked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,10 +46,21 @@ export default function IOISubmissionPage() {
 
   useEffect(() => {
     const fetchIOIs = async () => {
-      const res = await fetch(`/api/deals/${dealId}/ioi`);
-      if (res.ok) {
-        const data = await res.json();
-        setPreviousIOIs(data.iois);
+      setError(null);
+      try {
+        const res = await fetch(`/api/deals/${dealId}/ioi`);
+        if (res.ok) {
+          const data = await res.json();
+          setPreviousIOIs(data.iois);
+          setBlocked(false);
+        } else {
+          setBlocked(true);
+          const data = await res.json().catch(() => null);
+          setError(data?.error || "IOI workflow is not available for this deal.");
+        }
+      } catch {
+        setBlocked(true);
+        setError("Unable to load IOI workflow right now.");
       }
       setLoading(false);
     };
@@ -97,6 +109,19 @@ export default function IOISubmissionPage() {
     return (
       <main className="min-h-screen bg-bg-alt p-8">
         <p className="text-text-secondary">Loading...</p>
+      </main>
+    );
+  }
+
+  if (blocked) {
+    return (
+      <main className="min-h-screen bg-bg-alt p-8">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-error">{error || "IOI workflow is not available for this deal."}</p>
+          <a href={`/deals/${dealId}`} className="text-sm text-secondary hover:underline mt-4 inline-block">
+            Back to deal
+          </a>
+        </div>
       </main>
     );
   }

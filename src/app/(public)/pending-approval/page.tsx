@@ -34,7 +34,7 @@ export default function PendingApprovalPage() {
 
         <Link
           href="/"
-          className="text-md font-medium text-primary hover:text-secondary"
+          className="text-md font-medium text-secondary hover:text-primary hover:underline"
         >
           Return to homepage
         </Link>
