@@ -233,6 +233,55 @@ describe("ProjectDealsView", () => {
     expect(mockPush).toHaveBeenCalledWith("/deals/deal-nda/nda");
   });
 
+  it("renders Submit IOI as the primary action for deals with nda_signed engagement", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-ioi-ready",
+        headline: "IOI Ready Target",
+        engagement: {
+          id: "engagement-ioi-ready",
+          stage: "nda_signed",
+          nda_status: "signed",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    const submitIoiButton = await screen.findByRole("button", { name: "Submit IOI" });
+
+    expect(submitIoiButton).toBeInTheDocument();
+    expect(submitIoiButton).toHaveClass("MuiButton-contained");
+    expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pursue" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Decline" })).not.toBeInTheDocument();
+  });
+
+  it("navigates to deal IOI page when Submit IOI is clicked", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-ioi-ready",
+        headline: "IOI Ready Target",
+        engagement: {
+          id: "engagement-ioi-ready",
+          stage: "nda_signed",
+          nda_status: "signed",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Submit IOI" }));
+
+    expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-ioi-ready");
+    expect(mockPush).toHaveBeenCalledWith("/deals/deal-ioi-ready/ioi");
+  });
+
   it("shows Pursue and Decline (and not Sign NDA) when engagement is null", async () => {
     render(<ProjectDealsView projectId="project-1" />);
 
@@ -281,6 +330,107 @@ describe("ProjectDealsView", () => {
 
     await screen.findByRole("button", { name: "Open first row" });
     expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
+  });
+
+  it("renders View IOI action for deals with ioi_submitted engagement", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-ioi-submitted",
+        headline: "IOI Submitted Target",
+        engagement: {
+          id: "engagement-ioi-submitted",
+          stage: "ioi_submitted",
+          nda_status: "signed",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    const viewIoiButton = await screen.findByRole("button", { name: "View IOI" });
+
+    expect(viewIoiButton).toBeInTheDocument();
+    expect(viewIoiButton).toHaveClass("MuiButton-contained");
+    expect(screen.queryByRole("button", { name: "Submit IOI" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pursue" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Decline" })).not.toBeInTheDocument();
+  });
+
+  it("navigates to deal IOI page when View IOI is clicked", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-ioi-submitted",
+        headline: "IOI Submitted Target",
+        engagement: {
+          id: "engagement-ioi-submitted",
+          stage: "ioi_submitted",
+          nda_status: "signed",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "View IOI" }));
+
+    expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-ioi-submitted");
+    expect(mockPush).toHaveBeenCalledWith("/deals/deal-ioi-submitted/ioi");
+  });
+
+  it("renders View LOI action for deals with loi_submitted engagement", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-loi-submitted",
+        headline: "LOI Submitted Target",
+        engagement: {
+          id: "engagement-loi-submitted",
+          stage: "loi_submitted",
+          nda_status: "signed",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    const viewLoiButton = await screen.findByRole("button", { name: "View LOI" });
+
+    expect(viewLoiButton).toBeInTheDocument();
+    expect(viewLoiButton).toHaveClass("MuiButton-contained");
+    expect(screen.queryByRole("button", { name: "Submit IOI" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View IOI" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pursue" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Decline" })).not.toBeInTheDocument();
+  });
+
+  it("navigates to deal LOI page when View LOI is clicked", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-loi-submitted",
+        headline: "LOI Submitted Target",
+        engagement: {
+          id: "engagement-loi-submitted",
+          stage: "loi_submitted",
+          nda_status: "signed",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "View LOI" }));
+
+    expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-loi-submitted");
+    expect(mockPush).toHaveBeenCalledWith("/deals/deal-loi-submitted/loi");
   });
 
   it("shows and dismisses saved banner from query param", async () => {

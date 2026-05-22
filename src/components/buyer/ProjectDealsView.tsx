@@ -216,17 +216,10 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
   const detailColumns = useMemo<GridColDef<Deal>[]>(() => {
     return [
       {
-        field: "date_received",
-        headerName: "Date Received",
-        flex: 0.9,
-        minWidth: 130,
-        cellClassName: "row-hover-text",
-      },
-      {
         field: "revenue_year_3",
         headerName: "Revenue",
         flex: 0.9,
-        minWidth: 120,
+        minWidth: 80,
         cellClassName: "row-hover-text",
         valueGetter: (_, row) => row.revenue_year_3,
         renderCell: (params) =>
@@ -236,7 +229,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "ebitda_year_3",
         headerName: "EBITDA",
         flex: 0.9,
-        minWidth: 120,
+        minWidth: 80,
         cellClassName: "row-hover-text",
         valueGetter: (_, row) => row.ebitda_year_3,
         renderCell: (params) =>
@@ -253,7 +246,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "geography",
         headerName: "Geography",
         flex: 0.9,
-        minWidth: 130,
+        minWidth: 140,
         cellClassName: "row-hover-text",
         valueGetter: (_, row) => getGeography(row) || "—",
       },
@@ -261,7 +254,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "status",
         headerName: "Deal Status",
         flex: 1,
-        minWidth: 130,
+        minWidth: 140,
         sortable: false,
         renderCell: (params) => (
           <Chip
@@ -275,7 +268,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "engagement_status",
         headerName: "Engagement Status",
         flex: 1,
-        minWidth: 160,
+        minWidth: 150,
         sortable: false,
         renderCell: (params) =>
           params.row.engagement ? (
@@ -299,6 +292,9 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         renderCell: (params) => {
           const stage = params.row.engagement?.stage;
           const isNdaPending = stage === "nda_pending";
+          const isNdaSigned = stage === "nda_signed";
+          const isIoiSubmitted = stage === "ioi_submitted";
+          const isLoiSubmitted = stage === "loi_submitted";
           const isEngaged = Boolean(params.row.engagement) && stage !== "declined";
           const isDeclined = stage === "declined";
 
@@ -322,6 +318,66 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
                   }}
                 >
                   Sign NDA
+                </Button>
+              )}
+              {isNdaSigned && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{
+                    textTransform: "none",
+                    borderRadius: 1,
+                    px: 1.75,
+                    fontWeight: 600,
+                    backgroundColor: "var(--color-primary)",
+                    "&:hover": { backgroundColor: "var(--color-btn-hover)" }
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    router.push(`/deals/${params.row.id}/ioi`);
+                  }}
+                >
+                  Submit IOI
+                </Button>
+              )}
+              {isIoiSubmitted && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{
+                    textTransform: "none",
+                    borderRadius: 1,
+                    px: 1.75,
+                    fontWeight: 600,
+                    backgroundColor: "var(--color-primary)",
+                    "&:hover": { backgroundColor: "var(--color-btn-hover)" }
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    router.push(`/deals/${params.row.id}/ioi`);
+                  }}
+                >
+                  View IOI
+                </Button>
+              )}
+              {isLoiSubmitted && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{
+                    textTransform: "none",
+                    borderRadius: 1,
+                    px: 1.75,
+                    fontWeight: 600,
+                    backgroundColor: "var(--color-primary)",
+                    "&:hover": { backgroundColor: "var(--color-btn-hover)" }
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    router.push(`/deals/${params.row.id}/loi`);
+                  }}
+                >
+                  View LOI
                 </Button>
               )}
               {!isNdaPending && !isEngaged && !isDeclined && (
@@ -394,6 +450,13 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
             </>
           );
         },
+      },
+      {
+        field: "date_received",
+        headerName: "Date Received",
+        flex: 0.9,
+        minWidth: 130,
+        cellClassName: "row-hover-text",
       },
     ];
   }, [actionLoading, handleDecline, handlePursue, router]);
