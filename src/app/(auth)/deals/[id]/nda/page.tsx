@@ -38,6 +38,8 @@ export default function NDASigningPage() {
   const [serverDate, setServerDate] = useState<string | null>(null);
 
   const displayDate = serverDate ?? "Server date unavailable";
+  const isSignedView = engagement?.nda_status === "signed";
+  const isCustomNdaUnavailable = deal?.nda_type === "custom" && !deal.nda_document_path;
 
   useEffect(() => {
     const fetchNDA = async () => {
@@ -166,6 +168,10 @@ export default function NDASigningPage() {
                 View NDA Document
               </a>
             </div>
+          ) : deal.nda_type === "custom" ? (
+            <div className="bg-error/10 border border-error/20 rounded-md p-4 mb-4 text-sm text-error">
+              This custom NDA is currently unavailable. Please contact support before proceeding.
+            </div>
           ) : (
             <div className="bg-bg-alt rounded-md p-4 mb-4 text-sm text-text-secondary space-y-2">
               <p className="font-medium text-text">Geneva Holdings Platform NDA</p>
@@ -189,66 +195,70 @@ export default function NDASigningPage() {
           )}
         </div>
 
-        {/* Signature Fields */}
-        <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
-          <h3 className="text-sm font-medium text-text mb-4">Electronic Signature</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">Full Name *</label>
-              <input
-                type="text"
-                value={signatureName}
-                onChange={(e) => setSignatureName(e.target.value)}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
-                placeholder="Your full legal name"
-              />
+        {!isSignedView && !isCustomNdaUnavailable && (
+          <>
+            {/* Signature Fields */}
+            <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
+              <h3 className="text-sm font-medium text-text mb-4">Electronic Signature</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-text mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    value={signatureName}
+                    onChange={(e) => setSignatureName(e.target.value)}
+                    className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
+                    placeholder="Your full legal name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text mb-1">Title *</label>
+                  <input
+                    type="text"
+                    value={signatureTitle}
+                    onChange={(e) => setSignatureTitle(e.target.value)}
+                    className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
+                    placeholder="e.g., Managing Partner"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text mb-1">Company *</label>
+                  <input
+                    type="text"
+                    value={signatureCompany}
+                    onChange={(e) => setSignatureCompany(e.target.value)}
+                    className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
+                    placeholder="Your company name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text mb-1">Date *</label>
+                  <p className="w-full border border-border-gray rounded-md px-3 py-2 text-sm bg-bg-alt text-text">
+                    {displayDate}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">Title *</label>
-              <input
-                type="text"
-                value={signatureTitle}
-                onChange={(e) => setSignatureTitle(e.target.value)}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
-                placeholder="e.g., Managing Partner"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">Company *</label>
-              <input
-                type="text"
-                value={signatureCompany}
-                onChange={(e) => setSignatureCompany(e.target.value)}
-                className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
-                placeholder="Your company name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text mb-1">Date *</label>
-              <p className="w-full border border-border-gray rounded-md px-3 py-2 text-sm bg-bg-alt text-text">
-                {displayDate}
-              </p>
-            </div>
-          </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          <button
-            onClick={handleSign}
-            disabled={submitting}
-            className="flex-1 bg-primary text-white rounded-md py-3 font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
-          >
-            {submitting ? "Signing..." : "Sign NDA"}
-          </button>
-          <button
-            onClick={handleDecline}
-            disabled={submitting}
-            className="px-6 py-3 bg-surface-alt border border-border-gray text-text-secondary rounded-md font-medium hover:bg-bg-alt transition-colors disabled:opacity-50"
-          >
-            Decline NDA
-          </button>
-        </div>
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleSign}
+                disabled={submitting}
+                className="flex-1 bg-primary text-white rounded-md py-3 font-medium hover:bg-btn-hover transition-colors disabled:opacity-50"
+              >
+                {submitting ? "Signing..." : "Sign NDA"}
+              </button>
+              <button
+                onClick={handleDecline}
+                disabled={submitting}
+                className="px-6 py-3 bg-surface-alt border border-error text-error rounded-md font-medium hover:bg-bg-alt transition-colors disabled:opacity-50"
+              >
+                Decline NDA
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );

@@ -16,6 +16,7 @@ interface Deal {
   headline: string;
   description: string;
   industry: string;
+  nda_type: "platform" | "custom";
   geography_display: string;
   status: string;
   revenue_year_1: number | null;
@@ -83,6 +84,9 @@ export default function BuyerDealWorkspace() {
   const stage = engagement?.stage;
   const ndaSent = engagement?.nda_status === "sent";
   const ndaSigned = engagement?.nda_status === "signed";
+  const ndaViewHref = deal.nda_type === "custom"
+    ? `/api/deals/${dealId}/nda/document`
+    : `/deals/${dealId}/nda`;
   const cimReleased = engagement?.cim_released === true;
   const canAccessIoiWorkflow = canBuyerAccessIoiWorkflow({
     isApprovedBuyer: true,
@@ -182,6 +186,15 @@ export default function BuyerDealWorkspace() {
                     className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
                   >
                     Sign NDA
+                  </Link>
+                )}
+
+                {ndaSigned && (
+                  <Link
+                    href={ndaViewHref}
+                    className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
+                  >
+                    View NDA
                   </Link>
                 )}
 

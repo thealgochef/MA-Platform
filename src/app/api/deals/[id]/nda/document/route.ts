@@ -16,6 +16,16 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role, status")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "buyer" || profile.status !== "approved") {
+    return NextResponse.json({ error: "NDA not available" }, { status: 403 });
+  }
+
   const { data: deal } = await supabase
     .from("deals")
     .select("id, nda_type, nda_document_path")
