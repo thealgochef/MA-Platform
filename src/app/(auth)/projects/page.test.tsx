@@ -113,7 +113,7 @@ describe("ProjectsPage", () => {
   });
 
   it("shows loading state before projects request resolves", async () => {
-    let resolveFetch: ((value: { ok: boolean; json: () => Promise<{ projects: [] }> }) => void) | null = null;
+    let resolveFetch!: (value: { ok: boolean; json: () => Promise<{ projects: [] }> }) => void;
     const deferredFetch = new Promise<{ ok: boolean; json: () => Promise<{ projects: [] }> }>((resolve) => {
       resolveFetch = resolve;
     });
@@ -124,7 +124,7 @@ describe("ProjectsPage", () => {
 
     expect(screen.getByText("Loading projects...")).toBeInTheDocument();
 
-    resolveFetch?.({
+    resolveFetch({
       ok: true,
       json: async () => ({ projects: [] }),
     });

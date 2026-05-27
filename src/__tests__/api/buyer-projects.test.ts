@@ -326,39 +326,28 @@ describe("Phase 4: Buyer Projects & Deal Discovery", () => {
       ).toBe(true);
     });
 
-    it("should display deals in table format", () => {
+    it("should delegate project deal feed rendering to ProjectDealsView", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "(auth)", "projects", "[id]", "page.tsx"),
         "utf-8"
       );
-      expect(content).toContain("<table");
-      expect(content).toContain("Headline");
-      expect(content).toContain("Industry");
+
+      // Contract: wrapper imports and renders ProjectDealsView with a params-derived project ID.
+      expect(content).toMatch(/import\s+ProjectDealsView\s+from\s+["']@\/components\/buyer\/ProjectDealsView["']/);
+      expect(content).toMatch(/const\s+params\s*=\s*useParams\(\)/);
+      expect(content).toMatch(/<ProjectDealsView\s+projectId=\{params\.id\s+as\s+string\}\s*\/>/);
     });
 
-    it("should have Decline and Pursue action buttons", () => {
+    it("wrapper should remain thin and delegate instead of local data orchestration", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "(auth)", "projects", "[id]", "page.tsx"),
         "utf-8"
       );
-      expect(content).toContain("Decline");
-      expect(content).toContain("Pursue");
-    });
 
-    it("should show deal status badges", () => {
-      const content = fs.readFileSync(
-        path.join(SRC, "app", "(auth)", "projects", "[id]", "page.tsx"),
-        "utf-8"
-      );
-      expect(content).toContain("DEAL_STATUS_LABELS");
-    });
-
-    it("should show engagement status for engaged deals", () => {
-      const content = fs.readFileSync(
-        path.join(SRC, "app", "(auth)", "projects", "[id]", "page.tsx"),
-        "utf-8"
-      );
-      expect(content).toContain("engagement");
+      expect(content).toMatch(/return\s*<ProjectDealsView\b/);
+      expect(content).not.toMatch(/\buseState\s*\(/);
+      expect(content).not.toMatch(/\buseEffect\s*\(/);
+      expect(content).not.toMatch(/\bfetch\s*\(/);
     });
   });
 
