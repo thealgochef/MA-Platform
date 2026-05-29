@@ -1,9 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { DataGridTable } from "@/components/ui/DataGridTable";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
+import {
+  GridColDef,
+  GridPaginationModel,
+  GridRowSelectionModel,
+  GridSortModel,
+} from "@mui/x-data-grid";
 
 interface Deal {
   id: string;
@@ -18,27 +26,205 @@ interface Deal {
 }
 
 export default function BrokerDashboard() {
+  const router = useRouter();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>({
+    type: "include",
+    ids: new Set(),
+  });
+  const [sortModel, setSortModel] = useState<GridSortModel>([]);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 10,
+  });
 
   useEffect(() => {
+    let isMounted = true;
+    const abortController = new AbortController();
+
     const fetchDeals = async () => {
       try {
-        const res = await fetch("/api/deals");
+        const res = await fetch("/api/deals", { signal: abortController.signal });
         if (res.ok) {
           const data = await res.json();
-          setDeals(data.deals || []);
+          if (isMounted) {
+            setDeals(data.deals || []);
+          }
         } else {
-          setError("Failed to load deals.");
+          if (isMounted) {
+            setError("Failed to load deals.");
+          }
         }
-      } catch {
-        setError("Network error. Please try again.");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        if (isMounted) {
+          setError("Network error. Please try again.");
+        }
+      } finally {
+        if (isMounted && !abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
+
     fetchDeals();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, []);
+
+  const handleSortModelChange = (model: GridSortModel) => {
+    setSortModel(model);
+    setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
+  };
+
+  // Preserve legacy KPI behavior from pre-DataGrid dashboard: "Active Deals" intentionally
+  // means "not closed/terminated" and therefore includes drafts.
+  const activeDeals = deals.filter(d => !["terminated", "closed"].includes(d.status));
+  const closedDeals = deals.filter(d => d.status === "closed");
+  const draftDeals = deals.filter(d => d.status === "draft");
+
+  const columns = useMemo<GridColDef<Deal>[]>(() => {
+    return [
+      {
+        field: "project_name",
+        headerName: "Project Name",
+        flex: 1.2,
+        minWidth: 180,
+        cellClassName: "font-bold text-primary",
+      },
+      {
+        field: "headline",
+        headerName: "Headline",
+        flex: 1.5,
+        minWidth: 220,
+        cellClassName: "text-text-secondary row-hover-text",
+      },
+      {
+        field: "industry",
+        headerName: "Industry",
+        flex: 1,
+        minWidth: 140,
+        cellClassName: "text-text-secondary row-hover-text",
+      },
+      {
+        field: "revenue",
+        headerName: "Revenue",
+        flex: 1,
+        minWidth: 140,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => row.revenue_year_3 ?? Number.NEGATIVE_INFINITY,
+        renderCell: (params) => {
+          const revenue = params.row.revenue_year_3;
+          return revenue != null ? formatCurrency(revenue) + "M": "—";
+        },
+      },
+      {
+        field: "ebitda",
+        headerName: "EBITDA",
+        flex: 1,
+        minWidth: 140,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => row.ebitda_year_3 ?? Number.NEGATIVE_INFINITY,
+        renderCell: (params) => {
+          const ebitda = params.row.ebitda_year_3;
+          return ebitda != null ? formatCurrency(ebitda) + "M": "—";
+        },
+      },
+      {
+        field: "status",
+        headerName: "Status",
+        flex: 1,
+        minWidth: 130,
+        renderCell: (params) => {
+          const status = params.row.status;
+          const statusLabel = DEAL_STATUS_LABELS[status] ?? status ?? "Unknown";
+          return (
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                status === "draft" ? "bg-warning/10 text-warning" :
+                status === "paused" ? "bg-warning/10 text-warning" :
+                status === "terminated" ? "bg-error/10 text-error" :
+                status === "closed" ? "bg-text-secondary/10 text-text-secondary" :
+                "bg-success/10 text-success"
+              }`}
+            >
+              {statusLabel}
+            </span>
+          );
+        },
+      },
+      {
+        field: "view_count",
+        headerName: "Views",
+        flex: 0.8,
+        minWidth: 90,
+        cellClassName: "text-text-secondary row-hover-text",
+      },
+    ];
+  }, []);
+
+  const sortedDeals = useMemo(() => {
+    const activeSort = sortModel[0];
+    if (!activeSort?.field || !activeSort.sort) {
+      return deals;
+    }
+
+    const direction = activeSort.sort === "asc" ? 1 : -1;
+    const getValue = (deal: Deal) => {
+      switch (activeSort.field) {
+        case "project_name":
+          return deal.project_name;
+        case "headline":
+          return deal.headline;
+        case "industry":
+          return deal.industry;
+        case "revenue":
+          return deal.revenue_year_3 ?? Number.NEGATIVE_INFINITY;
+        case "status":
+          return DEAL_STATUS_LABELS[deal.status] ?? deal.status;
+        case "view_count":
+          return deal.view_count;
+        default:
+          return "";
+      }
+    };
+
+    return [...deals].sort((a, b) => {
+      const aValue = getValue(a);
+      const bValue = getValue(b);
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return (aValue - bValue) * direction;
+      }
+
+      return (
+        String(aValue).localeCompare(String(bValue), undefined, {
+          sensitivity: "base",
+          numeric: true,
+        }) * direction
+      );
+    });
+  }, [deals, sortModel]);
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedDeals.length / paginationModel.pageSize) - 1);
+    if (paginationModel.page > maxPage) {
+      setPaginationModel((prev) => ({ ...prev, page: maxPage }));
+    }
+  }, [paginationModel.page, paginationModel.pageSize, sortedDeals.length]);
+
+  const pagedDeals = useMemo(() => {
+    const start = paginationModel.page * paginationModel.pageSize;
+    return sortedDeals.slice(start, start + paginationModel.pageSize);
+  }, [paginationModel.page, paginationModel.pageSize, sortedDeals]);
 
   if (loading) {
     return (
@@ -49,10 +235,6 @@ export default function BrokerDashboard() {
       </main>
     );
   }
-
-  const activeDeals = deals.filter(d => !["terminated", "closed"].includes(d.status));
-  const closedDeals = deals.filter(d => d.status === "closed");
-  const draftDeals = deals.filter(d => d.status === "draft");
 
   return (
     <main className="min-h-screen bg-bg-alt py-8">
@@ -113,48 +295,19 @@ export default function BrokerDashboard() {
             </Link>
           </div>
         ) : (
-          <div className="bg-surface-alt rounded-lg shadow-md overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border-gray bg-bg-alt">
-                  <th className="px-4 py-3 text-left font-medium text-text-secondary">Project Name</th>
-                  <th className="px-4 py-3 text-left font-medium text-text-secondary">Headline</th>
-                  <th className="px-4 py-3 text-left font-medium text-text-secondary">Industry</th>
-                  <th className="px-4 py-3 text-left font-medium text-text-secondary">Revenue</th>
-                  <th className="px-4 py-3 text-left font-medium text-text-secondary">Status</th>
-                  <th className="px-4 py-3 text-left font-medium text-text-secondary">Views</th>
-                </tr>
-              </thead>
-              <tbody>
-                {deals.map((deal) => (
-                  <tr
-                    key={deal.id}
-                    className="border-t border-border-gray hover:bg-bg-alt cursor-pointer"
-                    onClick={() => window.location.href = `/deals/${deal.id}`}
-                  >
-                    <td className="px-4 py-3 font-medium text-primary">{deal.project_name}</td>
-                    <td className="px-4 py-3 text-text-secondary">{deal.headline}</td>
-                    <td className="px-4 py-3 text-text-secondary">{deal.industry}</td>
-                    <td className="px-4 py-3">
-                      {deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        deal.status === "draft" ? "bg-warning/10 text-warning" :
-                        deal.status === "paused" ? "bg-warning/10 text-warning" :
-                        deal.status === "terminated" ? "bg-error/10 text-error" :
-                        deal.status === "closed" ? "bg-text-secondary/10 text-text-secondary" :
-                        "bg-success/10 text-success"
-                      }`}>
-                        {DEAL_STATUS_LABELS[deal.status]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary">{deal.view_count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataGridTable
+            rows={pagedDeals}
+            detailColumns={columns}
+            rowSelectionModel={rowSelectionModel}
+            onRowSelectionModelChange={setRowSelectionModel}
+            sortModel={sortModel}
+            onSortModelChange={handleSortModelChange}
+            onRowClick={(row) => router.push(`/deals/${row.id}`)}
+            sortedCount={sortedDeals.length}
+            paginationModel={paginationModel}
+            onPageChange={(page) => setPaginationModel((prev) => ({ ...prev, page }))}
+            onRowsPerPageChange={(pageSize) => setPaginationModel({ page: 0, pageSize })}
+          />
         )}
       </div>
     </main>
