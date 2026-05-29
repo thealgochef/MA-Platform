@@ -163,8 +163,23 @@ export const validateBuyerSignup = (data: BuyerSignupInput) => {
   };
 };
 export const settingsProfileUpdateSchema = z.object({
+  fullName: z.string().trim().max(255).optional(),
+  title: z.string().trim().max(255).optional(),
+  avatarPath: z.union([storageObjectKeySchema("avatarPath"), z.null()]).optional(),
+  phone: z.string().trim().max(50).optional(),
+  linkedIn: z.union([z.string().trim().url("Valid URL is required"), z.literal(""), z.null()]).optional(),
+  location: z.string().trim().max(255).optional(),
+  industryFocus: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+  licenseCredentials: z.string().trim().max(500).optional(),
+  dealTypes: z.string().trim().max(500).optional(),
   buyerType: z.union([z.enum(buyerTypeValues), z.literal(""), z.null()]).optional(),
-}).passthrough();
+  aum: z.string().trim().max(255).optional(),
+  firmName: z.string().trim().max(255).optional(),
+  description: z.string().trim().max(5000).optional(),
+  website: z.union([z.string().trim().url("Valid URL is required"), z.literal(""), z.null()]).optional(),
+  firmLocation: z.string().trim().max(255).optional(),
+  firmIndustryFocus: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+}).strict();
 
 export type SettingsProfileUpdateData = z.infer<typeof settingsProfileUpdateSchema>;
 

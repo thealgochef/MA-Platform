@@ -52,4 +52,60 @@ describe("Phase 9: Settings & Account Management", () => {
       expect(routeModule.POST).toBeTypeOf("function");
     });
   });
+
+  describe("Settings page source checks", () => {
+    it("resolves avatar URL from nested and top-level response keys", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain("profile.avatar_url ?? profile.avatarUrl ?? payload.avatar_url ?? payload.avatarUrl ?? null");
+    });
+
+    it("uses next/image for avatar rendering instead of raw img tags", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain('import Image from "next/image"');
+      expect(content).toContain("<Image");
+      expect(content).not.toContain("<img");
+    });
+
+    it("includes a firm location field in the settings form", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain('label="Firm Location"');
+      expect(content).toContain("setFirmLocation");
+    });
+
+    it("appends avatar cache-bust param safely when URL already has query params", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain('const appendCacheBustParam = (url: string) => `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`');
+      expect(content).toContain("setAvatarUrl(newUrl ? appendCacheBustParam(newUrl) : null);");
+    });
+
+    it("handles delete-account failures with try/catch/finally and user message", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain("const [deleteMessage, setDeleteMessage] = useState(\"\")");
+      expect(content).toContain("try {");
+      expect(content).toContain("} catch {");
+      expect(content).toContain("} finally {");
+      expect(content).toContain("setDeleteMessage(await getErrorMessage(res, \"Failed to delete account.\"));");
+      expect(content).toContain("<StatusMessage>{deleteMessage}</StatusMessage>");
+    });
+  });
 });

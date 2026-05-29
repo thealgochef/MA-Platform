@@ -23,36 +23,52 @@ import { POST } from "@/app/api/settings/delete-account/route";
 function createAdminClientStub({
   activeDeals = [],
   firmMemberCount = 1,
+  activeDealsSelectError = null,
   dealsTerminateError = null,
+  engagementsTerminateError = null,
+  buyerEngagementsUpdateError = null,
+  usersCountError = null,
+  firmDeleteError = null,
   usersDeleteError = null,
   authDeleteError = null,
 }: {
   activeDeals?: Array<{ id: string }>;
   firmMemberCount?: number;
+  activeDealsSelectError?: { message: string } | null;
   dealsTerminateError?: { message: string } | null;
+  engagementsTerminateError?: { message: string } | null;
+  buyerEngagementsUpdateError?: { message: string } | null;
+  usersCountError?: { message: string } | null;
+  firmDeleteError?: { message: string } | null;
   usersDeleteError?: { message: string } | null;
   authDeleteError?: { message: string } | null;
 } = {}) {
-  const dealsSelectNot = vi.fn().mockResolvedValue({ data: activeDeals, error: null });
+  const dealsSelectNot = vi.fn().mockResolvedValue({
+    data: activeDeals,
+    error: activeDealsSelectError,
+  });
   const dealsSelectEq = vi.fn().mockReturnValue({
     not: dealsSelectNot,
   });
   const dealsUpdateIn = vi.fn().mockResolvedValue({ error: dealsTerminateError });
   const dealsUpdate = vi.fn().mockReturnValue({ in: dealsUpdateIn });
 
-  const engagementsUpdateIn = vi.fn().mockResolvedValue({ error: null });
+  const engagementsUpdateIn = vi.fn().mockResolvedValue({ error: engagementsTerminateError });
   const engagementsUpdateEq = vi.fn().mockReturnThis();
-  const engagementsUpdateNot = vi.fn().mockResolvedValue({ error: null });
+  const engagementsUpdateNot = vi.fn().mockResolvedValue({ error: buyerEngagementsUpdateError });
   const engagementsUpdate = vi.fn().mockReturnValue({
     in: engagementsUpdateIn,
     eq: engagementsUpdateEq,
     not: engagementsUpdateNot,
   });
 
-  const firmsDeleteEq = vi.fn().mockResolvedValue({ error: null });
+  const firmsDeleteEq = vi.fn().mockResolvedValue({ error: firmDeleteError });
   const firmsDelete = vi.fn().mockReturnValue({ eq: firmsDeleteEq });
 
-  const usersCountEq = vi.fn().mockResolvedValue({ count: firmMemberCount, error: null });
+  const usersCountEq = vi.fn().mockResolvedValue({
+    count: firmMemberCount,
+    error: usersCountError,
+  });
   const usersCountSelect = vi.fn().mockReturnValue({ eq: usersCountEq });
 
   const usersDeleteEq = vi.fn().mockResolvedValue({ error: usersDeleteError });
@@ -233,7 +249,7 @@ describe("settings delete-account route runtime", () => {
     expect(notificationMocks.notifyBuyers).not.toHaveBeenCalled();
   });
 
-  it("broker flow still returns success when deal termination update fails", async () => {
+  it("returns 500 when broker deal termination update fails", async () => {
     const adminClient = createAdminClientStub({
       activeDeals: [{ id: "deal-1" }],
       firmMemberCount: 2,
@@ -253,17 +269,52 @@ describe("settings delete-account route runtime", () => {
       })
     );
 
-    // Current route behavior swallows operation errors and still reports success.
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ success: true });
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to terminate active deals during account deletion",
+    });
     expect(adminClient.dealsUpdate).toHaveBeenCalledWith({ status: "terminated" });
     expect(adminClient.dealsUpdateIn).toHaveBeenCalledWith("id", ["deal-1"]);
-    expect(adminClient.engagementsUpdateIn).toHaveBeenCalledWith("deal_id", ["deal-1"]);
-    expect(adminClient.usersDeleteEq).toHaveBeenCalledWith("id", "broker-1");
-    expect(adminClient.auth.admin.deleteUser).toHaveBeenCalledWith("broker-1");
+    expect(adminClient.engagementsUpdateIn).not.toHaveBeenCalled();
+    expect(adminClient.usersDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
+    expect(notificationMocks.notifyBuyers).not.toHaveBeenCalled();
   });
 
-  it("still returns success when public user delete fails", async () => {
+  it("returns 500 when broker engagement termination update fails", async () => {
+    const adminClient = createAdminClientStub({
+      activeDeals: [{ id: "deal-1" }],
+      firmMemberCount: 2,
+      engagementsTerminateError: { message: "engagement update failed" },
+    });
+    adminMocks.createAdminClient.mockReturnValue(adminClient);
+
+    authMocks.requireApprovedUser.mockResolvedValue({
+      user: { id: "broker-1" },
+      profile: { role: "broker", firm_id: "firm-1" },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/settings/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to terminate deal engagements during account deletion",
+    });
+    expect(adminClient.dealsUpdate).toHaveBeenCalledWith({ status: "terminated" });
+    expect(adminClient.dealsUpdateIn).toHaveBeenCalledWith("id", ["deal-1"]);
+    expect(adminClient.engagementsUpdate).toHaveBeenCalledWith({ stage: "terminated" });
+    expect(adminClient.engagementsUpdateIn).toHaveBeenCalledWith("deal_id", ["deal-1"]);
+    expect(adminClient.usersDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
+    expect(notificationMocks.notifyBuyers).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when public user delete fails", async () => {
     const adminClient = createAdminClientStub({
       firmMemberCount: 2,
       usersDeleteError: { message: "user delete failed" },
@@ -282,14 +333,15 @@ describe("settings delete-account route runtime", () => {
       })
     );
 
-    // Current route behavior swallows operation errors and still reports success.
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ success: true });
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to delete user profile during account deletion",
+    });
     expect(adminClient.usersDeleteEq).toHaveBeenCalledWith("id", "user-1");
-    expect(adminClient.auth.admin.deleteUser).toHaveBeenCalledWith("user-1");
+    expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
   });
 
-  it("still returns success when auth admin user delete fails", async () => {
+  it("returns 500 when auth admin user delete fails", async () => {
     const adminClient = createAdminClientStub({
       firmMemberCount: 2,
       authDeleteError: { message: "auth delete failed" },
@@ -308,11 +360,119 @@ describe("settings delete-account route runtime", () => {
       })
     );
 
-    // Current route behavior swallows operation errors and still reports success.
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ success: true });
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to delete auth account during account deletion",
+    });
     expect(adminClient.usersDeleteEq).toHaveBeenCalledWith("id", "user-1");
     expect(adminClient.auth.admin.deleteUser).toHaveBeenCalledWith("user-1");
+  });
+
+  it("returns 500 when loading broker active deals fails", async () => {
+    const adminClient = createAdminClientStub({
+      activeDealsSelectError: { message: "select failed" },
+    });
+    adminMocks.createAdminClient.mockReturnValue(adminClient);
+
+    authMocks.requireApprovedUser.mockResolvedValue({
+      user: { id: "broker-1" },
+      profile: { role: "broker", firm_id: "firm-1" },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/settings/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to load active deals for account deletion",
+    });
+    expect(adminClient.dealsUpdate).not.toHaveBeenCalled();
+    expect(adminClient.usersDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when buyer engagement cleanup fails", async () => {
+    const adminClient = createAdminClientStub({
+      buyerEngagementsUpdateError: { message: "engagement update failed" },
+    });
+    adminMocks.createAdminClient.mockReturnValue(adminClient);
+
+    authMocks.requireApprovedUser.mockResolvedValue({
+      user: { id: "buyer-1" },
+      profile: { role: "buyer", firm_id: "firm-1" },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/settings/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to update buyer engagements during account deletion",
+    });
+    expect(adminClient.usersDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when firm member count lookup fails", async () => {
+    const adminClient = createAdminClientStub({
+      usersCountError: { message: "count failed" },
+    });
+    adminMocks.createAdminClient.mockReturnValue(adminClient);
+
+    authMocks.requireApprovedUser.mockResolvedValue({
+      user: { id: "buyer-1" },
+      profile: { role: "buyer", firm_id: "firm-1" },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/settings/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to verify firm membership during account deletion",
+    });
+    expect(adminClient.usersDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when deleting sole-member firm fails", async () => {
+    const adminClient = createAdminClientStub({
+      firmMemberCount: 1,
+      firmDeleteError: { message: "firm delete failed" },
+    });
+    adminMocks.createAdminClient.mockReturnValue(adminClient);
+
+    authMocks.requireApprovedUser.mockResolvedValue({
+      user: { id: "user-1" },
+      profile: { role: "buyer", firm_id: "firm-1" },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/settings/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to delete firm during account deletion",
+    });
+    expect(adminClient.firmsDeleteEq).toHaveBeenCalledWith("id", "firm-1");
+    expect(adminClient.usersDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
   });
 
   it("deletes user/auth records and deletes firm only when user is sole member", async () => {

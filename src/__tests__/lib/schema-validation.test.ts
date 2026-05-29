@@ -352,6 +352,73 @@ describe("Settings profile validation", () => {
     expect(settingsProfileUpdateSchema.parse({ fullName: "Ada Lovelace" }).fullName)
       .toBe("Ada Lovelace");
   });
+
+  it("accepts the expected settings profile and firm update fields", () => {
+    const parsed = settingsProfileUpdateSchema.parse({
+      fullName: "Ada Lovelace",
+      title: "Partner",
+      avatarPath: "avatars/ada.png",
+      phone: "555-1234",
+      linkedIn: "https://www.linkedin.com/in/ada",
+      location: "Austin, TX",
+      industryFocus: ["Technology", "Healthcare"],
+      licenseCredentials: "Series 7",
+      dealTypes: "Control",
+      buyerType: "family_office",
+      aum: "$1B",
+      firmName: "Analytical Capital",
+      description: "Thesis-driven lower middle market investor",
+      website: "https://analytical.example",
+      firmLocation: "New York, NY",
+      firmIndustryFocus: ["Technology"],
+    });
+
+    expect(parsed).toMatchObject({
+      fullName: "Ada Lovelace",
+      title: "Partner",
+      avatarPath: "avatars/ada.png",
+      phone: "555-1234",
+      linkedIn: "https://www.linkedin.com/in/ada",
+      location: "Austin, TX",
+      industryFocus: ["Technology", "Healthcare"],
+      licenseCredentials: "Series 7",
+      dealTypes: "Control",
+      buyerType: "family_office",
+      aum: "$1B",
+      firmName: "Analytical Capital",
+      description: "Thesis-driven lower middle market investor",
+      website: "https://analytical.example",
+      firmLocation: "New York, NY",
+      firmIndustryFocus: ["Technology"],
+    });
+  });
+
+  it("validates avatarPath as a safe storage key", () => {
+    expect(settingsProfileUpdateSchema.safeParse({ avatarPath: "user-1/avatar" }).success)
+      .toBe(true);
+    expect(settingsProfileUpdateSchema.safeParse({ avatarPath: "/user-1/avatar" }).success)
+      .toBe(false);
+    expect(settingsProfileUpdateSchema.safeParse({ avatarPath: "user-1/../avatar" }).success)
+      .toBe(false);
+    expect(settingsProfileUpdateSchema.safeParse({ avatarPath: "user-1/avatar?dl=1" }).success)
+      .toBe(false);
+  });
+
+  it("rejects unknown extra keys in settings profile payload", () => {
+    expect(
+      settingsProfileUpdateSchema.safeParse({
+        fullName: "Ada Lovelace",
+        avatarUrl: "https://cdn.example.com/avatar.png",
+      }).success
+    ).toBe(false);
+
+    expect(
+      settingsProfileUpdateSchema.safeParse({
+        firmName: "Analytical Capital",
+        unexpectedField: "not-allowed",
+      }).success
+    ).toBe(false);
+  });
 });
 
 describe("API request validation schemas", () => {

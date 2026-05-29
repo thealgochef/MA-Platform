@@ -12,10 +12,12 @@ import { GET, PATCH } from "@/app/api/settings/profile/route";
 
 function createGetSupabase({
   profile,
+  profileError = null,
   firm,
   signedUrl,
 }: {
   profile: Record<string, unknown> | null;
+  profileError?: { message: string } | null;
   firm?: Record<string, unknown> | null;
   signedUrl?: string | null;
 }) {
@@ -24,7 +26,7 @@ function createGetSupabase({
     eq: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue({
       data: profile,
-      error: profile ? null : { message: "not found" },
+      error: profileError,
     }),
   };
 
@@ -59,20 +61,43 @@ function createGetSupabase({
 
 function createPatchSupabase({
   profile,
-  usersUpdateError = null,
+  usersUpdateErrors,
   firmsUpdateError = null,
+  userSelectError = null,
 }: {
-  profile: { role: string; firm_id: string | null; avatar_path: string | null } | null;
-  usersUpdateError?: { message: string } | null;
+  profile: {
+    role: string;
+    firm_id: string | null;
+    avatar_path: string | null;
+    full_name?: string | null;
+    title?: string | null;
+    phone?: string | null;
+    linkedin?: string | null;
+    location?: string | null;
+    industry_focus?: string[] | null;
+    license_credentials?: string | null;
+    deal_types?: string | null;
+    buyer_type?: string | null;
+    aum?: string | null;
+  } | null;
+  usersUpdateErrors?: Array<{ message: string } | null>;
   firmsUpdateError?: { message: string } | null;
+  userSelectError?: { message: string } | null;
 }) {
   const usersSelectQuery = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: profile, error: null }),
+    single: vi.fn().mockResolvedValue({ data: profile, error: userSelectError }),
   };
 
-  const usersUpdateEq = vi.fn().mockResolvedValue({ error: usersUpdateError });
+  const usersUpdateEq = vi.fn();
+  if (usersUpdateErrors && usersUpdateErrors.length > 0) {
+    for (const error of usersUpdateErrors) {
+      usersUpdateEq.mockResolvedValueOnce({ error });
+    }
+  } else {
+    usersUpdateEq.mockResolvedValue({ error: null });
+  }
   const usersUpdate = vi.fn().mockReturnValue({ eq: usersUpdateEq });
 
   const firmsUpdateEq = vi.fn().mockResolvedValue({ error: firmsUpdateError });
@@ -122,7 +147,7 @@ describe("settings profile route runtime", () => {
   });
 
   it("GET returns 404 when profile is missing", async () => {
-    const supabase = createGetSupabase({ profile: null });
+    const supabase = createGetSupabase({ profile: null, profileError: null });
     authMocks.requireApprovedUser.mockResolvedValue({
       supabase,
       user: { id: "user-1" },
@@ -132,6 +157,22 @@ describe("settings profile route runtime", () => {
 
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ error: "Profile not found" });
+  });
+
+  it("GET returns 500 when loading profile fails", async () => {
+    const supabase = createGetSupabase({
+      profile: null,
+      profileError: { message: "query failed" },
+    });
+    authMocks.requireApprovedUser.mockResolvedValue({
+      supabase,
+      user: { id: "user-1" },
+    });
+
+    const response = await GET();
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({ error: "Failed to load profile" });
   });
 
   it("GET returns profile, firm, and signed avatar URL when avatar exists", async () => {
@@ -157,12 +198,52 @@ describe("settings profile route runtime", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      profile,
+      profile: {
+        ...profile,
+        avatar_url: "https://cdn.example.com/avatar-signed",
+        avatarUrl: "https://cdn.example.com/avatar-signed",
+      },
       firm,
       avatar_url: "https://cdn.example.com/avatar-signed",
+      avatarUrl: "https://cdn.example.com/avatar-signed",
     });
     expect(supabase.storage.from).toHaveBeenCalledWith("profile-pictures");
     expect(supabase.createSignedUrl).toHaveBeenCalledWith("avatars/user-1.png", 60 * 60);
+  });
+
+  it("GET returns both avatar URL key variants as null when no avatar path exists", async () => {
+    const profile = {
+      id: "user-1",
+      role: "buyer",
+      firm_id: "firm-1",
+      avatar_path: null,
+    };
+    const firm = { id: "firm-1", name: "Acme Capital" };
+    const supabase = createGetSupabase({
+      profile,
+      firm,
+      signedUrl: null,
+    });
+
+    authMocks.requireApprovedUser.mockResolvedValue({
+      supabase,
+      user: { id: "user-1" },
+    });
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      profile: {
+        ...profile,
+        avatar_url: null,
+        avatarUrl: null,
+      },
+      firm,
+      avatar_url: null,
+      avatarUrl: null,
+    });
+    expect(supabase.createSignedUrl).not.toHaveBeenCalled();
   });
 
   it("PATCH passes through auth response", async () => {
@@ -268,7 +349,7 @@ describe("settings profile route runtime", () => {
   it("PATCH returns 500 when users update fails", async () => {
     const supabase = createPatchSupabase({
       profile: { role: "buyer", firm_id: "firm-1", avatar_path: null },
-      usersUpdateError: { message: "users update failed" },
+      usersUpdateErrors: [{ message: "users update failed" }],
     });
     authMocks.requireApprovedUser.mockResolvedValue({
       supabase,
@@ -289,7 +370,42 @@ describe("settings profile route runtime", () => {
 
   it("PATCH returns 500 when firms update fails", async () => {
     const supabase = createPatchSupabase({
-      profile: { role: "buyer", firm_id: "firm-1", avatar_path: null },
+      profile: {
+        role: "buyer",
+        firm_id: "firm-1",
+        avatar_path: null,
+        full_name: "Existing Name",
+      },
+      firmsUpdateError: { message: "firms update failed" },
+    });
+    authMocks.requireApprovedUser.mockResolvedValue({
+      supabase,
+      user: { id: "user-1" },
+    });
+
+    const response = await PATCH(
+      new Request("http://localhost/api/settings/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ fullName: "Updated Name", firmName: "Acme Capital" }),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "firms update failed. User profile changes were rolled back.",
+    });
+    expect(supabase.usersUpdate).toHaveBeenCalledTimes(2);
+    expect(supabase.usersUpdate).toHaveBeenNthCalledWith(1, { full_name: "Updated Name" });
+    expect(supabase.usersUpdate).toHaveBeenNthCalledWith(2, { full_name: "Existing Name" });
+  });
+
+  it("PATCH returns firm error without rollback note when no user update was attempted", async () => {
+    const supabase = createPatchSupabase({
+      profile: {
+        role: "buyer",
+        firm_id: "firm-1",
+        avatar_path: null,
+      },
       firmsUpdateError: { message: "firms update failed" },
     });
     authMocks.requireApprovedUser.mockResolvedValue({
@@ -305,7 +421,64 @@ describe("settings profile route runtime", () => {
     );
 
     expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({ error: "firms update failed" });
+    await expect(response.json()).resolves.toEqual({
+      error: "firms update failed",
+    });
+    expect(supabase.usersUpdate).not.toHaveBeenCalled();
+    expect(supabase.firmsUpdate).toHaveBeenCalledWith({ name: "Acme Capital" });
+  });
+
+  it("PATCH returns 500 when firm update fails and rollback also fails", async () => {
+    const supabase = createPatchSupabase({
+      profile: {
+        role: "buyer",
+        firm_id: "firm-1",
+        avatar_path: null,
+        full_name: "Existing Name",
+      },
+      usersUpdateErrors: [null, { message: "rollback failed" }],
+      firmsUpdateError: { message: "firms update failed" },
+    });
+    authMocks.requireApprovedUser.mockResolvedValue({
+      supabase,
+      user: { id: "user-1" },
+    });
+
+    const response = await PATCH(
+      new Request("http://localhost/api/settings/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ fullName: "Updated Name", firmName: "Acme Capital" }),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to update firm and failed to rollback user profile changes",
+    });
+    expect(supabase.usersUpdate).toHaveBeenCalledTimes(2);
+  });
+
+  it("PATCH rejects avatarPath that is not scoped to current user", async () => {
+    const supabase = createPatchSupabase({
+      profile: { role: "buyer", firm_id: "firm-1", avatar_path: null },
+    });
+    authMocks.requireApprovedUser.mockResolvedValue({
+      supabase,
+      user: { id: "user-1" },
+    });
+
+    const response = await PATCH(
+      new Request("http://localhost/api/settings/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ avatarPath: "user-2/avatar" }),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "avatarPath must be a safe storage object path scoped to the current user",
+    });
+    expect(supabase.usersUpdate).not.toHaveBeenCalled();
   });
 
   it("PATCH removes existing avatar file when avatarPath is null", async () => {
@@ -345,7 +518,7 @@ describe("settings profile route runtime", () => {
         body: JSON.stringify({
           fullName: "Jane Doe",
           title: "Principal",
-          avatarPath: "avatars/new.png",
+          avatarPath: "user-1/avatar",
           phone: "555-1234",
           linkedIn: "https://linkedin.com/in/jane",
           location: "Austin, TX",
@@ -369,7 +542,7 @@ describe("settings profile route runtime", () => {
     expect(supabase.usersUpdate).toHaveBeenCalledWith({
       full_name: "Jane Doe",
       title: "Principal",
-      avatar_path: "avatars/new.png",
+      avatar_path: "user-1/avatar",
       phone: "555-1234",
       linkedin: "https://linkedin.com/in/jane",
       location: "Austin, TX",

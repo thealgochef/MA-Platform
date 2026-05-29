@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Button,
@@ -19,6 +20,53 @@ import {
 } from "@/lib/constants";
 
 type NotificationPrefs = Record<string, { email: boolean; in_platform: boolean }>;
+
+const appendCacheBustParam = (url: string) => `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`;
+
+const getErrorMessage = async (response: Response, fallback: string) => {
+  try {
+    const payload: unknown = await response.json();
+    if (
+      payload &&
+      typeof payload === "object" &&
+      "error" in payload &&
+      typeof (payload as { error?: unknown }).error === "string"
+    ) {
+      return (payload as { error: string }).error;
+    }
+  } catch {
+    // noop: fallback handled below
+  }
+
+  return fallback;
+};
+
+type SettingsProfileResponse = {
+  profile?: {
+    role?: string | null;
+    full_name?: string | null;
+    title?: string | null;
+    avatar_path?: string | null;
+    avatar_url?: string | null;
+    avatarUrl?: string | null;
+    location?: string | null;
+    industry_focus?: string[] | null;
+    license_credentials?: string | null;
+    deal_types?: string | null;
+    buyer_type?: string | null;
+    aum?: string | null;
+    phone?: string | null;
+    linkedin?: string | null;
+  };
+  firm?: {
+    name?: string | null;
+    description?: string | null;
+    website?: string | null;
+    location?: string | null;
+  } | null;
+  avatar_url?: string | null;
+  avatarUrl?: string | null;
+};
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -58,42 +106,71 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [profileMessage, setProfileMessage] = useState("");
   const [notifMessage, setNotifMessage] = useState("");
+  const [deleteMessage, setDeleteMessage] = useState("");
 
   // Load profile and notification preferences
   useEffect(() => {
     async function loadData() {
-      const [profileRes, notifRes] = await Promise.all([
-        fetch("/api/settings/profile"),
-        fetch("/api/settings/notifications"),
-      ]);
+      setProfileMessage("");
+      setNotifMessage("");
 
-      if (profileRes.ok) {
-        const { profile, firm } = await profileRes.json();
-        setRole(profile.role || "");
-        setFullName(profile.full_name || "");
-        setTitle(profile.title || "");
-        setAvatarPath(profile.avatar_path || null);
-        setAvatarUrl(profile.avatar_url || null);
-        setLocation(profile.location || "");
-        setIndustryFocus(profile.industry_focus || []);
-        setCredentials(profile.license_credentials || "");
-        setDealTypes(profile.deal_types || "");
-        setBuyerType(profile.buyer_type || "");
-        setAum(profile.aum || "");
-        setPhone(profile.phone || "");
-        setLinkedIn(profile.linkedin || "");
+      try {
+        const [profileRes, notifRes] = await Promise.all([
+          fetch("/api/settings/profile"),
+          fetch("/api/settings/notifications"),
+        ]);
 
-        if (firm) {
-          setFirmName(firm.name || "");
-          setDescription(firm.description || "");
-          setWebsite(firm.website || "");
-          setFirmLocation(firm.location || "");
+        if (profileRes.ok) {
+          const payload = (await profileRes.json()) as SettingsProfileResponse;
+          const profile = payload.profile ?? {};
+          const firm = payload.firm;
+          const resolvedAvatarUrl = profile.avatar_url ?? profile.avatarUrl ?? payload.avatar_url ?? payload.avatarUrl ?? null;
+
+          setRole(profile.role || "");
+          setFullName(profile.full_name || "");
+          setTitle(profile.title || "");
+          setAvatarPath(profile.avatar_path || null);
+          setAvatarUrl(resolvedAvatarUrl);
+          setLocation(profile.location || "");
+          setIndustryFocus(profile.industry_focus || []);
+          setCredentials(profile.license_credentials || "");
+          setDealTypes(profile.deal_types || "");
+          setBuyerType(profile.buyer_type || "");
+          setAum(profile.aum || "");
+          setPhone(profile.phone || "");
+          setLinkedIn(profile.linkedin || "");
+
+          if (firm) {
+            setFirmName(firm.name || "");
+            setDescription(firm.description || "");
+            setWebsite(firm.website || "");
+            setFirmLocation(firm.location || "");
+          }
+        } else {
+          setProfileMessage(await getErrorMessage(profileRes, "Failed to load profile."));
         }
-      }
 
-      if (notifRes.ok) {
-        const { preferences } = await notifRes.json();
-        setNotificationPrefs(preferences || {});
+        if (notifRes.ok) {
+          const payload: unknown = await notifRes.json();
+          if (
+            payload &&
+            typeof payload === "object" &&
+            "preferences" in payload &&
+            typeof (payload as { preferences?: unknown }).preferences === "object" &&
+            (payload as { preferences?: unknown }).preferences !== null
+          ) {
+            setNotificationPrefs(
+              (payload as { preferences: NotificationPrefs }).preferences
+            );
+          } else {
+            setNotificationPrefs({});
+          }
+        } else {
+          setNotifMessage(await getErrorMessage(notifRes, "Failed to load preferences."));
+        }
+      } catch {
+        setProfileMessage("Failed to load settings.");
+        setNotifMessage("Failed to load preferences.");
       }
     }
     loadData();
@@ -128,13 +205,29 @@ export default function SettingsPage() {
       });
 
       if (!res.ok) {
-        const { error } = await res.json().catch(() => ({}));
-        throw new Error(error || "Failed to upload profile picture.");
+        throw new Error(await getErrorMessage(res, "Failed to upload profile picture."));
       }
 
-      const { avatarPath: newPath, avatarUrl: newUrl } = await res.json();
+      const payload: unknown = await res.json();
+      if (!payload || typeof payload !== "object") {
+        throw new Error("Failed to upload profile picture.");
+      }
+
+      const newPath =
+        "avatarPath" in payload && typeof payload.avatarPath === "string"
+          ? payload.avatarPath
+          : null;
+      const newUrl =
+        "avatarUrl" in payload && typeof payload.avatarUrl === "string"
+          ? payload.avatarUrl
+          : null;
+
+      if (!newPath) {
+        throw new Error("Failed to upload profile picture.");
+      }
+
       setAvatarPath(newPath);
-      setAvatarUrl(newUrl ? `${newUrl}?t=${Date.now()}` : null);
+      setAvatarUrl(newUrl ? appendCacheBustParam(newUrl) : null);
       setProfileMessage("Profile picture updated.");
     } catch (error) {
       setProfileMessage(
@@ -159,7 +252,7 @@ export default function SettingsPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to remove profile picture.");
+        throw new Error(await getErrorMessage(res, "Failed to remove profile picture."));
       }
 
       setAvatarPath(null);
@@ -201,13 +294,21 @@ export default function SettingsPage() {
       payload.buyerType = buyerType;
     }
 
-    const res = await fetch("/api/settings/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    setProfileSaving(false);
-    setProfileMessage(res.ok ? "Profile saved." : "Failed to save profile.");
+    try {
+      const res = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      setProfileMessage(
+        res.ok ? "Profile saved." : await getErrorMessage(res, "Failed to save profile.")
+      );
+    } catch {
+      setProfileMessage("Failed to save profile.");
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const notificationEvents =
@@ -226,26 +327,42 @@ export default function SettingsPage() {
   const handleNotifSave = async () => {
     setNotifSaving(true);
     setNotifMessage("");
-    const res = await fetch("/api/settings/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preferences: notificationPrefs }),
-    });
-    setNotifSaving(false);
-    setNotifMessage(res.ok ? "Preferences saved." : "Failed to save preferences.");
+    try {
+      const res = await fetch("/api/settings/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: notificationPrefs }),
+      });
+      setNotifMessage(
+        res.ok ? "Preferences saved." : await getErrorMessage(res, "Failed to save preferences.")
+      );
+    } catch {
+      setNotifMessage("Failed to save preferences.");
+    } finally {
+      setNotifSaving(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
     if (confirmDelete !== "DELETE") return;
+    setDeleteMessage("");
     setDeleting(true);
-    const res = await fetch("/api/settings/delete-account", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ confirmation: "DELETE" }),
-    });
-    if (res.ok) {
-      router.push("/");
-    } else {
+
+    try {
+      const res = await fetch("/api/settings/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      });
+
+      if (res.ok) {
+        router.push("/");
+      } else {
+        setDeleteMessage(await getErrorMessage(res, "Failed to delete account."));
+      }
+    } catch {
+      setDeleteMessage("Failed to delete account.");
+    } finally {
       setDeleting(false);
     }
   };
@@ -268,9 +385,12 @@ export default function SettingsPage() {
               </label>
               <div className="flex flex-col gap-4 rounded-lg border border-dashed border-gray-300 p-4 sm:flex-row sm:items-center">
                 {avatarUrl ? (
-                  <img
+                  <Image
                     src={avatarUrl}
                     alt={`${fullName || "User"} profile picture`}
+                    width={80}
+                    height={80}
+                    unoptimized
                     className="h-20 w-20 rounded-full object-cover border border-gray-200"
                   />
                 ) : (
@@ -386,6 +506,13 @@ export default function SettingsPage() {
               type="url"
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
+            />
+
+            <TextInput
+              label="Firm Location"
+              type="text"
+              value={firmLocation}
+              onChange={(e) => setFirmLocation(e.target.value)}
             />
 
             {/* Broker-specific fields */}
@@ -531,7 +658,10 @@ export default function SettingsPage() {
           {!showDeleteModal ? (
             <Button
               variant="danger"
-              onClick={() => setShowDeleteModal(true)}
+              onClick={() => {
+                setDeleteMessage("");
+                setShowDeleteModal(true);
+              }}
             >
               Delete My Account
             </Button>
@@ -576,6 +706,7 @@ export default function SettingsPage() {
                 <Button
                   variant="secondary"
                   onClick={() => {
+                    setDeleteMessage("");
                     setShowDeleteModal(false);
                     setConfirmDelete("");
                   }}
@@ -583,6 +714,9 @@ export default function SettingsPage() {
                   Cancel
                 </Button>
               </div>
+              {deleteMessage && (
+                <StatusMessage>{deleteMessage}</StatusMessage>
+              )}
             </div>
           )}
         </Card>
