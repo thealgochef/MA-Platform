@@ -42,6 +42,8 @@ END $$;
 
 -- 1e. Drop v1 tables (reverse FK dependency order)
 DROP TABLE IF EXISTS match_views CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS message_thread_reads CASCADE;
 DROP TABLE IF EXISTS notification_preferences CASCADE;
 DROP TABLE IF EXISTS messages CASCADE;
 DROP TABLE IF EXISTS connections CASCADE;
@@ -477,6 +479,9 @@ CREATE TABLE messages (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE INDEX messages_engagement_id_created_at_desc_idx
+  ON messages (engagement_id, created_at DESC);
+
 -- Table: deal_activity_log
 CREATE TABLE deal_activity_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -499,6 +504,38 @@ CREATE TABLE notification_preferences (
 
 CREATE TRIGGER notification_preferences_updated_at
   BEFORE UPDATE ON notification_preferences
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Table: notifications
+CREATE TABLE notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  event text NOT NULL,
+  deal_id uuid REFERENCES deals(id) ON DELETE SET NULL,
+  engagement_id uuid REFERENCES deal_engagements(id) ON DELETE SET NULL,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  read_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX notifications_user_id_created_at_idx
+  ON notifications (user_id, created_at DESC);
+
+CREATE INDEX notifications_user_id_read_at_idx
+  ON notifications (user_id, read_at);
+
+-- Table: message_thread_reads
+CREATE TABLE message_thread_reads (
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  engagement_id uuid NOT NULL REFERENCES deal_engagements(id) ON DELETE CASCADE,
+  last_read_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, engagement_id)
+);
+
+CREATE TRIGGER message_thread_reads_updated_at
+  BEFORE UPDATE ON message_thread_reads
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ============================================================
@@ -546,6 +583,42 @@ RETURNS boolean AS $$
   );
 $$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
+CREATE OR REPLACE FUNCTION can_access_engagement_thread(p_engagement_id uuid)
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM users u
+    JOIN deal_engagements de ON de.id = p_engagement_id
+    JOIN deals d ON d.id = de.deal_id
+    WHERE u.id = auth.uid()
+      AND u.status = 'approved'
+      AND (
+        u.role = 'admin'
+        OR de.buyer_user_id = auth.uid()
+        OR d.point_of_contact_id = auth.uid()
+      )
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
+
+CREATE OR REPLACE FUNCTION mark_message_thread_read(p_engagement_id uuid)
+RETURNS void AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  INSERT INTO message_thread_reads (user_id, engagement_id, last_read_at)
+  VALUES (auth.uid(), p_engagement_id, now())
+  ON CONFLICT (user_id, engagement_id)
+  DO UPDATE SET
+    last_read_at = now(),
+    updated_at = now();
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER VOLATILE SET search_path = public;
+
+REVOKE ALL ON FUNCTION mark_message_thread_read(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION mark_message_thread_read(uuid) TO authenticated;
+
 -- Enable RLS on all tables
 ALTER TABLE firms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -560,6 +633,8 @@ ALTER TABLE buyer_projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deal_activity_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE message_thread_reads ENABLE ROW LEVEL SECURITY;
 
 -- FIRMS policies
 CREATE POLICY "Admins can do everything on firms" ON firms FOR ALL
@@ -637,14 +712,28 @@ CREATE POLICY "Buyers with appropriate access can view deal documents" ON deal_d
 CREATE POLICY "Admins can view all deal documents" ON deal_documents FOR SELECT USING (is_admin());
 
 -- DEAL_ENGAGEMENTS policies
-CREATE POLICY "Buyers can see their own engagements" ON deal_engagements FOR SELECT USING (buyer_user_id = auth.uid());
+CREATE POLICY "Buyers can see their own engagements" ON deal_engagements FOR SELECT
+  USING (buyer_user_id = auth.uid() AND current_user_is_approved('buyer'));
 CREATE POLICY "Broker firm members can see engagements on their deals" ON deal_engagements FOR SELECT
-  USING (EXISTS (SELECT 1 FROM deals WHERE deals.id = deal_engagements.deal_id AND deals.firm_id = get_user_firm_id()));
+  USING (
+    current_user_is_approved('broker')
+    AND EXISTS (SELECT 1 FROM deals WHERE deals.id = deal_engagements.deal_id AND deals.firm_id = get_user_firm_id())
+  );
 CREATE POLICY "Admins can see all engagements" ON deal_engagements FOR SELECT USING (is_admin());
-CREATE POLICY "Buyers can insert engagements" ON deal_engagements FOR INSERT WITH CHECK (buyer_user_id = auth.uid());
-CREATE POLICY "Buyers can update their own engagements" ON deal_engagements FOR UPDATE USING (buyer_user_id = auth.uid());
+CREATE POLICY "Buyers can insert engagements" ON deal_engagements FOR INSERT
+  WITH CHECK (buyer_user_id = auth.uid() AND current_user_is_approved('buyer'));
+CREATE POLICY "Buyers can update their own engagements" ON deal_engagements FOR UPDATE
+  USING (buyer_user_id = auth.uid() AND current_user_is_approved('buyer'))
+  WITH CHECK (buyer_user_id = auth.uid() AND current_user_is_approved('buyer'));
 CREATE POLICY "Broker firm members can update engagements on their deals" ON deal_engagements FOR UPDATE
-  USING (EXISTS (SELECT 1 FROM deals WHERE deals.id = deal_engagements.deal_id AND deals.firm_id = get_user_firm_id()));
+  USING (
+    current_user_is_approved('broker')
+    AND EXISTS (SELECT 1 FROM deals WHERE deals.id = deal_engagements.deal_id AND deals.firm_id = get_user_firm_id())
+  )
+  WITH CHECK (
+    current_user_is_approved('broker')
+    AND EXISTS (SELECT 1 FROM deals WHERE deals.id = deal_engagements.deal_id AND deals.firm_id = get_user_firm_id())
+  );
 CREATE POLICY "Admins can update any engagement" ON deal_engagements FOR UPDATE USING (is_admin());
 
 -- IOIS policies
@@ -686,6 +775,8 @@ CREATE POLICY "Admins can see all buyer projects" ON buyer_projects FOR SELECT U
 -- MESSAGES policies
 CREATE POLICY "Message participants can see messages" ON messages FOR SELECT
   USING (
+    current_user_is_approved()
+    AND
     EXISTS (
       SELECT 1 FROM deal_engagements de JOIN deals d ON d.id = de.deal_id
       WHERE de.id = messages.engagement_id
@@ -695,9 +786,11 @@ CREATE POLICY "Message participants can see messages" ON messages FOR SELECT
 CREATE POLICY "Message participants can send messages" ON messages FOR INSERT
   WITH CHECK (
     sender_id = auth.uid()
+    AND current_user_is_approved()
     AND EXISTS (
       SELECT 1 FROM deal_engagements de JOIN deals d ON d.id = de.deal_id
       WHERE de.id = messages.engagement_id
+      AND de.deal_id = messages.deal_id
       AND (de.buyer_user_id = auth.uid() OR d.point_of_contact_id = auth.uid())
     )
   );
@@ -715,6 +808,24 @@ CREATE POLICY "Activity log inserts via service role or triggers" ON deal_activi
 -- NOTIFICATION_PREFERENCES policies
 CREATE POLICY "Users can manage their own notification preferences" ON notification_preferences FOR ALL USING (user_id = auth.uid());
 CREATE POLICY "Admins can see all notification preferences" ON notification_preferences FOR SELECT USING (is_admin());
+
+-- NOTIFICATIONS policies
+CREATE POLICY "Approved users can read their own notifications" ON notifications FOR SELECT
+  USING (user_id = auth.uid() AND current_user_is_approved());
+CREATE POLICY "Approved users can update their own notifications" ON notifications FOR UPDATE
+  USING (user_id = auth.uid() AND current_user_is_approved())
+  WITH CHECK (user_id = auth.uid() AND current_user_is_approved());
+CREATE POLICY "Approved admins can read all notifications" ON notifications FOR SELECT
+  USING (is_admin());
+
+-- MESSAGE_THREAD_READS policies
+CREATE POLICY "Approved participants can read own thread markers" ON message_thread_reads FOR SELECT
+  USING (user_id = auth.uid() AND can_access_engagement_thread(engagement_id));
+CREATE POLICY "Approved participants can create own thread markers" ON message_thread_reads FOR INSERT
+  WITH CHECK (user_id = auth.uid() AND can_access_engagement_thread(engagement_id));
+CREATE POLICY "Approved participants can update own thread markers" ON message_thread_reads FOR UPDATE
+  USING (user_id = auth.uid() AND can_access_engagement_thread(engagement_id))
+  WITH CHECK (user_id = auth.uid() AND can_access_engagement_thread(engagement_id));
 
 -- ============================================================
 -- PHASE 6: STORAGE BUCKETS AND POLICIES
@@ -819,8 +930,11 @@ CREATE POLICY "Thread participants can upload message attachments" ON storage.ob
     AND auth.uid() IS NOT NULL
     AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.pdf$'
     AND EXISTS (
-      SELECT 1 FROM deal_engagements e JOIN deals d ON d.id = e.deal_id
-      WHERE e.id::text = (storage.foldername(name))[1]
+      SELECT 1 FROM users u
+      JOIN deal_engagements e ON e.id::text = (storage.foldername(name))[1]
+      JOIN deals d ON d.id = e.deal_id
+      WHERE u.id = auth.uid()
+        AND u.status = 'approved'
         AND (e.buyer_user_id = auth.uid() OR d.point_of_contact_id = auth.uid())
     )
   );
@@ -831,8 +945,11 @@ CREATE POLICY "Thread participants can read message attachments" ON storage.obje
     AND name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.pdf$'
     AND (
       EXISTS (
-        SELECT 1 FROM deal_engagements e JOIN deals d ON d.id = e.deal_id
-        WHERE e.id::text = (storage.foldername(name))[1]
+        SELECT 1 FROM users u
+        JOIN deal_engagements e ON e.id::text = (storage.foldername(name))[1]
+        JOIN deals d ON d.id = e.deal_id
+        WHERE u.id = auth.uid()
+          AND u.status = 'approved'
           AND (e.buyer_user_id = auth.uid() OR d.point_of_contact_id = auth.uid())
       )
       OR EXISTS (

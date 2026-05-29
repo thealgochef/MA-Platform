@@ -29,8 +29,27 @@ export async function GET(
   const { threadId } = params;
   // threadId = engagement_id (one thread per engagement)
 
+  const { data: profile, error: profileError } = await supabase
+    .from("users")
+    .select("role, status")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError) {
+    console.error("[messages/thread] Failed to load profile", {
+      threadId,
+      userId: user.id,
+      error: profileError,
+    });
+    return NextResponse.json({ error: "Failed to load profile" }, { status: 500 });
+  }
+
+  if (profile.status !== "approved") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   // Fetch engagement with deal info
-  const { data: engagement } = await supabase
+  const { data: engagement, error: engagementError } = await supabase
     .from("deal_engagements")
     .select(`
       id,
@@ -45,7 +64,16 @@ export async function GET(
       )
     `)
     .eq("id", threadId)
-    .single();
+    .maybeSingle();
+
+  if (engagementError) {
+    console.error("[messages/thread] Failed to load thread engagement", {
+      threadId,
+      userId: user.id,
+      error: engagementError,
+    });
+    return NextResponse.json({ error: "Failed to load thread" }, { status: 500 });
+  }
 
   if (!engagement) {
     return NextResponse.json({ error: "Thread not found" }, { status: 404 });
@@ -57,21 +85,26 @@ export async function GET(
   const isBuyer = engagement.buyer_user_id === user.id;
   const isPOC = deal.point_of_contact_id === user.id;
 
-  // Check if admin
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
   const isAdmin = profile?.role === "admin";
 
   if (!isBuyer && !isPOC && !isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const { error: readMarkerError } = await supabase.rpc("mark_message_thread_read", {
+    p_engagement_id: threadId,
+  });
+
+  if (readMarkerError) {
+    console.error("[messages/thread] Failed to update read marker", {
+      threadId,
+      userId: user.id,
+      error: readMarkerError,
+    });
+  }
+
   // Fetch messages ordered chronologically
-  const { data: messages } = await supabase
+  const { data: messages, error: messagesError } = await supabase
     .from("messages")
     .select(`
       id,
@@ -86,23 +119,52 @@ export async function GET(
     .eq("deal_id", engagement.deal_id)
     .order("created_at", { ascending: true });
 
+  if (messagesError) {
+    console.error("[messages/thread] Failed to load thread messages", {
+      threadId,
+      userId: user.id,
+      error: messagesError,
+    });
+    return NextResponse.json({ error: "Failed to load messages" }, { status: 500 });
+  }
+
   // Fetch other party info
   let otherParty;
   if (isBuyer) {
     // Buyer sees the broker POC
-    const { data: poc } = await supabase
+    const { data: poc, error: pocError } = await supabase
       .from("users")
       .select("full_name, firms ( name )")
       .eq("id", deal.point_of_contact_id as string)
       .single();
+
+    if (pocError) {
+      console.error("[messages/thread] Failed to load broker counterparty", {
+        threadId,
+        userId: user.id,
+        error: pocError,
+      });
+      return NextResponse.json({ error: "Failed to load thread" }, { status: 500 });
+    }
+
     otherParty = poc;
   } else {
     // Broker/admin sees the buyer
-    const { data: buyer } = await supabase
+    const { data: buyer, error: buyerError } = await supabase
       .from("users")
       .select("full_name, firms ( name )")
       .eq("id", engagement.buyer_user_id)
       .single();
+
+    if (buyerError) {
+      console.error("[messages/thread] Failed to load buyer counterparty", {
+        threadId,
+        userId: user.id,
+        error: buyerError,
+      });
+      return NextResponse.json({ error: "Failed to load thread" }, { status: 500 });
+    }
+
     otherParty = buyer;
   }
 
@@ -132,8 +194,27 @@ export async function POST(
 
   const { threadId } = params;
 
+  const { data: profile, error: profileError } = await supabase
+    .from("users")
+    .select("role, status")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError) {
+    console.error("[messages/thread] Failed to load profile for send", {
+      threadId,
+      userId: user.id,
+      error: profileError,
+    });
+    return NextResponse.json({ error: "Failed to load profile" }, { status: 500 });
+  }
+
+  if (profile.status !== "approved") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   // Fetch engagement with deal info
-  const { data: engagement } = await supabase
+  const { data: engagement, error: engagementError } = await supabase
     .from("deal_engagements")
     .select(`
       id,
@@ -145,7 +226,16 @@ export async function POST(
       )
     `)
     .eq("id", threadId)
-    .single();
+    .maybeSingle();
+
+  if (engagementError) {
+    console.error("[messages/thread] Failed to load thread engagement for send", {
+      threadId,
+      userId: user.id,
+      error: engagementError,
+    });
+    return NextResponse.json({ error: "Failed to load thread" }, { status: 500 });
+  }
 
   if (!engagement) {
     return NextResponse.json({ error: "Thread not found" }, { status: 404 });
@@ -188,6 +278,15 @@ export async function POST(
     .single();
 
   if (error) {
+    console.error("[messages/thread] Failed to insert thread message", {
+      threadId,
+      userId: user.id,
+      engagementId: threadId,
+      dealId: engagement.deal_id,
+      hasContent: Boolean(content),
+      hasAttachment: Boolean(attachment_path),
+      error,
+    });
     return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
 
