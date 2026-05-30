@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { isValidStorageObjectKey, settingsProfileUpdateSchema } from "@/lib/validators";
 import { isAuthResponse, requireApprovedUser } from "@/server/auth";
 
+const SETTINGS_PROFILE_USER_SELECT =
+  "role, full_name, title, avatar_path, location, industry_focus, license_credentials, deal_types, buyer_type, accreditation, aum, phone, linkedin, firm_id";
+
+const SETTINGS_PROFILE_FIRM_SELECT =
+  "name, description, website, location, team_members_requested";
+
 export async function GET() {
   const context = await requireApprovedUser();
   if (isAuthResponse(context)) return context;
@@ -10,7 +16,7 @@ export async function GET() {
   // Get user profile
   const { data: profile, error: profileError } = await supabase
     .from("users")
-    .select("*")
+    .select(SETTINGS_PROFILE_USER_SELECT)
     .eq("id", user.id)
     .single();
 
@@ -31,7 +37,7 @@ export async function GET() {
   if (profile.firm_id) {
     const { data: firmData, error: firmError } = await supabase
       .from("firms")
-      .select("*")
+      .select(SETTINGS_PROFILE_FIRM_SELECT)
       .eq("id", profile.firm_id)
       .single();
     if (firmError) {
@@ -96,7 +102,7 @@ export async function PATCH(request: Request) {
   // Get current user profile
   const { data: profile, error: profileError } = await supabase
     .from("users")
-    .select("role, firm_id, avatar_path, full_name, title, phone, linkedin, location, industry_focus, license_credentials, deal_types, buyer_type, aum")
+    .select("role, firm_id, avatar_path, full_name, title, phone, linkedin, location, industry_focus, license_credentials, deal_types, buyer_type, accreditation, aum")
     .eq("id", user.id)
     .single();
 
@@ -133,8 +139,26 @@ export async function PATCH(request: Request) {
   if (body.linkedIn !== undefined) userUpdate.linkedin = body.linkedIn;
   if (body.location !== undefined) userUpdate.location = body.location;
   if (body.industryFocus !== undefined) userUpdate.industry_focus = body.industryFocus;
-  if (body.licenseCredentials !== undefined) userUpdate.license_credentials = body.licenseCredentials;
-  if (body.dealTypes !== undefined) userUpdate.deal_types = body.dealTypes;
+  if (body.licenseCredentials !== undefined) {
+    if (profile.role !== "broker") {
+      return NextResponse.json(
+        { error: "licenseCredentials can only be updated by broker users" },
+        { status: 400 }
+      );
+    }
+
+    userUpdate.license_credentials = body.licenseCredentials;
+  }
+  if (body.dealTypes !== undefined) {
+    if (profile.role !== "broker") {
+      return NextResponse.json(
+        { error: "dealTypes can only be updated by broker users" },
+        { status: 400 }
+      );
+    }
+
+    userUpdate.deal_types = body.dealTypes;
+  }
   if (body.buyerType !== undefined) {
     const buyerType = body.buyerType === "" ? null : body.buyerType;
 
@@ -149,7 +173,30 @@ export async function PATCH(request: Request) {
       userUpdate.buyer_type = buyerType;
     }
   }
-  if (body.aum !== undefined) userUpdate.aum = body.aum;
+  if (body.accreditation !== undefined) {
+    const accreditation = body.accreditation === "" ? null : body.accreditation;
+
+    if (accreditation !== null && profile.role !== "buyer") {
+      return NextResponse.json(
+        { error: "accreditation can only be updated by buyer users" },
+        { status: 400 }
+      );
+    }
+
+    if (profile.role === "buyer") {
+      userUpdate.accreditation = accreditation;
+    }
+  }
+  if (body.aum !== undefined) {
+    if (profile.role !== "buyer") {
+      return NextResponse.json(
+        { error: "aum can only be updated by buyer users" },
+        { status: 400 }
+      );
+    }
+
+    userUpdate.aum = body.aum;
+  }
 
   for (const key of Object.keys(userUpdate)) {
     rollbackUserUpdate[key] = profile[key as keyof typeof profile];
@@ -169,7 +216,7 @@ export async function PATCH(request: Request) {
         userId: user.id,
         error: userError.message,
       });
-      return NextResponse.json({ error: userError.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
     }
   }
 
@@ -180,6 +227,7 @@ export async function PATCH(request: Request) {
     if (body.description !== undefined) firmUpdate.description = body.description;
     if (body.website !== undefined) firmUpdate.website = body.website;
     if (body.firmLocation !== undefined) firmUpdate.location = body.firmLocation;
+    if (body.otherMembers !== undefined) firmUpdate.team_members_requested = body.otherMembers;
     if (body.firmIndustryFocus !== undefined) firmUpdate.industry_focus = body.firmIndustryFocus;
 
     if (Object.keys(firmUpdate).length > 0) {
@@ -216,7 +264,7 @@ export async function PATCH(request: Request) {
         });
         const rollbackMessage = shouldUpdateUser ? ". User profile changes were rolled back." : "";
         return NextResponse.json(
-          { error: `${firmError.message}${rollbackMessage}` },
+          { error: `Failed to update firm${rollbackMessage}` },
           { status: 500 }
         );
       }

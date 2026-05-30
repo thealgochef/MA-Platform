@@ -74,14 +74,103 @@ describe("Phase 9: Settings & Account Management", () => {
       expect(content).not.toContain("<img");
     });
 
-    it("includes a firm location field in the settings form", () => {
+    it("includes firm location state wiring in the settings form", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
         "utf-8"
       );
 
-      expect(content).toContain('label="Firm Location"');
+      expect(content).toContain("const [firmLocation, setFirmLocation] = useState(\"\")");
+      expect(content).toContain("value={firmLocation}");
       expect(content).toContain("setFirmLocation");
+    });
+
+    it("uses first/last name UI and keeps accreditation wiring", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain('label="First Name"');
+      expect(content).toContain('label="Last Name"');
+      expect(content).toContain("const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();");
+      expect(content).toContain('label="Basis for Accreditation"');
+    });
+
+    it("does not render or wire the Other Firm Members Who Need Access field", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).not.toContain('label="Other Firm Members Who Need Access"');
+      expect(content).not.toContain("otherMembers");
+      expect(content).not.toContain("setOtherMembers");
+    });
+
+    it("locks buyer Type and Basis for Accreditation selects", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toMatch(/<SelectInput[\s\S]*label="Type"[\s\S]*value=\{buyerType\}[\s\S]*disabled/);
+      expect(content).toMatch(
+        /<SelectInput[\s\S]*label="Basis for Accreditation"[\s\S]*value=\{accreditation\}[\s\S]*disabled/
+      );
+    });
+
+    it("aligns handleProfileSave payload with all visible settings UI fields", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+
+      const handleProfileSaveMatch = content.match(
+        /const handleProfileSave = async \(\) => \{[\s\S]*?\n  \};/
+      );
+
+      expect(handleProfileSaveMatch).not.toBeNull();
+
+      const handleProfileSaveSource = handleProfileSaveMatch?.[0] || "";
+
+      const alwaysSubmittedFields = [
+        "fullName",
+        "title",
+        "phone",
+        "linkedIn",
+        "location",
+        "industryFocus",
+        "firmName",
+        "description",
+        "website",
+        "firmLocation",
+      ];
+
+      alwaysSubmittedFields.forEach((field) => {
+        expect(handleProfileSaveSource).toMatch(new RegExp(`\\b${field}\\b\\s*(?:,|:)`));
+      });
+
+      expect(handleProfileSaveSource).not.toContain("otherMembers");
+      expect(handleProfileSaveSource).toMatch(/if\s*\(isBuyer\)\s*\{[\s\S]*payload\.aum\s*=\s*aum;[\s\S]*\}/);
+      expect(handleProfileSaveSource).toMatch(
+        /if\s*\(isBroker\)\s*\{[\s\S]*payload\.licenseCredentials\s*=\s*credentials;[\s\S]*payload\.dealTypes\s*=\s*dealTypes;[\s\S]*\}/
+      );
+      expect(handleProfileSaveSource).not.toMatch(/\bbuyerType\b\s*:/);
+      expect(handleProfileSaveSource).not.toMatch(/\baccreditation\b\s*:/);
+      expect(handleProfileSaveSource).not.toContain("payload.buyerType");
+      expect(handleProfileSaveSource).not.toContain("payload.accreditation");
+    });
+
+    it("always allows buyer AUM updates without buyerType gating", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "(auth)", "settings", "page.tsx"),
+        "utf-8"
+      );
+
+      expect(content).toContain("if (isBuyer) {");
+      expect(content).toContain("payload.aum = aum;");
+      expect(content).not.toContain("BUYER_TYPE_VALUES.includes");
     });
 
     it("appends avatar cache-bust param safely when URL already has query params", () => {

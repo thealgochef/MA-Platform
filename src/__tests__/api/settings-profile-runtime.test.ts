@@ -65,10 +65,10 @@ function createPatchSupabase({
   firmsUpdateError = null,
   userSelectError = null,
 }: {
-  profile: {
-    role: string;
-    firm_id: string | null;
-    avatar_path: string | null;
+   profile: {
+     role: string;
+     firm_id: string | null;
+     avatar_path: string | null;
     full_name?: string | null;
     title?: string | null;
     phone?: string | null;
@@ -76,10 +76,11 @@ function createPatchSupabase({
     location?: string | null;
     industry_focus?: string[] | null;
     license_credentials?: string | null;
-    deal_types?: string | null;
-    buyer_type?: string | null;
-    aum?: string | null;
-  } | null;
+     deal_types?: string | null;
+     buyer_type?: string | null;
+      accreditation?: string | null;
+     aum?: string | null;
+   } | null;
   usersUpdateErrors?: Array<{ message: string } | null>;
   firmsUpdateError?: { message: string } | null;
   userSelectError?: { message: string } | null;
@@ -207,6 +208,12 @@ describe("settings profile route runtime", () => {
       avatar_url: "https://cdn.example.com/avatar-signed",
       avatarUrl: "https://cdn.example.com/avatar-signed",
     });
+    expect(supabase.usersQuery.select).toHaveBeenCalledWith(
+      "role, full_name, title, avatar_path, location, industry_focus, license_credentials, deal_types, buyer_type, accreditation, aum, phone, linkedin, firm_id"
+    );
+    expect(supabase.firmsQuery.select).toHaveBeenCalledWith(
+      "name, description, website, location, team_members_requested"
+    );
     expect(supabase.storage.from).toHaveBeenCalledWith("profile-pictures");
     expect(supabase.createSignedUrl).toHaveBeenCalledWith("avatars/user-1.png", 60 * 60);
   });
@@ -304,6 +311,98 @@ describe("settings profile route runtime", () => {
     expect(supabase.usersUpdate).not.toHaveBeenCalled();
   });
 
+  it("PATCH rejects accreditation for non-buyer profiles", async () => {
+    const supabase = createPatchSupabase({
+      profile: { role: "broker", firm_id: "firm-1", avatar_path: null },
+    });
+    authMocks.requireApprovedUser.mockResolvedValue({
+      supabase,
+      user: { id: "user-1" },
+    });
+
+    const response = await PATCH(
+      new Request("http://localhost/api/settings/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ accreditation: "income" }),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "accreditation can only be updated by buyer users",
+    });
+    expect(supabase.usersUpdate).not.toHaveBeenCalled();
+  });
+
+  it("PATCH rejects aum for non-buyer profiles", async () => {
+    const supabase = createPatchSupabase({
+      profile: { role: "broker", firm_id: "firm-1", avatar_path: null },
+    });
+    authMocks.requireApprovedUser.mockResolvedValue({
+      supabase,
+      user: { id: "user-1" },
+    });
+
+    const response = await PATCH(
+      new Request("http://localhost/api/settings/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ aum: "$500M" }),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "aum can only be updated by buyer users",
+    });
+    expect(supabase.usersUpdate).not.toHaveBeenCalled();
+  });
+
+  it("PATCH rejects licenseCredentials for non-broker profiles", async () => {
+    const supabase = createPatchSupabase({
+      profile: { role: "buyer", firm_id: "firm-1", avatar_path: null },
+    });
+    authMocks.requireApprovedUser.mockResolvedValue({
+      supabase,
+      user: { id: "user-1" },
+    });
+
+    const response = await PATCH(
+      new Request("http://localhost/api/settings/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ licenseCredentials: "Series 7" }),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "licenseCredentials can only be updated by broker users",
+    });
+    expect(supabase.usersUpdate).not.toHaveBeenCalled();
+  });
+
+  it("PATCH rejects dealTypes for non-broker profiles", async () => {
+    const supabase = createPatchSupabase({
+      profile: { role: "buyer", firm_id: "firm-1", avatar_path: null },
+    });
+    authMocks.requireApprovedUser.mockResolvedValue({
+      supabase,
+      user: { id: "user-1" },
+    });
+
+    const response = await PATCH(
+      new Request("http://localhost/api/settings/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ dealTypes: "Control" }),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "dealTypes can only be updated by broker users",
+    });
+    expect(supabase.usersUpdate).not.toHaveBeenCalled();
+  });
+
   it("PATCH returns 400 when payload fails schema validation", async () => {
     const supabase = createPatchSupabase({
       profile: { role: "buyer", firm_id: "firm-1", avatar_path: null },
@@ -364,7 +463,7 @@ describe("settings profile route runtime", () => {
     );
 
     expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({ error: "users update failed" });
+    await expect(response.json()).resolves.toEqual({ error: "Failed to update profile" });
     expect(supabase.firmsUpdate).not.toHaveBeenCalled();
   });
 
@@ -392,7 +491,7 @@ describe("settings profile route runtime", () => {
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({
-      error: "firms update failed. User profile changes were rolled back.",
+      error: "Failed to update firm. User profile changes were rolled back.",
     });
     expect(supabase.usersUpdate).toHaveBeenCalledTimes(2);
     expect(supabase.usersUpdate).toHaveBeenNthCalledWith(1, { full_name: "Updated Name" });
@@ -422,7 +521,7 @@ describe("settings profile route runtime", () => {
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({
-      error: "firms update failed",
+      error: "Failed to update firm",
     });
     expect(supabase.usersUpdate).not.toHaveBeenCalled();
     expect(supabase.firmsUpdate).toHaveBeenCalledWith({ name: "Acme Capital" });
@@ -503,7 +602,7 @@ describe("settings profile route runtime", () => {
     expect(supabase.remove).toHaveBeenCalledWith(["avatars/old.png"]);
   });
 
-  it("PATCH updates users and firms mappings on valid payload", async () => {
+  it("PATCH updates users and firms mappings for valid buyer payload", async () => {
     const supabase = createPatchSupabase({
       profile: { role: "buyer", firm_id: "firm-1", avatar_path: null },
     });
@@ -523,14 +622,14 @@ describe("settings profile route runtime", () => {
           linkedIn: "https://linkedin.com/in/jane",
           location: "Austin, TX",
           industryFocus: ["Technology"],
-          licenseCredentials: "Series 7",
-          dealTypes: "Control",
           buyerType: "family_office",
+          accreditation: "income",
           aum: "$500M",
           firmName: "Acme Capital",
           description: "Lower middle market investor",
           website: "https://acme.example",
           firmLocation: "Austin, TX",
+          otherMembers: "Alex Smith, Jamie Lee",
           firmIndustryFocus: ["Technology"],
         }),
       })
@@ -547,9 +646,8 @@ describe("settings profile route runtime", () => {
       linkedin: "https://linkedin.com/in/jane",
       location: "Austin, TX",
       industry_focus: ["Technology"],
-      license_credentials: "Series 7",
-      deal_types: "Control",
       buyer_type: "family_office",
+      accreditation: "income",
       aum: "$500M",
     });
     expect(supabase.usersUpdateEq).toHaveBeenCalledWith("id", "user-1");
@@ -559,6 +657,66 @@ describe("settings profile route runtime", () => {
       description: "Lower middle market investor",
       website: "https://acme.example",
       location: "Austin, TX",
+      team_members_requested: "Alex Smith, Jamie Lee",
+      industry_focus: ["Technology"],
+    });
+    expect(supabase.firmsUpdateEq).toHaveBeenCalledWith("id", "firm-1");
+  });
+
+  it("PATCH updates users and firms mappings for valid broker payload", async () => {
+    const supabase = createPatchSupabase({
+      profile: { role: "broker", firm_id: "firm-1", avatar_path: null },
+    });
+    authMocks.requireApprovedUser.mockResolvedValue({
+      supabase,
+      user: { id: "user-1" },
+    });
+
+    const response = await PATCH(
+      new Request("http://localhost/api/settings/profile", {
+        method: "PATCH",
+        body: JSON.stringify({
+          fullName: "Jane Doe",
+          title: "Managing Director",
+          avatarPath: "user-1/avatar",
+          phone: "555-1234",
+          linkedIn: "https://linkedin.com/in/jane",
+          location: "Austin, TX",
+          industryFocus: ["Technology"],
+          licenseCredentials: "Series 7",
+          dealTypes: "Control",
+          firmName: "Acme Advisory",
+          description: "Lower middle market sell-side advisor",
+          website: "https://advisory.example",
+          firmLocation: "Austin, TX",
+          otherMembers: "Alex Smith, Jamie Lee",
+          firmIndustryFocus: ["Technology"],
+        }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ success: true });
+
+    expect(supabase.usersUpdate).toHaveBeenCalledWith({
+      full_name: "Jane Doe",
+      title: "Managing Director",
+      avatar_path: "user-1/avatar",
+      phone: "555-1234",
+      linkedin: "https://linkedin.com/in/jane",
+      location: "Austin, TX",
+      industry_focus: ["Technology"],
+      license_credentials: "Series 7",
+      deal_types: "Control",
+    });
+    expect(supabase.usersUpdateEq).toHaveBeenCalledWith("id", "user-1");
+
+    expect(supabase.firmsUpdate).toHaveBeenCalledWith({
+      name: "Acme Advisory",
+      description: "Lower middle market sell-side advisor",
+      website: "https://advisory.example",
+      location: "Austin, TX",
+      team_members_requested: "Alex Smith, Jamie Lee",
       industry_focus: ["Technology"],
     });
     expect(supabase.firmsUpdateEq).toHaveBeenCalledWith("id", "firm-1");

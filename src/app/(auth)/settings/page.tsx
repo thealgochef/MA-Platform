@@ -12,9 +12,9 @@ import {
   TextInput,
 } from "@/components/ui";
 import {
+  ACCREDITATIONS,
   INDUSTRIES,
   BUYER_TYPES,
-  BUYER_TYPE_VALUES,
   BROKER_NOTIFICATION_EVENTS,
   BUYER_NOTIFICATION_EVENTS,
 } from "@/lib/constants";
@@ -54,6 +54,7 @@ type SettingsProfileResponse = {
     license_credentials?: string | null;
     deal_types?: string | null;
     buyer_type?: string | null;
+    accreditation?: string | null;
     aum?: string | null;
     phone?: string | null;
     linkedin?: string | null;
@@ -63,16 +64,31 @@ type SettingsProfileResponse = {
     description?: string | null;
     website?: string | null;
     location?: string | null;
+    team_members_requested?: string | null;
   } | null;
   avatar_url?: string | null;
   avatarUrl?: string | null;
+};
+
+const splitFullName = (fullName: string | null | undefined) => {
+  const normalized = (fullName || "").trim();
+  if (!normalized) {
+    return { firstName: "", lastName: "" };
+  }
+
+  const [firstName, ...rest] = normalized.split(/\s+/);
+  return {
+    firstName,
+    lastName: rest.join(" "),
+  };
 };
 
 export default function SettingsPage() {
   const router = useRouter();
 
   // Profile state
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [role, setRole] = useState("");
   const [title, setTitle] = useState("");
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
@@ -82,6 +98,7 @@ export default function SettingsPage() {
   const [credentials, setCredentials] = useState("");
   const [dealTypes, setDealTypes] = useState("");
   const [buyerType, setBuyerType] = useState("");
+  const [accreditation, setAccreditation] = useState("");
   const [aum, setAum] = useState("");
   const [phone, setPhone] = useState("");
   const [linkedIn, setLinkedIn] = useState("");
@@ -125,9 +142,11 @@ export default function SettingsPage() {
           const profile = payload.profile ?? {};
           const firm = payload.firm;
           const resolvedAvatarUrl = profile.avatar_url ?? profile.avatarUrl ?? payload.avatar_url ?? payload.avatarUrl ?? null;
+          const parsedName = splitFullName(profile.full_name);
 
           setRole(profile.role || "");
-          setFullName(profile.full_name || "");
+          setFirstName(parsedName.firstName);
+          setLastName(parsedName.lastName);
           setTitle(profile.title || "");
           setAvatarPath(profile.avatar_path || null);
           setAvatarUrl(resolvedAvatarUrl);
@@ -136,6 +155,7 @@ export default function SettingsPage() {
           setCredentials(profile.license_credentials || "");
           setDealTypes(profile.deal_types || "");
           setBuyerType(profile.buyer_type || "");
+          setAccreditation(profile.accreditation || "");
           setAum(profile.aum || "");
           setPhone(profile.phone || "");
           setLinkedIn(profile.linkedin || "");
@@ -270,6 +290,9 @@ export default function SettingsPage() {
   const handleProfileSave = async () => {
     setProfileSaving(true);
     setProfileMessage("");
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const isBuyer = role === "buyer";
+    const isBroker = role === "broker";
     const payload: Record<string, unknown> = {
       fullName,
       title,
@@ -277,21 +300,19 @@ export default function SettingsPage() {
       linkedIn,
       location,
       industryFocus,
-      licenseCredentials: credentials,
-      dealTypes,
-      aum,
       firmName,
       description,
       website,
       firmLocation,
     };
 
-    if (
-      role === "buyer" &&
-      (buyerType === "" ||
-        BUYER_TYPE_VALUES.includes(buyerType as (typeof BUYER_TYPE_VALUES)[number]))
-    ) {
-      payload.buyerType = buyerType;
+    if (isBuyer) {
+      payload.aum = aum;
+    }
+
+    if (isBroker) {
+      payload.licenseCredentials = credentials;
+      payload.dealTypes = dealTypes;
     }
 
     try {
@@ -313,6 +334,7 @@ export default function SettingsPage() {
 
   const notificationEvents =
     role === "broker" ? BROKER_NOTIFICATION_EVENTS : BUYER_NOTIFICATION_EVENTS;
+  const displayName = `${firstName} ${lastName}`.trim();
 
   const toggleNotification = (eventKey: string, channel: "email" | "in_platform") => {
     setNotificationPrefs((prev) => {
@@ -375,8 +397,11 @@ export default function SettingsPage() {
         {/* ─── Edit Profile ────────────────────────────────────── */}
         <Card>
           <h2 className="text-xl font-semibold text-primary mb-4">Edit Profile</h2>
-
           <div className="space-y-4">
+
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Personal
+            </p>
 
             {/* ─── Avatar Upload ───────────────────────────────── */}
             <div>
@@ -387,7 +412,7 @@ export default function SettingsPage() {
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
-                    alt={`${fullName || "User"} profile picture`}
+                    alt={`${displayName || "User"} profile picture`}
                     width={80}
                     height={80}
                     unoptimized
@@ -395,7 +420,7 @@ export default function SettingsPage() {
                   />
                 ) : (
                   <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-xl font-semibold text-primary">
-                    {(fullName || "User")
+                    {(displayName || "User")
                       .split(" ")
                       .map((part) => part[0])
                       .join("")
@@ -433,12 +458,19 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* ─── Profile Fields ────────────────────────────────── */}
+            {/* ─── Personal Profile Fields ────────────────────────────────── */}
             <TextInput
-              label="Full Name"
+              label="First Name"
               type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
+
+            <TextInput
+              label="Last Name"
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
             />
 
             <TextInput
@@ -457,12 +489,24 @@ export default function SettingsPage() {
             />
 
             <TextInput
+              label="Location"
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+
+            <TextInput
               label="LinkedIn Profile"
               type="url"
               value={linkedIn}
               onChange={(e) => setLinkedIn(e.target.value)}
               placeholder="https://www.linkedin.com/in/your-profile"
             />
+
+            {/* ─── Firm Profile Fields ────────────────────────────────────── */}
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Firm
+            </p>
 
             <TextInput
               label="Firm Name"
@@ -471,6 +515,47 @@ export default function SettingsPage() {
               onChange={(e) => setFirmName(e.target.value)}
             />
 
+            <TextInput
+              label="Location"
+              type="text"
+              value={firmLocation}
+              onChange={(e) => setFirmLocation(e.target.value)}
+            />
+
+            <TextInput
+              label="Website"
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+
+            {/* Buyer-specific fields */}
+            {role === "buyer" && (
+              <>
+                <SelectInput
+                  label="Type"
+                  value={buyerType}
+                  onChange={(e) => setBuyerType(e.target.value)}
+                  disabled
+                >
+                  <option value="">Select firm type</option>
+                  {BUYER_TYPES.map((bt) => (
+                    <option key={bt.value} value={bt.value}>
+                      {bt.label}
+                    </option>
+                  ))}
+                </SelectInput>
+              </>
+            )}
+            {role === "buyer" && (
+              <TextInput
+                label="Assets Under Management (AUM)"
+                type="text"
+                value={aum}
+                onChange={(e) => setAum(e.target.value)}
+              />
+            )}
+
             <TextareaInput
               label="Description"
               value={description}
@@ -478,12 +563,58 @@ export default function SettingsPage() {
               rows={3}
             />
 
-            <TextInput
-              label="Location"
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
+
+            {/* Broker-specific field */}
+            {role === "broker" && (
+              <>
+                <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+                Credentials & Accreditation
+                </p>
+                <TextInput
+                  label="License & Credentials"
+                  type="text"
+                  value={credentials}
+                  onChange={(e) => setCredentials(e.target.value)}
+                />
+              </>
+            )}
+
+            {/* Buyer-specific field */}
+            {role === "buyer" && (
+              <>
+                <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+                Credentials & Accreditation
+                </p>
+                <SelectInput
+                  label="Basis for Accreditation"
+                  value={accreditation}
+                  onChange={(e) => setAccreditation(e.target.value)}
+                  disabled
+                >
+                  <option value="">Select basis for accreditation</option>
+                  {ACCREDITATIONS.map((acc) => (
+                    <option key={acc.value} value={acc.value}>
+                      {acc.label}
+                    </option>
+                  ))}
+                </SelectInput>
+              </>
+            )}
+            
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Focus
+            </p>
+            {/* Broker-specific field */}
+            {role === "broker" && (
+              <>
+                <TextInput
+                  label="Types of Deals Typically Represented"
+                  type="text"
+                  value={dealTypes}
+                  onChange={(e) => setDealTypes(e.target.value)}
+                />
+              </>
+            )}
 
             <SelectInput
               label="Industry Focus"
@@ -500,62 +631,6 @@ export default function SettingsPage() {
                 </option>
               ))}
             </SelectInput>
-
-            <TextInput
-              label="Website"
-              type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-            />
-
-            <TextInput
-              label="Firm Location"
-              type="text"
-              value={firmLocation}
-              onChange={(e) => setFirmLocation(e.target.value)}
-            />
-
-            {/* Broker-specific fields */}
-            {role === "broker" && (
-              <>
-                <TextInput
-                  label="License & Credentials"
-                  type="text"
-                  value={credentials}
-                  onChange={(e) => setCredentials(e.target.value)}
-                />
-                <TextInput
-                  label="Deal Types"
-                  type="text"
-                  value={dealTypes}
-                  onChange={(e) => setDealTypes(e.target.value)}
-                />
-              </>
-            )}
-
-            {/* Buyer-specific fields */}
-            {role === "buyer" && (
-              <>
-                <SelectInput
-                  label="Buyer Type"
-                  value={buyerType}
-                  onChange={(e) => setBuyerType(e.target.value)}
-                >
-                  <option value="">Select type</option>
-                  {BUYER_TYPES.map((bt) => (
-                    <option key={bt.value} value={bt.value}>
-                      {bt.label}
-                    </option>
-                  ))}
-                </SelectInput>
-                <TextInput
-                  label="Assets Under Management (AUM)"
-                  type="text"
-                  value={aum}
-                  onChange={(e) => setAum(e.target.value)}
-                />
-              </>
-            )}
 
             <div className="flex items-center gap-3">
               <Button
