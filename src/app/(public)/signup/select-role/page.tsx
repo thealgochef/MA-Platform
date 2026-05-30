@@ -7,7 +7,7 @@ export default function SelectRolePage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-surface text-text">
-      <div className="bg-bg rounded-xl shadow-md p-8 w-full max-w-md">
+      <div className="bg-bg rounded-xl border border-border-color p-8 w-full max-w-md">
 
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold font-display text-primary mb-2">

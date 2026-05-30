@@ -103,7 +103,7 @@ export default function EditProjectPage() {
           <div className="bg-error/10 border border-error/20 text-error rounded-md p-3 mb-6 text-sm">{error}</div>
         )}
 
-        <div className="bg-surface-alt rounded-lg shadow-md p-6 space-y-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium text-text mb-1">Project Name *</label>
             <input

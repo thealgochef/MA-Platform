@@ -123,7 +123,7 @@ export default function BuyerDealWorkspace() {
         </div>
 
         {/* Deal Overview */}
-        <div className="bg-surface-alt rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 mb-6">
           <h2 className="text-lg font-semibold text-primary mb-3">Overview</h2>
           <p className="text-text-secondary mb-4">{deal.description}</p>
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -139,7 +139,7 @@ export default function BuyerDealWorkspace() {
         </div>
 
         {/* Financials */}
-        <div className="bg-surface-alt rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 mb-6">
           <h2 className="text-lg font-semibold text-primary mb-3">Financials</h2>
           <table className="w-full text-sm">
             <thead>
@@ -168,7 +168,7 @@ export default function BuyerDealWorkspace() {
         </div>
 
         {/* Engagement Status & Actions */}
-        <div className="bg-surface-alt rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 mb-6">
           <h2 className="text-lg font-semibold text-primary mb-3">Your Engagement</h2>
           {engagement ? (
             <div className="space-y-4">

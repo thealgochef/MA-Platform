@@ -125,7 +125,7 @@ export default function DealClosurePage() {
       <main className="min-h-screen bg-bg-alt py-8">
         <div className="max-w-2xl mx-auto px-4">
           <h1 className="text-2xl font-bold text-primary mb-6">Deal Closure</h1>
-          <div className="bg-surface-alt rounded-lg shadow-md p-6 space-y-4">
+          <div className="bg-surface-alt rounded-lg border border-border-color p-6 space-y-4">
             <div>
               <p className="text-sm text-text-secondary">Enterprise Value</p>
               <p className="text-lg font-semibold text-primary">
@@ -195,7 +195,7 @@ export default function DealClosurePage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-surface-alt rounded-lg shadow-md p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-surface-alt rounded-lg border border-border-color p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-text mb-1">
               Total Enterprise Value ($) *

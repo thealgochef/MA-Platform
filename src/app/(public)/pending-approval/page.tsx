@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function PendingApprovalPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-surface text-text">
-      <div className="bg-bg rounded-xl shadow-md p-8 w-full max-w-lg text-center">
+      <div className="bg-bg rounded-xl border border-border-color p-8 w-full max-w-lg text-center">
 
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg

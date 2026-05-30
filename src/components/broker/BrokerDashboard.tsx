@@ -263,19 +263,19 @@ export default function BrokerDashboard() {
 
         {/* Analytics Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-surface-alt rounded-lg shadow-sm p-4">
+          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
             <p className="text-xs text-text-secondary">Total Deals</p>
             <p className="text-2xl font-bold text-primary">{deals.length}</p>
           </div>
-          <div className="bg-surface-alt rounded-lg shadow-sm p-4">
+          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
             <p className="text-xs text-text-secondary">Active Deals</p>
             <p className="text-2xl font-bold text-primary">{activeDeals.length}</p>
           </div>
-          <div className="bg-surface-alt rounded-lg shadow-sm p-4">
+          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
             <p className="text-xs text-text-secondary">Drafts</p>
             <p className="text-2xl font-bold text-primary">{draftDeals.length}</p>
           </div>
-          <div className="bg-surface-alt rounded-lg shadow-sm p-4">
+          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
             <p className="text-xs text-text-secondary">Closed</p>
             <p className="text-2xl font-bold text-primary">{closedDeals.length}</p>
           </div>
@@ -285,7 +285,7 @@ export default function BrokerDashboard() {
         <h2 className="text-lg font-semibold text-primary mb-4">Your Deals</h2>
 
         {deals.length === 0 ? (
-          <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center">
+          <div className="bg-surface-alt rounded-lg border border-border-color p-8 text-center">
             <p className="text-text-secondary mb-4">Post your first deal</p>
             <Link
               href="/deals/new"

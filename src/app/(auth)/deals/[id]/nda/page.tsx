@@ -151,7 +151,7 @@ export default function NDASigningPage() {
         )}
 
         {/* NDA Document Display */}
-        <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 mb-6">
           <h2 className="text-lg font-semibold text-primary mb-4">
             {deal.nda_type === "custom" ? "Custom NDA" : "Platform Standard NDA"}
           </h2>
@@ -198,7 +198,7 @@ export default function NDASigningPage() {
         {!isSignedView && !isCustomNdaUnavailable && (
           <>
             {/* Signature Fields */}
-            <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-6 mb-6">
               <h3 className="text-sm font-medium text-text mb-4">Electronic Signature</h3>
               <div className="space-y-4">
                 <div>

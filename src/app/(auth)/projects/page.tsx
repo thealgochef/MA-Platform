@@ -196,7 +196,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-bg-alt">
-      <div className="bg-bg border-b border-border-gray pt-8 pb-6">
+      <div className="bg-bg border-b border-border-color pt-8 pb-6">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-primary">Acquisition Projects</h1>
@@ -219,7 +219,7 @@ export default function ProjectsPage() {
       <div className="max-w-6xl mx-auto px-4 pb-8">
         <div className="pt-4">
           {projects.length === 0 ? (
-            <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-8 text-center">
               <p className="text-text-secondary mb-4">
                 Create your first acquisition project to start matching with deals.
               </p>

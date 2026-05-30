@@ -95,7 +95,7 @@ export default function LOIComparePage() {
           <a href={`/deals/${dealId}`} className="text-sm text-secondary hover:underline">Back to deal</a>
         </div>
 
-        <div className="bg-surface-alt rounded-lg shadow-md overflow-x-auto">
+        <div className="bg-surface-alt rounded-lg border border-border-color overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border-gray bg-bg-alt">

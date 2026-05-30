@@ -9,7 +9,7 @@ type CardProps = HTMLAttributes<HTMLElement> & {
 
 export function Card({ as: Component = "section", className, children, ...props }: CardProps) {
   return (
-    <Component className={cn("bg-surface-alt rounded-lg shadow-sm p-6", className)} {...props}>
+    <Component className={cn("bg-surface-alt rounded-lg border border-border-color p-6", className)} {...props}>
       {children}
     </Component>
   );

@@ -262,7 +262,7 @@ export default function BrokerDealManagement({
         )}
 
         {/* Header */}
-        <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 mb-6">
           <div className="flex items-start justify-between">
 
             <div>
@@ -326,7 +326,7 @@ export default function BrokerDealManagement({
 
         {showDeleteConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-            <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl">
+            <div className="w-full max-w-md rounded-lg bg-surface border border-border-color p-6">
               <h2 className="text-lg font-semibold text-text">Delete deal?</h2>
               <p className="mt-2 text-sm text-text-secondary">
                 This action cannot be undone. This will permanently delete this deal and its related records.
@@ -362,7 +362,7 @@ export default function BrokerDealManagement({
         )}
 
         {/* Tab Navigation */}
-        <div className="bg-surface-alt rounded-lg shadow-md mb-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color mb-6">
           <div className="flex border-b border-border-gray overflow-x-auto">
             {tabs.map((tab) => (
               <button

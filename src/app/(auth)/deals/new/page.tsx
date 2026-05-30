@@ -214,7 +214,7 @@ export default function CreateDealPage() {
         )}
 
         {/* Teaser Upload Zone */}
-        <div className="bg-surface-alt rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 mb-6">
           <h2 className="text-lg font-semibold text-primary mb-2">Teaser Document</h2>
           <p className="text-xs text-text-secondary mb-3">
             Upload your teaser PDF. Auto-extraction coming soon — for now the file is stored.
@@ -230,7 +230,7 @@ export default function CreateDealPage() {
           )}
         </div>
 
-        <div className="bg-surface-alt rounded-lg shadow-md p-6 space-y-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 space-y-6">
           {/* Project Name */}
           <div>
             <label className="block text-sm font-medium text-text mb-1">

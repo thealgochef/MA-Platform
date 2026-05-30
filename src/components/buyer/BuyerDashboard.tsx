@@ -89,23 +89,23 @@ export default function BuyerDashboard() {
         {/* Analytics Section */}
         {analytics && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            <div className="bg-surface-alt rounded-lg shadow-md p-4">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <p className="text-xs text-text-secondary">Deals Pursuing</p>
               <p className="text-2xl font-bold text-primary">{analytics.pursuing}</p>
             </div>
-            <div className="bg-surface-alt rounded-lg shadow-md p-4">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <p className="text-xs text-text-secondary">Deals Passed</p>
               <p className="text-2xl font-bold text-primary">{analytics.passed}</p>
             </div>
-            <div className="bg-surface-alt rounded-lg shadow-md p-4">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <p className="text-xs text-text-secondary">NDAs Signed</p>
               <p className="text-2xl font-bold text-primary">{analytics.ndaSigned}</p>
             </div>
-            <div className="bg-surface-alt rounded-lg shadow-md p-4">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <p className="text-xs text-text-secondary">IOIs Submitted</p>
               <p className="text-2xl font-bold text-primary">{analytics.ioisSubmitted}</p>
             </div>
-            <div className="bg-surface-alt rounded-lg shadow-md p-4">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <p className="text-xs text-text-secondary">LOIs Submitted</p>
               <p className="text-2xl font-bold text-primary">{analytics.loisSubmitted}</p>
             </div>
@@ -114,25 +114,25 @@ export default function BuyerDashboard() {
 
         {analytics && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-surface-alt rounded-lg shadow-md p-4">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <p className="text-xs text-text-secondary">Avg Revenue (Pursued)</p>
               <p className="text-lg font-bold text-primary">
                 {analytics.avgRevenue != null ? formatCurrency(analytics.avgRevenue) + "M" : "—"}
               </p>
             </div>
-            <div className="bg-surface-alt rounded-lg shadow-md p-4">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <p className="text-xs text-text-secondary">Avg EBITDA (Pursued)</p>
               <p className="text-lg font-bold text-primary">
                 {analytics.avgEbitda != null ? formatCurrency(analytics.avgEbitda) + "M" : "—"}
               </p>
             </div>
-            <div className="bg-surface-alt rounded-lg shadow-md p-4">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <p className="text-xs text-text-secondary">Avg Revenue (Matched)</p>
               <p className="text-lg font-bold text-primary">
                 {analytics.avgMatchedRevenue != null ? formatCurrency(analytics.avgMatchedRevenue) + "M" : "—"}  
               </p>
             </div>
-            <div className="bg-surface-alt rounded-lg shadow-md p-4">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <p className="text-xs text-text-secondary">Avg EBITDA (Matched)</p>
               <p className="text-lg font-bold text-primary">
                 {analytics.avgMatchedEbitda != null ? formatCurrency(analytics.avgMatchedEbitda) + "M" : "—"}
@@ -144,7 +144,7 @@ export default function BuyerDashboard() {
         {/* Deals by Industry / Stage */}
         {analytics && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div className="bg-surface-alt rounded-lg shadow-md p-4">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <h3 className="text-sm font-medium text-text mb-3">Deals by Stage</h3>
               {Object.entries(analytics.dealsByStage).length > 0 ? (
                 <div className="space-y-2">
@@ -159,7 +159,7 @@ export default function BuyerDashboard() {
                 <p className="text-sm text-text-secondary">No active engagements.</p>
               )}
             </div>
-            <div className="bg-surface-alt rounded-lg shadow-md p-4">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <h3 className="text-sm font-medium text-text mb-3">Deals by Industry</h3>
               {Object.entries(analytics.dealsByIndustry).length > 0 ? (
                 <div className="space-y-2">
@@ -179,7 +179,7 @@ export default function BuyerDashboard() {
 
         {/* Recent Activity Feed */}
         {activity.length > 0 && (
-          <div className="bg-surface-alt rounded-lg shadow-md p-4 mb-8">
+          <div className="bg-surface-alt rounded-lg border border-border-color p-4 mb-8">
             <h3 className="text-sm font-medium text-text mb-3">Recent Activity</h3>
             <div className="space-y-2">
               {activity.slice(0, 10).map((item) => (
@@ -196,7 +196,7 @@ export default function BuyerDashboard() {
         <h2 className="text-lg font-semibold text-primary mb-4">Your Projects</h2>
 
         {projects.length === 0 ? (
-          <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center">
+          <div className="bg-surface-alt rounded-lg border border-border-color p-8 text-center">
             <p className="text-text-secondary mb-4">Create your first acquisition project</p>
             <a
               href="/projects/new"
@@ -211,7 +211,7 @@ export default function BuyerDashboard() {
               <a
                 key={project.id}
                 href={`/projects/${project.id}`}
-                className="bg-surface-alt rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow"
+                className="bg-surface-alt rounded-lg border border-border-color p-4 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="font-medium text-primary">{project.name}</h3>

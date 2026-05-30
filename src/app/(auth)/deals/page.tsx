@@ -314,7 +314,7 @@ export default function DealsPage() {
         )}
 
         {deals.length === 0 ? (
-          <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center">
+          <div className="bg-surface-alt rounded-lg border border-border-color p-8 text-center">
             <p className="text-text-secondary mb-4">You haven&apos;t created any deals yet.</p>
             <Link
               href="/deals/new"
