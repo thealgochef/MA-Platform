@@ -96,8 +96,8 @@ export default function ProjectsPage() {
             return "—";
           }
 
-          return `${revenue_min != null ? formatCurrency(revenue_min) : "Any"} – ${
-            revenue_max != null ? formatCurrency(revenue_max) : "Any"
+          return `${revenue_min != null ? formatCurrency(revenue_min) + 'M': "Any"} – ${
+            revenue_max != null ? formatCurrency(revenue_max) + 'M': "Any"
           }`;
         },
       },
@@ -114,8 +114,8 @@ export default function ProjectsPage() {
             return "—";
           }
 
-          return `${ebitda_min != null ? formatCurrency(ebitda_min) : "Any"} – ${
-            ebitda_max != null ? formatCurrency(ebitda_max) : "Any"
+          return `${ebitda_min != null ? formatCurrency(ebitda_min) + 'M': "Any"} – ${
+            ebitda_max != null ? formatCurrency(ebitda_max) + 'M': "Any"
           }`;
         },
       },

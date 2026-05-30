@@ -275,8 +275,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
             <Chip
               label={params.row.engagement.stage.replace(/_/g, " ")}
               size="small"
-              sx={{ textTransform: "capitalize" }}
-              variant="outlined"
+              sx={{ textTransform: "capitalize", backgroundColor: "var(--color-subtle)", color: "var(--color-primary)", fontWeight: 500 }}
             />
           ) : (
             <span style={{ color: "#9CA3AF" }}>—</span>

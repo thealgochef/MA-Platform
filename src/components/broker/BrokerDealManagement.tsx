@@ -478,7 +478,7 @@ export default function BrokerDealManagement({
                             <td className="px-3 py-2">{eng.users?.firms?.name || eng.firms?.name || "—"}</td>
                             <td className="px-3 py-2">{BUYER_TYPES.find(bt => bt.value === eng.users?.buyer_type)?.label || eng.users?.buyer_type || "—"}</td>
                             <td className="px-3 py-2">
-                              <span className="px-2 py-0.5 rounded text-xs bg-info/10 text-info">{eng.stage}</span>
+                              <span className="px-2 py-0.5 rounded text-xs bg-subtle text-primary font-semibold">{eng.stage}</span>
                             </td>
                             <td className="px-3 py-2">{eng.nda_status}</td>
                             <td className="px-3 py-2">{eng.cim_released ? (eng.cim_viewed_at ? "Viewed" : "Released") : "—"}</td>
