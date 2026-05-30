@@ -391,11 +391,11 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen bg-bg-alt py-8">
-      <div className="max-w-3xl mx-auto px-4 space-y-8">
-        <h1 className="text-3xl font-bold text-primary">Settings</h1>
+      <div className="max-w-3xl mx-auto px-4">
+        <h1 className="text-3xl font-bold text-primary mb-6">Settings</h1>
 
         {/* ─── Edit Profile ────────────────────────────────────── */}
-        <Card>
+        <Card className="mb-6">
           <h2 className="text-xl font-semibold text-primary mb-4">Edit Profile</h2>
           <div className="space-y-4">
 
@@ -648,7 +648,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* ─── Notification Preferences ─────────────────────── */}
-        <Card>
+        <Card className="mb-6">
           <h2 className="text-xl font-semibold text-primary mb-4">
             Notification Preferences
           </h2>
@@ -721,7 +721,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* ─── Delete Account ───────────────────────────────── */}
-        <Card className="border border-red-200">
+        <Card className="border border-red-200 mb-6">
           <h2 className="text-xl font-semibold text-red-600 mb-2">
             Delete Account
           </h2>
