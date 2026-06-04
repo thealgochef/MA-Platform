@@ -20,8 +20,8 @@
   /* Supplementary colors */
   --color-btn-hover: #348d65;
   --color-neutral-btn-hover: #e5e7eb;
-  --color-border: rgba(45, 106, 79, 0.20);
-  --color-subtle: rgba(45, 106, 79, 0.09);
+  --color-border: rgba(45, 106, 79, 0.25);
+  --color-subtle: rgba(45, 106, 79, 0.10);
   --color-faint: rgba(45, 106, 79, 0.05);
 }
 

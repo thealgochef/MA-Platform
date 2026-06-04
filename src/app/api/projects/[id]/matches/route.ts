@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { matchDealsToProject, type MatchCriteria, type DealForMatching } from "@/lib/matching";
 import { escapePostgrestLikePattern } from "@/lib/validators";
 import { ACTIVE_DEAL_STATUSES } from "@/lib/constants";
+import { isAuthResponse, requireRole } from "@/server/auth";
 
 const PAGE_SIZE = 20;
 const FETCH_BATCH_SIZE = 100;
@@ -10,7 +10,7 @@ const MAX_SCAN_BATCHES = 50;
 const MAX_SCANNED_ROWS = FETCH_BATCH_SIZE * MAX_SCAN_BATCHES;
 const MAX_CANONICAL_KEYWORDS = 20;
 const MAX_KEYWORD_TOKEN_LENGTH = 64;
-const DEAL_SELECT_FIELDS = "id, headline, description, industry, state, region, geography_display, status, revenue_year_3, ebitda_year_3, ioi_due_date, loi_due_date";
+const DEAL_SELECT_FIELDS = "id, headline, description, industry, state, region, geography_display, status, revenue_year_1, ebitda_year_1, revenue_year_2, ebitda_year_2, revenue_year_3, ebitda_year_3, revenue_projection, ebitda_projection, fiscal_year_labels, nda_type, cim_sharing_preference, nda_vetting_preference, teaser_document_path, cim_document_path, nda_document_path, ioi_due_date, loi_due_date, published_at, closed_at";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const KEYWORD_SPLIT_REGEX = /[(),]+/;
 
@@ -23,10 +23,42 @@ type DealRow = {
   region: string | null;
   geography_display: string | null;
   status: string;
+  revenue_year_1: number | null;
+  ebitda_year_1: number | null;
+  revenue_year_2: number | null;
+  ebitda_year_2: number | null;
   revenue_year_3: number | null;
   ebitda_year_3: number | null;
+  revenue_projection: number | null;
+  ebitda_projection: number | null;
+  fiscal_year_labels: Record<string, string> | null;
+  nda_type: string | null;
+  cim_sharing_preference: string | null;
+  nda_vetting_preference: string | null;
+  teaser_document_path: string | null;
+  cim_document_path: string | null;
+  nda_document_path: string | null;
   ioi_due_date: string | null;
   loi_due_date: string | null;
+  published_at: string | null;
+  closed_at: string | null;
+};
+
+type EngagementRow = {
+  id: string;
+  deal_id: string;
+  stage: string | null;
+  nda_status: string | null;
+  nda_signed_at: string | null;
+  cim_released: boolean | null;
+  cim_released_at: string | null;
+  cim_viewed_at: string | null;
+  cim_downloaded_at: string | null;
+  pass_reason: string | null;
+  pass_reason_detail: string | null;
+  declined_at: string | null;
+  vetting_status: string | null;
+  vetting_rejection_reason: string | null;
 };
 
 function buildKeywordOrFilter(keywords?: string[]) {
@@ -100,16 +132,33 @@ function parseCursor(cursor: string | null): { value: string | null; isInvalid: 
   return { value: cursor, isInvalid: false };
 }
 
+function buildBuyerMatchResponseDeal(deal: DealRow, engagement: EngagementRow | null) {
+  const {
+    teaser_document_path: teaserDocumentPath,
+    cim_document_path: cimDocumentPath,
+    nda_document_path: ndaDocumentPath,
+    ...safeDealFields
+  } = deal;
+
+  const ndaHasBeenSentOrSigned = engagement?.nda_status === "sent" || engagement?.nda_status === "signed";
+  const buyerHasCimAccess = engagement?.nda_status === "signed" && engagement?.cim_released === true;
+
+  return {
+    ...safeDealFields,
+    has_teaser_document: Boolean(teaserDocumentPath),
+    has_nda_document: deal.nda_type === "custom" && Boolean(ndaDocumentPath) && ndaHasBeenSentOrSigned,
+    has_cim_document: Boolean(cimDocumentPath) && buyerHasCimAccess,
+    engagement,
+  };
+}
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const context = await requireRole("buyer");
+  if (isAuthResponse(context)) return context;
+  const { supabase, user } = context;
 
   // Fetch the project and verify ownership
   const { data: project, error: projectError } = await supabase
@@ -237,13 +286,13 @@ export async function GET(
   const pageDeals = matchedDeals.slice(0, PAGE_SIZE);
   const pageDealIds = pageDeals.map((deal) => deal.id);
 
-  let engagements: Array<{ id: string; deal_id: string; stage: string | null; nda_status: string | null }> = [];
+  let engagements: EngagementRow[] = [];
 
   // Fetch existing engagements only for deals in this page
   if (pageDealIds.length > 0) {
     const { data: engagementRows, error: engagementsError } = await supabase
       .from("deal_engagements")
-      .select("id, deal_id, stage, nda_status")
+      .select("id, deal_id, stage, nda_status, nda_signed_at, cim_released, cim_released_at, cim_viewed_at, cim_downloaded_at, pass_reason, pass_reason_detail, declined_at, vetting_status, vetting_rejection_reason")
       .eq("buyer_user_id", user.id)
       .in("deal_id", pageDealIds);
 
@@ -260,10 +309,7 @@ export async function GET(
   }
 
   const engagementMap = new Map((engagements || []).map((engagement) => [engagement.deal_id, engagement]));
-  const results = pageDeals.map((deal) => ({
-    ...deal,
-    engagement: engagementMap.get(deal.id) || null,
-  }));
+  const results = pageDeals.map((deal) => buildBuyerMatchResponseDeal(deal, engagementMap.get(deal.id) || null));
 
   const hitScanCap = !exhausted && (scannedBatches >= MAX_SCAN_BATCHES || scannedRows >= MAX_SCANNED_ROWS);
   const nextCursor = matchedDeals.length > PAGE_SIZE

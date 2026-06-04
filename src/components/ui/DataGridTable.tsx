@@ -229,7 +229,7 @@ export function DataGridTable<T extends DealLike>({
   };
 
   return (
-    <Paper elevation={0} sx={{ borderRadius: 1, overflow: "hidden", border: "1px solid #CFCFCF" }}>
+    <Paper elevation={0} sx={{ borderRadius: 1, overflow: "hidden", border: "1px solid var(--color-border)" }}>
       <Box
         ref={tableContainerRef}
         sx={{ width: "100%", border: "0px" }}
@@ -293,7 +293,7 @@ export function DataGridTable<T extends DealLike>({
       <Box
         sx={{
           width: "100%",
-          borderTop: "1px solid #CFCFCF",
+          borderTop: "1px solid #E5E7EB",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",

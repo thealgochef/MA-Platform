@@ -5,6 +5,7 @@ import { Box, Paper, TablePagination } from "@mui/material";
 import {
   DataGrid,
   GridColDef,
+  GridEventListener,
   GridPaginationModel,
   GridRowParams,
   GridRowSelectionModel,
@@ -26,7 +27,7 @@ interface ProjectDealsTableProps<T extends DealLike> {
   onRowSelectionModelChange: (model: GridRowSelectionModel) => void;
   sortModel: GridSortModel;
   onSortModelChange: (model: GridSortModel) => void;
-  onRowClick?: (row: T) => void;
+  onRowClick?: (row: T, trigger?: HTMLElement | null) => void;
   sortedCount: number;
   paginationModel: GridPaginationModel;
   onPageChange: (page: number) => void;
@@ -164,8 +165,9 @@ export function ProjectDealsTable<T extends DealLike>({
     [headlineColumn]
   );
 
-  const handleRowClick = (params: GridRowParams<T>) => {
-    onRowClick?.(params.row);
+  const handleRowClick: GridEventListener<"rowClick"> = (params: GridRowParams<T>, event) => {
+    const trigger = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>("[role='row']") : null;
+    onRowClick?.(params.row, trigger);
   };
 
   const headlineSortableFields = useMemo(() => [fixedHeadlineColumn.field], [fixedHeadlineColumn.field]);
@@ -291,7 +293,7 @@ export function ProjectDealsTable<T extends DealLike>({
   };
 
   return (
-    <Paper elevation={0} sx={{ borderRadius: 1, overflow: "hidden", border: "1px solid #CFCFCF" }}>
+    <Paper elevation={0} sx={{ borderRadius: 1, overflow: "hidden", border: "1px solid var(--color-border)" }}>
       <Box
         ref={tableContainerRef}
         sx={{ width: "100%", display: "flex", border: "0px" }}
@@ -411,7 +413,7 @@ export function ProjectDealsTable<T extends DealLike>({
       <Box
         sx={{
           width: "100%",
-          borderTop: "1px solid #CFCFCF",
+          borderTop: "1px solid #E5E7EB",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",

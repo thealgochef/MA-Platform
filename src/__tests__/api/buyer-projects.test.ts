@@ -91,12 +91,63 @@ describe("Phase 4: Buyer Projects & Deal Discovery", () => {
       expect(content).toContain("matchDealsToProject");
     });
 
+    it("project matches route should require buyer role before returning matches", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "projects", "[id]", "matches", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("requireRole");
+      expect(content).toMatch(/requireRole\(["']buyer["']\)/);
+      expect(content).toContain("isAuthResponse");
+      expect(content).toMatch(/if \(isAuthResponse\(context\)\) return context/);
+    });
+
     it("project matches route should include existing engagements", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "api", "projects", "[id]", "matches", "route.ts"),
         "utf-8"
       );
       expect(content).toContain("deal_engagements");
+    });
+
+    it("project matches route should return minimized expanded drawer deal and engagement fields", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "projects", "[id]", "matches", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("description");
+      expect(content).toContain("revenue_year_1");
+      expect(content).toContain("ebitda_year_1");
+      expect(content).toContain("revenue_projection");
+      expect(content).toContain("fiscal_year_labels");
+      expect(content).toContain("nda_type");
+      expect(content).toContain("cim_sharing_preference");
+      expect(content).toContain("nda_vetting_preference");
+      expect(content).toContain("has_teaser_document");
+      expect(content).toContain("has_cim_document");
+      expect(content).toContain("has_nda_document");
+      expect(content).toContain("teaser_document_path: teaserDocumentPath");
+      expect(content).toContain("cim_document_path: cimDocumentPath");
+      expect(content).toContain("nda_document_path: ndaDocumentPath");
+      expect(content).toContain("cim_released_at");
+      expect(content).toContain("cim_viewed_at");
+      expect(content).toContain("pass_reason_detail");
+      expect(content).toContain("vetting_rejection_reason");
+    });
+
+    it("project matches route should not spread raw storage paths into buyer responses", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "projects", "[id]", "matches", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("buildBuyerMatchResponseDeal");
+      expect(content).not.toMatch(/\.\.\.deal,\s*engagement/);
+      expect(content).toMatch(/const buyerHasCimAccess =[\s\S]*engagement\?\.nda_status === "signed"[\s\S]*engagement\?\.cim_released === true/);
+      expect(content).toMatch(/has_cim_document:[\s\S]*buyerHasCimAccess/);
+      expect(content).toMatch(/has_nda_document:[\s\S]*ndaHasBeenSentOrSigned/);
     });
   });
 
