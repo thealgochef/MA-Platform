@@ -602,7 +602,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
             </div>
           )}
 
-          <div className="mb-2 flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-primary">{project?.name || "Project"}</h1>
               <p className="text-sm text-text-secondary">

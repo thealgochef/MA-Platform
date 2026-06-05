@@ -488,7 +488,7 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
           <div className="sticky top-0 z-10 border-b border-border-color bg-bg-alt px-6 pt-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 id="deal-drawer-title" className="mt-1 text-2xl font-bold text-primary">
+                <h2 id="deal-drawer-title" className="text-2xl font-bold text-primary">
                   <Link
                     href={workspaceHref}
                     className="inline-flex rounded-sm transition-colors hover:text-secondary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -496,7 +496,7 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
                     {deal.headline}
                   </Link>
 
-                  <div className="flex flex-wrap items-center gap-2 mb-1 mt-1">
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
                     <span className="rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">
                       {DEAL_STATUS_LABELS[deal.status] || deal.status}
                     </span>

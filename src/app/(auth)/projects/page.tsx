@@ -196,7 +196,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-bg-alt py-8">
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="w-full px-5 sm:px-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-primary">Acquisition Projects</h1>
           <Link
@@ -214,7 +214,7 @@ export default function ProjectsPage() {
         )}
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 pb-8">
+      <div className="w-full px-4 pb-8">
         <div>
           {projects.length === 0 ? (
             <div className="bg-surface-alt rounded-lg border border-border-color p-8 text-center">
