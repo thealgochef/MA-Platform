@@ -34,7 +34,7 @@ interface ProjectDealsTableProps<T extends DealLike> {
   onRowsPerPageChange: (pageSize: number) => void;
 }
 
-const HEADLINE_COLUMN_WIDTH = 400;
+const HEADLINE_COLUMN_WIDTH = 450;
 const SELECTION_COLUMN_WIDTH = 50;
 const HEADLINE_GRID_WIDTH = HEADLINE_COLUMN_WIDTH + SELECTION_COLUMN_WIDTH;
 const SCROLLBAR_IDLE_MS = 300;

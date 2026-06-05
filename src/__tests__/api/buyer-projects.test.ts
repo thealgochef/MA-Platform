@@ -137,6 +137,16 @@ describe("Phase 4: Buyer Projects & Deal Discovery", () => {
       expect(content).toContain("vetting_rejection_reason");
     });
 
+    it("project matches route should map deals.created_at to date_received", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "projects", "[id]", "matches", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("created_at");
+      expect(content).toContain("date_received: createdAt");
+    });
+
     it("project matches route should not spread raw storage paths into buyer responses", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "api", "projects", "[id]", "matches", "route.ts"),

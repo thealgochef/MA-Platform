@@ -99,6 +99,35 @@ function getVisibleDeals(deals: Deal[], viewMode: ProjectDealsViewMode): Deal[] 
   });
 }
 
+function formatDateReceived(value: string | null | undefined): string {
+  if (!value) {
+    return "—";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "—";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  }).format(parsed);
+}
+
+function getDateReceivedSortValue(value: string | null | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  const timestamp = parsed.getTime();
+
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
 function getEmptyStateMessage(viewMode: ProjectDealsViewMode): string {
   if (viewMode === "active") {
     return "No deals with active engagements yet.";
@@ -326,8 +355,6 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
     return {
       field: "headline",
       headerName: "Headline",
-      width: 240,
-      minWidth: 220,
       cellClassName: "row-hover-text",
       renderCell: (params) => (
         <Box sx={{ color: "inherit" }}>
@@ -350,10 +377,19 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
   const detailColumns = useMemo<GridColDef<Deal>[]>(() => {
     return [
       {
+        field: "date_received",
+        headerName: "Date Received",
+        flex: 0.9,
+        minWidth: 120,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => row.date_received,
+        renderCell: (params) => formatDateReceived(params.row.date_received),
+      },
+      {
         field: "revenue_year_3",
         headerName: "Revenue",
         flex: 0.9,
-        minWidth: 80,
+        minWidth: 120,
         cellClassName: "row-hover-text",
         valueGetter: (_, row) => row.revenue_year_3,
         renderCell: (params) =>
@@ -363,7 +399,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "ebitda_year_3",
         headerName: "EBITDA",
         flex: 0.9,
-        minWidth: 80,
+        minWidth: 120,
         cellClassName: "row-hover-text",
         valueGetter: (_, row) => row.ebitda_year_3,
         renderCell: (params) =>
@@ -373,14 +409,14 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "industry",
         headerName: "Industry",
         flex: 1,
-        minWidth: 140,
+        minWidth: 120,
         cellClassName: "row-hover-text",
       },
       {
         field: "geography",
         headerName: "Location",
         flex: 0.9,
-        minWidth: 140,
+        minWidth: 120,
         cellClassName: "row-hover-text",
         valueGetter: (_, row) => getGeography(row) || "—",
       },
@@ -388,7 +424,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "status",
         headerName: "Deal Status",
         flex: 1,
-        minWidth: 140,
+        minWidth: 160,
         sortable: false,
         renderCell: (params) => (
           <Chip
@@ -400,9 +436,9 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
       },
       {
         field: "engagement_status",
-        headerName: "Engagement Status",
+        headerName: "Engagement",
         flex: 1,
-        minWidth: 150,
+        minWidth: 160,
         sortable: false,
         renderCell: (params) =>
           params.row.engagement ? (
@@ -470,13 +506,6 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
           );
         },
       },
-      {
-        field: "date_received",
-        headerName: "Date Received",
-        flex: 0.9,
-        minWidth: 130,
-        cellClassName: "row-hover-text",
-      },
     ];
   }, [actionLoading, handleDecline, handlePursue, router]);
 
@@ -495,6 +524,8 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
           return deal.industry;
         case "geography":
           return getGeography(deal) || "";
+        case "date_received":
+          return getDateReceivedSortValue(deal.date_received);
         case "revenue_year_3":
           return deal.revenue_year_3 ?? Number.NEGATIVE_INFINITY;
         case "ebitda_year_3":
@@ -507,6 +538,18 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
     return [...visibleDeals].sort((a, b) => {
       const aValue = getValue(a);
       const bValue = getValue(b);
+
+      if (aValue == null && bValue == null) {
+        return 0;
+      }
+
+      if (aValue == null) {
+        return 1;
+      }
+
+      if (bValue == null) {
+        return -1;
+      }
 
       if (typeof aValue === "number" && typeof bValue === "number") {
         return (aValue - bValue) * direction;
@@ -559,7 +602,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
             </div>
           )}
 
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-2 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-primary">{project?.name || "Project"}</h1>
               <p className="text-sm text-text-secondary">

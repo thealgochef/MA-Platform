@@ -10,7 +10,7 @@ const MAX_SCAN_BATCHES = 50;
 const MAX_SCANNED_ROWS = FETCH_BATCH_SIZE * MAX_SCAN_BATCHES;
 const MAX_CANONICAL_KEYWORDS = 20;
 const MAX_KEYWORD_TOKEN_LENGTH = 64;
-const DEAL_SELECT_FIELDS = "id, headline, description, industry, state, region, geography_display, status, revenue_year_1, ebitda_year_1, revenue_year_2, ebitda_year_2, revenue_year_3, ebitda_year_3, revenue_projection, ebitda_projection, fiscal_year_labels, nda_type, cim_sharing_preference, nda_vetting_preference, teaser_document_path, cim_document_path, nda_document_path, ioi_due_date, loi_due_date, published_at, closed_at";
+const DEAL_SELECT_FIELDS = "id, headline, description, industry, state, region, geography_display, status, revenue_year_1, ebitda_year_1, revenue_year_2, ebitda_year_2, revenue_year_3, ebitda_year_3, revenue_projection, ebitda_projection, fiscal_year_labels, nda_type, cim_sharing_preference, nda_vetting_preference, teaser_document_path, cim_document_path, nda_document_path, ioi_due_date, loi_due_date, published_at, closed_at, created_at";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const KEYWORD_SPLIT_REGEX = /[(),]+/;
 
@@ -42,6 +42,7 @@ type DealRow = {
   loi_due_date: string | null;
   published_at: string | null;
   closed_at: string | null;
+  created_at: string;
 };
 
 type EngagementRow = {
@@ -137,6 +138,7 @@ function buildBuyerMatchResponseDeal(deal: DealRow, engagement: EngagementRow | 
     teaser_document_path: teaserDocumentPath,
     cim_document_path: cimDocumentPath,
     nda_document_path: ndaDocumentPath,
+    created_at: createdAt,
     ...safeDealFields
   } = deal;
 
@@ -145,6 +147,7 @@ function buildBuyerMatchResponseDeal(deal: DealRow, engagement: EngagementRow | 
 
   return {
     ...safeDealFields,
+    date_received: createdAt,
     has_teaser_document: Boolean(teaserDocumentPath),
     has_nda_document: deal.nda_type === "custom" && Boolean(ndaDocumentPath) && ndaHasBeenSentOrSigned,
     has_cim_document: Boolean(cimDocumentPath) && buyerHasCimAccess,

@@ -207,32 +207,34 @@ export default function BuyerDealWorkspace() {
                   </Link>
                 )}
 
-                {canAccessIoiWorkflow && (
-                  <Link
-                    href={`/deals/${dealId}/ioi`}
-                    className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
-                  >
-                    Submit IOI
-                  </Link>
-                )}
+                <div className="ml-auto flex flex-wrap justify-end gap-3">
+                  {canAccessIoiWorkflow && (
+                    <Link
+                      href={`/deals/${dealId}/ioi`}
+                      className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
+                    >
+                      Submit IOI
+                    </Link>
+                  )}
 
-                {canAccessLoiWorkflow && (
-                  <Link
-                    href={`/deals/${dealId}/loi`}
-                    className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
-                  >
-                    Submit LOI
-                  </Link>
-                )}
+                  {canAccessLoiWorkflow && (
+                    <Link
+                      href={`/deals/${dealId}/loi`}
+                      className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
+                    >
+                      Submit LOI
+                    </Link>
+                  )}
 
-                {canReportClosure && (
-                  <Link
-                    href={`/deals/${dealId}/close`}
-                    className="px-4 py-2 border border-border-gray text-text rounded-md text-sm font-medium hover:bg-bg-alt transition-colors"
-                  >
-                    Report Closure
-                  </Link>
-                )}
+                  {canReportClosure && (
+                    <Link
+                      href={`/deals/${dealId}/close`}
+                      className="px-4 py-2 border border-border-gray text-text rounded-md text-sm font-medium hover:bg-bg-alt transition-colors"
+                    >
+                      Report Closure
+                    </Link>
+                  )}
+                </div>
               </div>
 
               {/* Messaging link */}

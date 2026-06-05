@@ -6,6 +6,7 @@ import ProjectDealsView, { getProjectDealsRouteForTabChange } from "./ProjectDea
 type MockDeal = {
   id: string;
   headline: string;
+  date_received?: string | null;
   description?: string | null;
   industry: string;
   state: string | null;
@@ -97,6 +98,7 @@ vi.mock("@/components/ui/ProjectDealsTable", () => ({
     rows,
     headlineColumn,
     detailColumns,
+    onSortModelChange,
     onRowClick,
   }: {
     rows: MockDeal[];
@@ -113,13 +115,26 @@ vi.mock("@/components/ui/ProjectDealsTable", () => ({
       field: string;
       renderCell?: (params: { row: MockDeal }) => React.ReactNode;
     }>;
+    onSortModelChange?: (model: Array<{ field: string; sort: "asc" | "desc" }>) => void;
     onRowClick?: (row: MockDeal, trigger?: HTMLElement | null) => void;
   }) => {
     const actionsColumn = detailColumns?.find((column) => column.field === "actions");
+    const dateReceivedColumn = detailColumns?.find((column) => column.field === "date_received");
     const firstRow = rows[0];
 
     return (
       <div>
+        <button type="button" onClick={() => onSortModelChange?.([{ field: "date_received", sort: "asc" }])}>
+          Sort by date received asc
+        </button>
+        <button type="button" onClick={() => onSortModelChange?.([{ field: "date_received", sort: "desc" }])}>
+          Sort by date received desc
+        </button>
+        <ol data-testid="row-order">
+          {rows.map((row) => (
+            <li key={row.id}>{row.headline}</li>
+          ))}
+        </ol>
         <button type="button" onClick={(event) => firstRow && onRowClick?.(firstRow, event.currentTarget)}>
           Open first row
         </button>
@@ -130,9 +145,10 @@ vi.mock("@/components/ui/ProjectDealsTable", () => ({
               id: firstRow.id,
               field: "headline",
               hasFocus: true,
-              value: firstRow.headline,
-            })}
+                value: firstRow.headline,
+              })}
             <div data-testid="table-actions">{actionsColumn?.renderCell?.({ row: firstRow })}</div>
+            <div data-testid="date-received-cell">{dateReceivedColumn?.renderCell?.({ row: firstRow })}</div>
           </div>
         )}
       </div>
@@ -246,7 +262,7 @@ describe("ProjectDealsView", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Alpha Manufacturing" }));
 
-    expect(screen.getByRole("dialog", { name: "Alpha Manufacturing" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Alpha Manufacturing/ })).toBeInTheDocument();
     expect(screen.getByText("Industrial")).toBeInTheDocument();
     expect(screen.getByText("TX")).toBeInTheDocument();
   });
@@ -256,8 +272,8 @@ describe("ProjectDealsView", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Alpha Manufacturing" }));
 
-    const dialog = screen.getByRole("dialog", { name: "Alpha Manufacturing" });
-    const headline = within(dialog).getByRole("heading", { name: "Alpha Manufacturing" });
+    const dialog = screen.getByRole("dialog", { name: /Alpha Manufacturing/ });
+    const headline = within(dialog).getByRole("heading", { name: /Alpha Manufacturing/ });
     const headlineLink = within(dialog).getByRole("link", { name: "Alpha Manufacturing" });
 
     expect(headline).toContainElement(headlineLink);
@@ -356,7 +372,7 @@ describe("ProjectDealsView", () => {
 
     const activePanel = screen.getByRole("tabpanel");
 
-    expect(screen.getByRole("dialog", { name: "Sparse Services" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Sparse Services/ })).toBeInTheDocument();
     expect(screen.getByText("Not yet engaged")).toBeInTheDocument();
     expect(screen.getByText("No business description provided.")).toBeInTheDocument();
     expect(screen.getByText("Year 1")).toBeInTheDocument();
@@ -372,7 +388,7 @@ describe("ProjectDealsView", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
-    expect(screen.getByRole("dialog", { name: "Alpha Manufacturing" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Alpha Manufacturing/ })).toBeInTheDocument();
     expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-1");
   });
 
@@ -380,12 +396,12 @@ describe("ProjectDealsView", () => {
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
-    expect(screen.getByRole("dialog", { name: "Alpha Manufacturing" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Alpha Manufacturing/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Alpha Manufacturing" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: /Alpha Manufacturing/ })).not.toBeInTheDocument();
     });
   });
 
@@ -393,12 +409,12 @@ describe("ProjectDealsView", () => {
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
-    expect(screen.getByRole("dialog", { name: "Alpha Manufacturing" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Alpha Manufacturing/ })).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "Escape" });
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Alpha Manufacturing" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: /Alpha Manufacturing/ })).not.toBeInTheDocument();
     });
   });
 
@@ -406,12 +422,12 @@ describe("ProjectDealsView", () => {
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
-    expect(screen.getByRole("dialog", { name: "Alpha Manufacturing" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Alpha Manufacturing/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("deal-drawer-backdrop"));
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Alpha Manufacturing" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: /Alpha Manufacturing/ })).not.toBeInTheDocument();
     });
   });
 
@@ -422,7 +438,7 @@ describe("ProjectDealsView", () => {
     trigger.focus();
     fireEvent.click(trigger);
 
-    const dialog = await screen.findByRole("dialog", { name: "Alpha Manufacturing" });
+    const dialog = await screen.findByRole("dialog", { name: /Alpha Manufacturing/ });
     const closeButton = await screen.findByRole("button", { name: "Close" });
     await waitFor(() => {
       expect(closeButton).toHaveFocus();
@@ -464,70 +480,70 @@ describe("ProjectDealsView", () => {
     fireEvent.click(closeButton);
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Alpha Manufacturing" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog", { name: /Alpha Manufacturing/ })).not.toBeInTheDocument();
     });
     expect(trigger).toHaveFocus();
   });
 
-  it("renders and switches drawer Details/Updates/Files tabs with partitioned panel content", async () => {
+  it("renders and switches drawer Details/Events/Files tabs with partitioned panel content", async () => {
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
     const detailsTab = screen.getByRole("tab", { name: "Details" });
-    const updatesTab = screen.getByRole("tab", { name: "Updates" });
+    const eventsTab = screen.getByRole("tab", { name: "Events" });
     const filesTab = screen.getByRole("tab", { name: "Files" });
 
     expect(detailsTab).toBeInTheDocument();
-    expect(updatesTab).toBeInTheDocument();
+    expect(eventsTab).toBeInTheDocument();
     expect(filesTab).toBeInTheDocument();
 
     const drawerTabsRoot = screen.getByTestId("deal-drawer-primary-tabs");
     expect(drawerTabsRoot).toHaveClass("deal-drawer-primary-tabs", "w-full");
     expect(drawerTabsRoot).toHaveAttribute("data-full-width-intent", "true");
     expect(drawerTabsRoot).toContainElement(detailsTab);
-    expect(drawerTabsRoot).toContainElement(updatesTab);
+    expect(drawerTabsRoot).toContainElement(eventsTab);
     expect(drawerTabsRoot).toContainElement(filesTab);
     expect(detailsTab).toHaveAttribute("aria-selected", "true");
 
     const detailsPanelId = detailsTab.getAttribute("aria-controls");
-    const updatesPanelId = updatesTab.getAttribute("aria-controls");
+    const eventsPanelId = eventsTab.getAttribute("aria-controls");
     const filesPanelId = filesTab.getAttribute("aria-controls");
 
     expect(detailsPanelId).toBeTruthy();
-    expect(updatesPanelId).toBeTruthy();
+    expect(eventsPanelId).toBeTruthy();
     expect(filesPanelId).toBeTruthy();
 
     const detailsPanel = document.getElementById(detailsPanelId as string);
-    const updatesPanel = document.getElementById(updatesPanelId as string);
+    const eventsPanel = document.getElementById(eventsPanelId as string);
     const filesPanel = document.getElementById(filesPanelId as string);
 
     expect(detailsPanel).toBeInTheDocument();
-    expect(updatesPanel).toBeInTheDocument();
+    expect(eventsPanel).toBeInTheDocument();
     expect(filesPanel).toBeInTheDocument();
     expect(detailsPanel).toHaveAttribute("role", "tabpanel");
-    expect(updatesPanel).toHaveAttribute("role", "tabpanel");
+    expect(eventsPanel).toHaveAttribute("role", "tabpanel");
     expect(filesPanel).toHaveAttribute("role", "tabpanel");
     expect(detailsPanel).toHaveAttribute("aria-labelledby", detailsTab.getAttribute("id"));
-    expect(updatesPanel).toHaveAttribute("aria-labelledby", updatesTab.getAttribute("id"));
+    expect(eventsPanel).toHaveAttribute("aria-labelledby", eventsTab.getAttribute("id"));
     expect(filesPanel).toHaveAttribute("aria-labelledby", filesTab.getAttribute("id"));
     expect(detailsPanel).not.toHaveAttribute("hidden");
-    expect(updatesPanel).toHaveAttribute("hidden");
+    expect(eventsPanel).toHaveAttribute("hidden");
     expect(filesPanel).toHaveAttribute("hidden");
     expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Status updates" })).not.toBeInTheDocument();
+    expect(within(detailsPanel as HTMLElement).queryByText("Current deal status")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Files" })).not.toBeInTheDocument();
 
-    fireEvent.click(updatesTab);
+    fireEvent.click(eventsTab);
 
     await waitFor(() => {
-      expect(updatesTab).toHaveAttribute("aria-selected", "true");
+      expect(eventsTab).toHaveAttribute("aria-selected", "true");
     });
 
     expect(detailsPanel).toHaveAttribute("hidden");
-    expect(updatesPanel).not.toHaveAttribute("hidden");
+    expect(eventsPanel).not.toHaveAttribute("hidden");
     expect(filesPanel).toHaveAttribute("hidden");
-    expect(screen.getByRole("heading", { name: "Status updates" })).toBeInTheDocument();
+    expect(within(eventsPanel as HTMLElement).getByRole("heading", { name: "Timeline" })).toBeInTheDocument();
     expect(screen.getByText("Current deal status")).toBeInTheDocument();
     expect(screen.getByText(/No active engagement/i)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Overview" })).not.toBeInTheDocument();
@@ -540,12 +556,12 @@ describe("ProjectDealsView", () => {
     });
 
     expect(detailsPanel).toHaveAttribute("hidden");
-    expect(updatesPanel).toHaveAttribute("hidden");
+    expect(eventsPanel).toHaveAttribute("hidden");
     expect(filesPanel).not.toHaveAttribute("hidden");
     expect(screen.getByRole("heading", { name: "Files" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Overview" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Financials" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Status updates" })).not.toBeInTheDocument();
+    expect(within(filesPanel as HTMLElement).queryByText("Current deal status")).not.toBeInTheDocument();
   });
 
   it("orders updates chronologically and omits placeholder timestamps", async () => {
@@ -569,27 +585,27 @@ describe("ProjectDealsView", () => {
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
-    const updatesTab = screen.getByRole("tab", { name: "Updates" });
-    fireEvent.click(updatesTab);
+    const eventsTab = screen.getByRole("tab", { name: "Events" });
+    fireEvent.click(eventsTab);
 
-    const updatesPanelId = updatesTab.getAttribute("aria-controls");
-    expect(updatesPanelId).toBeTruthy();
+    const eventsPanelId = eventsTab.getAttribute("aria-controls");
+    expect(eventsPanelId).toBeTruthy();
 
-    const updatesPanel = document.getElementById(updatesPanelId as string);
-    expect(updatesPanel).toBeInTheDocument();
+    const eventsPanel = document.getElementById(eventsPanelId as string);
+    expect(eventsPanel).toBeInTheDocument();
 
-    const cimViewed = within(updatesPanel as HTMLElement).getByText("CIM viewed");
-    const cimDownloaded = within(updatesPanel as HTMLElement).getByText("CIM downloaded");
-    const cimReleased = within(updatesPanel as HTMLElement).getByText("CIM released");
-    const ndaSigned = within(updatesPanel as HTMLElement).getByText("NDA signed");
-    const dealPublished = within(updatesPanel as HTMLElement).getByText("Deal published");
+    const cimViewed = within(eventsPanel as HTMLElement).getByText("CIM viewed");
+    const cimDownloaded = within(eventsPanel as HTMLElement).getByText("CIM downloaded");
+    const cimReleased = within(eventsPanel as HTMLElement).getByText("CIM released");
+    const ndaSigned = within(eventsPanel as HTMLElement).getByText("NDA signed");
+    const dealPublished = within(eventsPanel as HTMLElement).getByText("Deal published");
 
     expect(cimViewed.compareDocumentPosition(cimDownloaded) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(cimDownloaded.compareDocumentPosition(cimReleased) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(cimReleased.compareDocumentPosition(ndaSigned) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(ndaSigned.compareDocumentPosition(dealPublished) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    expect(within(updatesPanel as HTMLElement).queryByText("—")).not.toBeInTheDocument();
+    expect(within(eventsPanel as HTMLElement).queryByText("—")).not.toBeInTheDocument();
   });
 
   it("does not duplicate closed status updates for closed deals", async () => {
@@ -604,17 +620,17 @@ describe("ProjectDealsView", () => {
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
-    const updatesTab = screen.getByRole("tab", { name: "Updates" });
-    fireEvent.click(updatesTab);
+    const eventsTab = screen.getByRole("tab", { name: "Events" });
+    fireEvent.click(eventsTab);
 
-    const updatesPanelId = updatesTab.getAttribute("aria-controls");
-    expect(updatesPanelId).toBeTruthy();
+    const eventsPanelId = eventsTab.getAttribute("aria-controls");
+    expect(eventsPanelId).toBeTruthy();
 
-    const updatesPanel = document.getElementById(updatesPanelId as string);
-    expect(updatesPanel).toBeInTheDocument();
+    const eventsPanel = document.getElementById(eventsPanelId as string);
+    expect(eventsPanel).toBeInTheDocument();
 
-    expect(within(updatesPanel as HTMLElement).queryByText("Current deal status")).not.toBeInTheDocument();
-    expect(within(updatesPanel as HTMLElement).getByText("Deal closed")).toBeInTheDocument();
+    expect(within(eventsPanel as HTMLElement).queryByText("Current deal status")).not.toBeInTheDocument();
+    expect(within(eventsPanel as HTMLElement).getByText("Deal closed")).toBeInTheDocument();
   });
 
   it("keeps drawer tabs in the sticky header above tab panel content", async () => {
@@ -1195,5 +1211,173 @@ describe("ProjectDealsView", () => {
 
     expect(contentWrapper).toHaveClass("w-full", "px-4", "pb-8");
     expect(contentWrapper).not.toHaveClass("max-w-6xl", "mx-auto");
+  });
+
+  it("renders date received in mm/dd/yyyy format when provided", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        date_received: "2025-03-15T00:00:00.000Z",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent("03/15/2025");
+  });
+
+  it("renders an em dash when date received is missing or invalid", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        date_received: null,
+      },
+    ];
+
+    const { unmount } = render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent("—");
+
+    unmount();
+
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        date_received: "not-a-real-date",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent("—");
+  });
+
+  it("sorts rows by date received in chronological order", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-new",
+        headline: "Newest Deal",
+        date_received: "2025-03-20",
+      },
+      {
+        ...sampleDeals[0],
+        id: "deal-old",
+        headline: "Oldest Deal",
+        date_received: "2025-01-05",
+      },
+      {
+        ...sampleDeals[0],
+        id: "deal-mid",
+        headline: "Middle Deal",
+        date_received: "2025-02-10",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    await screen.findByRole("button", { name: "Open first row" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by date received asc" }));
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId("row-order")).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+        "Oldest Deal",
+        "Middle Deal",
+        "Newest Deal",
+      ]);
+    });
+  });
+
+  it("sorts rows by date received in reverse chronological order", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-new",
+        headline: "Newest Deal",
+        date_received: "2025-03-20",
+      },
+      {
+        ...sampleDeals[0],
+        id: "deal-old",
+        headline: "Oldest Deal",
+        date_received: "2025-01-05",
+      },
+      {
+        ...sampleDeals[0],
+        id: "deal-mid",
+        headline: "Middle Deal",
+        date_received: "2025-02-10",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    await screen.findByRole("button", { name: "Open first row" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by date received desc" }));
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId("row-order")).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+        "Newest Deal",
+        "Middle Deal",
+        "Oldest Deal",
+      ]);
+    });
+  });
+
+  it("places null or invalid date received values after valid dates for both sort directions", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-valid-early",
+        headline: "Valid Early Deal",
+        date_received: "2025-01-05",
+      },
+      {
+        ...sampleDeals[0],
+        id: "deal-null",
+        headline: "Null Date Deal",
+        date_received: null,
+      },
+      {
+        ...sampleDeals[0],
+        id: "deal-invalid",
+        headline: "Invalid Date Deal",
+        date_received: "not-a-real-date",
+      },
+      {
+        ...sampleDeals[0],
+        id: "deal-valid-late",
+        headline: "Valid Late Deal",
+        date_received: "2025-03-20",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    await screen.findByRole("button", { name: "Open first row" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by date received asc" }));
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId("row-order")).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+        "Valid Early Deal",
+        "Valid Late Deal",
+        "Null Date Deal",
+        "Invalid Date Deal",
+      ]);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by date received desc" }));
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId("row-order")).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+        "Valid Late Deal",
+        "Valid Early Deal",
+        "Null Date Deal",
+        "Invalid Date Deal",
+      ]);
+    });
   });
 });
