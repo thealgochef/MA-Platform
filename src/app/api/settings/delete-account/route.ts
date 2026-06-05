@@ -107,6 +107,74 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Remove buyer deal closures first; these rows reference engagements without ON DELETE CASCADE
+    const { error: buyerClosuresDeleteError } = await adminClient
+      .from("deal_closures")
+      .delete()
+      .eq("buyer_user_id", user.id);
+
+    if (buyerClosuresDeleteError) {
+      console.error("[settings/delete-account][POST] Failed to delete buyer deal closures", {
+        userId: user.id,
+        error: buyerClosuresDeleteError.message,
+      });
+      return NextResponse.json(
+        { error: "Failed to delete buyer deal closures during account deletion" },
+        { status: 500 }
+      );
+    }
+
+    // Remove buyer engagements after closures so firm/user deletes are not blocked by FK constraints
+    const { error: buyerEngagementsDeleteError } = await adminClient
+      .from("deal_engagements")
+      .delete()
+      .eq("buyer_user_id", user.id);
+
+    if (buyerEngagementsDeleteError) {
+      console.error("[settings/delete-account][POST] Failed to delete buyer deal engagements", {
+        userId: user.id,
+        error: buyerEngagementsDeleteError.message,
+      });
+      return NextResponse.json(
+        { error: "Failed to delete buyer deal engagements during account deletion" },
+        { status: 500 }
+      );
+    }
+
+    // Remove user-authored activity rows because actor_id references users without ON DELETE CASCADE
+    const { error: buyerActivityLogDeleteError } = await adminClient
+      .from("deal_activity_log")
+      .delete()
+      .eq("actor_id", user.id);
+
+    if (buyerActivityLogDeleteError) {
+      console.error("[settings/delete-account][POST] Failed to delete buyer activity log rows", {
+        userId: user.id,
+        error: buyerActivityLogDeleteError.message,
+      });
+      return NextResponse.json(
+        { error: "Failed to delete buyer activity logs during account deletion" },
+        { status: 500 }
+      );
+    }
+
+    // Remove buyer projects explicitly before user delete to avoid relational leftovers
+    const { error: buyerProjectsDeleteError } = await adminClient
+      .from("buyer_projects")
+      .delete()
+      .eq("buyer_user_id", user.id);
+
+    if (buyerProjectsDeleteError) {
+      console.error("[settings/delete-account][POST] Failed to delete buyer projects", {
+        userId: user.id,
+        error: buyerProjectsDeleteError.message,
+      });
+      return NextResponse.json(
+        { error: "Failed to delete buyer projects during account deletion" },
+        { status: 500 }
+      );
+    }
   }
 
   // Check if user is the only firm member

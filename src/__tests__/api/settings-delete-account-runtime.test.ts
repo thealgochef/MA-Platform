@@ -27,6 +27,10 @@ function createAdminClientStub({
   dealsTerminateError = null,
   engagementsTerminateError = null,
   buyerEngagementsUpdateError = null,
+  buyerClosuresDeleteError = null,
+  buyerEngagementsDeleteError = null,
+  buyerActivityLogDeleteError = null,
+  buyerProjectsDeleteError = null,
   usersCountError = null,
   firmDeleteError = null,
   usersDeleteError = null,
@@ -38,6 +42,10 @@ function createAdminClientStub({
   dealsTerminateError?: { message: string } | null;
   engagementsTerminateError?: { message: string } | null;
   buyerEngagementsUpdateError?: { message: string } | null;
+  buyerClosuresDeleteError?: { message: string } | null;
+  buyerEngagementsDeleteError?: { message: string } | null;
+  buyerActivityLogDeleteError?: { message: string } | null;
+  buyerProjectsDeleteError?: { message: string } | null;
   usersCountError?: { message: string } | null;
   firmDeleteError?: { message: string } | null;
   usersDeleteError?: { message: string } | null;
@@ -61,6 +69,20 @@ function createAdminClientStub({
     eq: engagementsUpdateEq,
     not: engagementsUpdateNot,
   });
+
+  const closuresDeleteEq = vi.fn().mockResolvedValue({ error: buyerClosuresDeleteError });
+  const closuresDelete = vi.fn().mockReturnValue({ eq: closuresDeleteEq });
+
+  const engagementsDeleteEq = vi.fn().mockResolvedValue({ error: buyerEngagementsDeleteError });
+  const engagementsDelete = vi.fn().mockReturnValue({ eq: engagementsDeleteEq });
+
+  const activityLogDeleteEq = vi
+    .fn()
+    .mockResolvedValue({ error: buyerActivityLogDeleteError });
+  const activityLogDelete = vi.fn().mockReturnValue({ eq: activityLogDeleteEq });
+
+  const buyerProjectsDeleteEq = vi.fn().mockResolvedValue({ error: buyerProjectsDeleteError });
+  const buyerProjectsDelete = vi.fn().mockReturnValue({ eq: buyerProjectsDeleteEq });
 
   const firmsDeleteEq = vi.fn().mockResolvedValue({ error: firmDeleteError });
   const firmsDelete = vi.fn().mockReturnValue({ eq: firmsDeleteEq });
@@ -90,7 +112,20 @@ function createAdminClientStub({
       if (table === "deal_engagements") {
         return {
           update: engagementsUpdate,
+          delete: engagementsDelete,
         };
+      }
+
+      if (table === "deal_closures") {
+        return { delete: closuresDelete };
+      }
+
+      if (table === "deal_activity_log") {
+        return { delete: activityLogDelete };
+      }
+
+      if (table === "buyer_projects") {
+        return { delete: buyerProjectsDelete };
       }
 
       if (table === "users") {
@@ -120,6 +155,14 @@ function createAdminClientStub({
     engagementsUpdateIn,
     engagementsUpdateEq,
     engagementsUpdateNot,
+    closuresDelete,
+    closuresDeleteEq,
+    engagementsDelete,
+    engagementsDeleteEq,
+    activityLogDelete,
+    activityLogDeleteEq,
+    buyerProjectsDelete,
+    buyerProjectsDeleteEq,
     usersCountSelect,
     usersCountEq,
     usersDelete,
@@ -222,7 +265,7 @@ describe("settings delete-account route runtime", () => {
     expect(notificationMocks.notifyBuyers).toHaveBeenNthCalledWith(2, "deal_terminated", "deal-2");
   });
 
-  it("buyer flow marks active engagements passed", async () => {
+  it("buyer flow updates engagements, performs buyer cleanup, and returns success", async () => {
     const adminClient = createAdminClientStub({ firmMemberCount: 2 });
     adminMocks.createAdminClient.mockReturnValue(adminClient);
 
@@ -246,6 +289,19 @@ describe("settings delete-account route runtime", () => {
       "in",
       '("passed","terminated","closed","declined")'
     );
+    expect(adminClient.closuresDeleteEq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+    expect(adminClient.engagementsDeleteEq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+    expect(adminClient.activityLogDeleteEq).toHaveBeenCalledWith("actor_id", "buyer-1");
+    expect(adminClient.buyerProjectsDeleteEq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+    expect(adminClient.from.mock.calls.map(([table]) => table)).toEqual([
+      "deal_engagements",
+      "deal_closures",
+      "deal_engagements",
+      "deal_activity_log",
+      "buyer_projects",
+      "users",
+      "users",
+    ]);
     expect(notificationMocks.notifyBuyers).not.toHaveBeenCalled();
   });
 
@@ -417,6 +473,133 @@ describe("settings delete-account route runtime", () => {
     await expect(response.json()).resolves.toEqual({
       error: "Failed to update buyer engagements during account deletion",
     });
+    expect(adminClient.closuresDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.engagementsDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.activityLogDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.buyerProjectsDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.usersCountEq).not.toHaveBeenCalled();
+    expect(adminClient.usersDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when deleting buyer deal closures fails and stops subsequent cleanup", async () => {
+    const adminClient = createAdminClientStub({
+      buyerClosuresDeleteError: { message: "closures delete failed" },
+    });
+    adminMocks.createAdminClient.mockReturnValue(adminClient);
+
+    authMocks.requireApprovedUser.mockResolvedValue({
+      user: { id: "buyer-1" },
+      profile: { role: "buyer", firm_id: "firm-1" },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/settings/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to delete buyer deal closures during account deletion",
+    });
+    expect(adminClient.engagementsUpdateEq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+    expect(adminClient.closuresDeleteEq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+    expect(adminClient.engagementsDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.activityLogDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.buyerProjectsDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.usersCountEq).not.toHaveBeenCalled();
+    expect(adminClient.usersDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when deleting buyer deal engagements fails and stops later cleanup", async () => {
+    const adminClient = createAdminClientStub({
+      buyerEngagementsDeleteError: { message: "engagements delete failed" },
+    });
+    adminMocks.createAdminClient.mockReturnValue(adminClient);
+
+    authMocks.requireApprovedUser.mockResolvedValue({
+      user: { id: "buyer-1" },
+      profile: { role: "buyer", firm_id: "firm-1" },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/settings/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to delete buyer deal engagements during account deletion",
+    });
+    expect(adminClient.closuresDeleteEq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+    expect(adminClient.engagementsDeleteEq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+    expect(adminClient.activityLogDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.buyerProjectsDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.usersCountEq).not.toHaveBeenCalled();
+    expect(adminClient.usersDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when deleting buyer activity logs fails and stops later cleanup", async () => {
+    const adminClient = createAdminClientStub({
+      buyerActivityLogDeleteError: { message: "activity delete failed" },
+    });
+    adminMocks.createAdminClient.mockReturnValue(adminClient);
+
+    authMocks.requireApprovedUser.mockResolvedValue({
+      user: { id: "buyer-1" },
+      profile: { role: "buyer", firm_id: "firm-1" },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/settings/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to delete buyer activity logs during account deletion",
+    });
+    expect(adminClient.engagementsDeleteEq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+    expect(adminClient.activityLogDeleteEq).toHaveBeenCalledWith("actor_id", "buyer-1");
+    expect(adminClient.buyerProjectsDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.usersCountEq).not.toHaveBeenCalled();
+    expect(adminClient.usersDeleteEq).not.toHaveBeenCalled();
+    expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when deleting buyer projects fails and does not continue", async () => {
+    const adminClient = createAdminClientStub({
+      buyerProjectsDeleteError: { message: "projects delete failed" },
+    });
+    adminMocks.createAdminClient.mockReturnValue(adminClient);
+
+    authMocks.requireApprovedUser.mockResolvedValue({
+      user: { id: "buyer-1" },
+      profile: { role: "buyer", firm_id: "firm-1" },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/settings/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      })
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Failed to delete buyer projects during account deletion",
+    });
+    expect(adminClient.activityLogDeleteEq).toHaveBeenCalledWith("actor_id", "buyer-1");
+    expect(adminClient.buyerProjectsDeleteEq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
+    expect(adminClient.usersCountEq).not.toHaveBeenCalled();
     expect(adminClient.usersDeleteEq).not.toHaveBeenCalled();
     expect(adminClient.auth.admin.deleteUser).not.toHaveBeenCalled();
   });
