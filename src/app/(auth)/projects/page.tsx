@@ -25,6 +25,12 @@ interface Project {
   created_at: string;
 }
 
+const DATE_DISPLAY_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "2-digit",
+  day: "2-digit",
+  year: "numeric",
+});
+
 export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -126,7 +132,7 @@ export default function ProjectsPage() {
         minWidth: 120,
         cellClassName: "row-hover-text",
         valueGetter: (_, row) => new Date(row.created_at).getTime(),
-        renderCell: (params) => new Date(params.row.created_at).toLocaleDateString(),
+        renderCell: (params) => DATE_DISPLAY_FORMATTER.format(new Date(params.row.created_at)),
       },
     ];
   }, []);

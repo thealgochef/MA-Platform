@@ -18,6 +18,17 @@ type MockDataGridProps = {
   onRowSelectionModelChange: (model: unknown) => void;
 };
 
+const US_MM_DD_YYYY_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "2-digit",
+  day: "2-digit",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function getExpectedUsDate(value: string): string {
+  return US_MM_DD_YYYY_FORMATTER.format(new Date(value));
+}
+
 const mockState = vi.hoisted(() => ({
   push: vi.fn(),
   capturedDataGridProps: [] as MockDataGridProps[],
@@ -284,6 +295,87 @@ describe("ProjectsPage", () => {
       expect(getLatestGridProps()?.paginationModel).toEqual({ page: 0, pageSize: 3 });
       expect(getLatestGridProps()?.sortedCount).toBe(projects.length);
     });
+  });
+
+  it("formats Created column values as deterministic MM/DD/YYYY", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project Orion",
+        industry: "Industrial",
+        revenue_min: null,
+        revenue_max: null,
+        ebitda_min: null,
+        ebitda_max: null,
+        location: "TX",
+        keywords: [],
+        created_at: "2026-01-02T00:00:00.000Z",
+      },
+    ];
+
+    mockProjectsResponse(projects);
+
+    render(<ProjectsPage />);
+
+    await screen.findByTestId("projects-data-grid");
+
+    const latestGridProps = getLatestGridProps();
+    const createdColumn = latestGridProps?.detailColumns.find(
+      (column: { field?: string }) => column.field === "created_at"
+    ) as { renderCell?: (params: { row: { created_at: string } }) => unknown } | undefined;
+
+    expect(createdColumn).toBeTruthy();
+    expect(createdColumn?.renderCell).toBeTypeOf("function");
+
+    const renderedCreatedValue = String(
+      createdColumn?.renderCell?.({
+        row: { created_at: "2026-01-02T00:00:00.000Z" },
+      })
+    );
+
+    expect(renderedCreatedValue).toBe(getExpectedUsDate("2026-01-02T00:00:00.000Z"));
+    expect(renderedCreatedValue).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+    expect(renderedCreatedValue).not.toBe("1/2/2026");
+  });
+
+  it("formats Created column values in UTC for near-midnight ISO timestamps", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project Orion",
+        industry: "Industrial",
+        revenue_min: null,
+        revenue_max: null,
+        ebitda_min: null,
+        ebitda_max: null,
+        location: "TX",
+        keywords: [],
+        created_at: "2026-01-01T00:30:00.000Z",
+      },
+    ];
+
+    mockProjectsResponse(projects);
+
+    render(<ProjectsPage />);
+
+    await screen.findByTestId("projects-data-grid");
+
+    const latestGridProps = getLatestGridProps();
+    const createdColumn = latestGridProps?.detailColumns.find(
+      (column: { field?: string }) => column.field === "created_at"
+    ) as { renderCell?: (params: { row: { created_at: string } }) => unknown } | undefined;
+
+    expect(createdColumn?.renderCell).toBeTypeOf("function");
+
+    const renderedCreatedValue = String(
+      createdColumn?.renderCell?.({
+        row: { created_at: "2026-01-01T00:30:00.000Z" },
+      })
+    );
+
+    expect(renderedCreatedValue).toBe("01/01/2026");
+    expect(renderedCreatedValue).toBe(getExpectedUsDate("2026-01-01T00:30:00.000Z"));
+    expect(renderedCreatedValue).not.toBe("12/31/2025");
   });
 
   it("renders empty state CTA when no projects are returned", async () => {

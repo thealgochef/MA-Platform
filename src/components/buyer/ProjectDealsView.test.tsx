@@ -53,6 +53,13 @@ const mockPush = vi.fn();
 let mockPathname = "/projects/project-1";
 let mockSearchParams = new URLSearchParams();
 let mockDeals: MockDeal[] = [];
+let mockProject: {
+  id: string;
+  name: string;
+  industry: string;
+  location: string;
+  created_at: string | null;
+};
 
 const sampleDeals: MockDeal[] = [
   {
@@ -87,6 +94,17 @@ const sampleDeals: MockDeal[] = [
   },
 ];
 
+const US_MM_DD_YYYY_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "2-digit",
+  day: "2-digit",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function getExpectedUsDate(value: string): string {
+  return US_MM_DD_YYYY_FORMATTER.format(new Date(value));
+}
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
   usePathname: () => mockPathname,
@@ -118,7 +136,6 @@ vi.mock("@/components/ui/ProjectDealsTable", () => ({
     onSortModelChange?: (model: Array<{ field: string; sort: "asc" | "desc" }>) => void;
     onRowClick?: (row: MockDeal, trigger?: HTMLElement | null) => void;
   }) => {
-    const actionsColumn = detailColumns?.find((column) => column.field === "actions");
     const dateReceivedColumn = detailColumns?.find((column) => column.field === "date_received");
     const firstRow = rows[0];
 
@@ -145,9 +162,8 @@ vi.mock("@/components/ui/ProjectDealsTable", () => ({
               id: firstRow.id,
               field: "headline",
               hasFocus: true,
-                value: firstRow.headline,
+              value: firstRow.headline,
               })}
-            <div data-testid="table-actions">{actionsColumn?.renderCell?.({ row: firstRow })}</div>
             <div data-testid="date-received-cell">{dateReceivedColumn?.renderCell?.({ row: firstRow })}</div>
           </div>
         )}
@@ -162,6 +178,13 @@ describe("ProjectDealsView", () => {
     mockPathname = "/projects/project-1";
     mockSearchParams = new URLSearchParams();
     mockDeals = sampleDeals;
+    mockProject = {
+      id: "project-1",
+      name: "Project Orion",
+      industry: "Industrial",
+      location: "TX",
+      created_at: null,
+    };
 
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
       const url = String(input);
@@ -170,7 +193,7 @@ describe("ProjectDealsView", () => {
         return {
           ok: true,
           json: async () => ({
-            project: { id: "project-1", name: "Project Orion", industry: "Industrial", location: "TX" },
+            project: mockProject,
           }),
         };
       }
@@ -491,7 +514,7 @@ describe("ProjectDealsView", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
     const detailsTab = screen.getByRole("tab", { name: "Details" });
-    const eventsTab = screen.getByRole("tab", { name: "Events" });
+    const eventsTab = screen.getByRole("tab", { name: "Messages" });
     const filesTab = screen.getByRole("tab", { name: "Files" });
 
     expect(detailsTab).toBeInTheDocument();
@@ -585,7 +608,7 @@ describe("ProjectDealsView", () => {
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
-    const eventsTab = screen.getByRole("tab", { name: "Events" });
+    const eventsTab = screen.getByRole("tab", { name: "Messages" });
     fireEvent.click(eventsTab);
 
     const eventsPanelId = eventsTab.getAttribute("aria-controls");
@@ -620,7 +643,7 @@ describe("ProjectDealsView", () => {
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
-    const eventsTab = screen.getByRole("tab", { name: "Events" });
+    const eventsTab = screen.getByRole("tab", { name: "Messages" });
     fireEvent.click(eventsTab);
 
     const eventsPanelId = eventsTab.getAttribute("aria-controls");
@@ -759,7 +782,7 @@ describe("ProjectDealsView", () => {
     });
   });
 
-  it("shows no-action drawer footer state when no table actions are available", async () => {
+  it("shows no-action drawer footer state when no drawer actions are available", async () => {
     mockPathname = "/projects/project-1/archive";
     mockDeals = [
       {
@@ -866,7 +889,9 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    expect(await screen.findByRole("button", { name: "Sign NDA" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    expect(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "Sign NDA" })).toBeInTheDocument();
   });
 
   it("navigates to deal NDA page when Sign NDA is clicked", async () => {
@@ -886,7 +911,8 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Sign NDA" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+    fireEvent.click(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "Sign NDA" }));
 
     expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-nda");
     expect(mockPush).toHaveBeenCalledWith("/deals/deal-nda/nda");
@@ -911,7 +937,10 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    const submitIoiButton = await screen.findByRole("button", { name: "Submit IOI" });
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const drawerFooter = screen.getByTestId("deal-drawer-footer");
+    const submitIoiButton = within(drawerFooter).getByRole("button", { name: "Submit IOI" });
 
     expect(submitIoiButton).toBeInTheDocument();
     expect(submitIoiButton).toBeEnabled();
@@ -939,7 +968,8 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Submit IOI" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+    fireEvent.click(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "Submit IOI" }));
 
     expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-ioi-ready");
     expect(mockPush).toHaveBeenCalledWith("/deals/deal-ioi-ready/ioi");
@@ -948,8 +978,11 @@ describe("ProjectDealsView", () => {
   it("shows Pursue and Decline (and not Sign NDA) when engagement is null", async () => {
     render(<ProjectDealsView projectId="project-1" />);
 
-    expect(await screen.findByRole("button", { name: "Pursue" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Decline" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const drawerFooter = screen.getByTestId("deal-drawer-footer");
+    expect(within(drawerFooter).getByRole("button", { name: "Pursue" })).toBeInTheDocument();
+    expect(within(drawerFooter).getByRole("button", { name: "Decline" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
   });
 
@@ -970,7 +1003,9 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    expect(await screen.findByRole("button", { name: "Pursue" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    expect(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "Pursue" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
   });
 
@@ -995,7 +1030,7 @@ describe("ProjectDealsView", () => {
     expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
   });
 
-  it("renders View IOI action in both table and drawer only when status is accepting_iois", async () => {
+  it("renders View IOI action in the drawer only when status is accepting_iois", async () => {
     mockPathname = "/projects/project-1/active";
     mockDeals = [
       {
@@ -1014,11 +1049,7 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    const tableActions = await screen.findByTestId("table-actions");
-    const tableViewIoiButton = within(tableActions).getByRole("button", { name: "View IOI" });
-
-    expect(tableViewIoiButton).toBeInTheDocument();
-    expect(tableViewIoiButton).toBeEnabled();
+    expect(screen.queryByTestId("table-actions")).not.toBeInTheDocument();
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
@@ -1033,7 +1064,7 @@ describe("ProjectDealsView", () => {
     expect(screen.queryByRole("button", { name: "Decline" })).not.toBeInTheDocument();
   });
 
-  it("does not render View IOI when status is not accepting_iois in table or drawer", async () => {
+  it("does not render View IOI in the drawer when status is not accepting_iois", async () => {
     mockPathname = "/projects/project-1/active";
     mockDeals = [
       {
@@ -1051,9 +1082,6 @@ describe("ProjectDealsView", () => {
     ];
 
     render(<ProjectDealsView projectId="project-1" />);
-
-    const tableActions = await screen.findByTestId("table-actions");
-    expect(within(tableActions).queryByRole("button", { name: "View IOI" })).not.toBeInTheDocument();
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
@@ -1080,7 +1108,8 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "View IOI" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+    fireEvent.click(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "View IOI" }));
 
     expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-ioi-submitted");
     expect(mockPush).toHaveBeenCalledWith("/deals/deal-ioi-submitted/ioi");
@@ -1104,7 +1133,9 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    const viewLoiButton = await screen.findByRole("button", { name: "View LOI" });
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const viewLoiButton = within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "View LOI" });
 
     expect(viewLoiButton).toBeInTheDocument();
     expect(viewLoiButton).toBeEnabled();
@@ -1133,13 +1164,14 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "View LOI" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+    fireEvent.click(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "View LOI" }));
 
     expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-loi-submitted");
     expect(mockPush).toHaveBeenCalledWith("/deals/deal-loi-submitted/loi");
   });
 
-  it("renders Submit LOI action for ioi_submitted deals when status is accepting_lois in table and drawer", async () => {
+  it("renders Submit LOI action for ioi_submitted deals when status is accepting_lois in the drawer", async () => {
     mockPathname = "/projects/project-1/active";
     mockDeals = [
       {
@@ -1157,13 +1189,7 @@ describe("ProjectDealsView", () => {
     ];
 
     render(<ProjectDealsView projectId="project-1" />);
-
-    const tableActions = await screen.findByTestId("table-actions");
-    const tableSubmitLoiButton = within(tableActions).getByRole("button", { name: "Submit LOI" });
-
-    expect(tableSubmitLoiButton).toBeInTheDocument();
-    expect(tableSubmitLoiButton).toBeEnabled();
-    expect(within(tableActions).queryByRole("button", { name: "View IOI" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("table-actions")).not.toBeInTheDocument();
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
@@ -1213,7 +1239,7 @@ describe("ProjectDealsView", () => {
     expect(contentWrapper).not.toHaveClass("max-w-6xl", "mx-auto");
   });
 
-  it("renders date received in mm/dd/yyyy format when provided", async () => {
+  it("renders Date Received using strict MM/DD/YYYY formatting when provided", async () => {
     mockDeals = [
       {
         ...sampleDeals[0],
@@ -1223,7 +1249,96 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent("03/15/2025");
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent(
+      getExpectedUsDate("2025-03-15T00:00:00.000Z")
+    );
+
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent(/^\d{2}\/\d{2}\/\d{4}$/);
+  });
+
+  it("renders Date Received in UTC for near-midnight ISO timestamps to prevent timezone drift", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        date_received: "2025-03-15T00:30:00.000Z",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    const dateReceivedCell = await screen.findByTestId("date-received-cell");
+
+    expect(dateReceivedCell).toHaveTextContent("03/15/2025");
+    expect(dateReceivedCell).toHaveTextContent(getExpectedUsDate("2025-03-15T00:30:00.000Z"));
+    expect(dateReceivedCell).not.toHaveTextContent("03/14/2025");
+  });
+
+  it("clamps Date Received display to project created_at when deal date is earlier", async () => {
+    mockProject = {
+      ...mockProject,
+      created_at: "2025-03-10T00:00:00.000Z",
+    };
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        date_received: "2025-03-01T00:00:00.000Z",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    const dateReceivedCell = await screen.findByTestId("date-received-cell");
+
+    expect(dateReceivedCell).toHaveTextContent(getExpectedUsDate("2025-03-10T00:00:00.000Z"));
+    expect(dateReceivedCell).toHaveTextContent(/^\d{2}\/\d{2}\/\d{4}$/);
+    expect(dateReceivedCell).not.toHaveTextContent(getExpectedUsDate("2025-03-01T00:00:00.000Z"));
+  });
+
+  it("keeps Date Received unchanged when deal date is on or after project created_at", async () => {
+    mockProject = {
+      ...mockProject,
+      created_at: "2025-03-10T00:00:00.000Z",
+    };
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        date_received: "2025-03-15T00:00:00.000Z",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent(
+      getExpectedUsDate("2025-03-15T00:00:00.000Z")
+    );
+  });
+
+  it("falls back to original Date Received behavior when project created_at is missing or invalid", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        date_received: "2025-03-01T00:00:00.000Z",
+      },
+    ];
+
+    const { unmount } = render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent(
+      getExpectedUsDate("2025-03-01T00:00:00.000Z")
+    );
+
+    unmount();
+
+    mockProject = {
+      ...mockProject,
+      created_at: "not-a-real-date",
+    };
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent(
+      getExpectedUsDate("2025-03-01T00:00:00.000Z")
+    );
   });
 
   it("renders an em dash when date received is missing or invalid", async () => {
@@ -1377,6 +1492,47 @@ describe("ProjectDealsView", () => {
         "Valid Early Deal",
         "Null Date Deal",
         "Invalid Date Deal",
+      ]);
+    });
+  });
+
+  it("sorts by effective Date Received using project created_at clamping", async () => {
+    mockProject = {
+      ...mockProject,
+      created_at: "2025-03-10T00:00:00.000Z",
+    };
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-at-created-at",
+        headline: "At Project Created Date",
+        date_received: "2025-03-10T00:00:00.000Z",
+      },
+      {
+        ...sampleDeals[0],
+        id: "deal-clamped",
+        headline: "Raw Earlier But Clamped",
+        date_received: "2025-01-01T00:00:00.000Z",
+      },
+      {
+        ...sampleDeals[0],
+        id: "deal-later",
+        headline: "Later",
+        date_received: "2025-03-20T00:00:00.000Z",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    await screen.findByRole("button", { name: "Open first row" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by date received asc" }));
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId("row-order")).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+        "At Project Created Date",
+        "Raw Earlier But Clamped",
+        "Later",
       ]);
     });
   });

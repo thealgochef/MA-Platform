@@ -9,7 +9,7 @@ import { useAutoDismissFlag } from "@/lib/useAutoDismissFlag";
 import { ProjectDealsTable } from "@/components/ui/ProjectDealsTable";
 import { ProjectDealDrawer, type ProjectDealDrawerDeal } from "@/components/buyer/ProjectDealDrawer";
 import { canBuyerAccessIoiWorkflow, canBuyerAccessLoiWorkflow } from "@/lib/buyer-workflow-gating";
-import { Box, Button, Chip, Stack, Tab } from "@mui/material";
+import { Box, Chip, Tab } from "@mui/material";
 import { PrimaryTabs } from "@/components/ui/PrimaryTabs";
 import {
   GridColDef,
@@ -34,10 +34,16 @@ interface Project {
   name: string;
   industry: string | null;
   location: string | null;
+  created_at: string | null;
 }
 
 const ARCHIVED_STAGES = new Set(["declined", "passed"]);
 const INACTIVE_STAGES = new Set(["declined", "passed", "terminated", "closed"]);
+const DATE_DISPLAY_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "2-digit",
+  day: "2-digit",
+  year: "numeric",
+});
 
 export function isProjectDealsViewMode(value: unknown): value is ProjectDealsViewMode {
   return value === "matches" || value === "active" || value === "archive";
@@ -109,12 +115,7 @@ function formatDateReceived(value: string | null | undefined): string {
     return "—";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: "UTC",
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-  }).format(parsed);
+  return DATE_DISPLAY_FORMATTER.format(parsed);
 }
 
 function getDateReceivedSortValue(value: string | null | undefined): number | null {
@@ -126,6 +127,29 @@ function getDateReceivedSortValue(value: string | null | undefined): number | nu
   const timestamp = parsed.getTime();
 
   return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function getEffectiveDateReceived(
+  dealDateReceived: string | null | undefined,
+  projectCreatedAt: string | null | undefined
+): string | null | undefined {
+  if (!dealDateReceived) {
+    return dealDateReceived;
+  }
+
+  const parsedDealDate = new Date(dealDateReceived);
+  const dealTimestamp = parsedDealDate.getTime();
+  if (Number.isNaN(dealTimestamp) || !projectCreatedAt) {
+    return dealDateReceived;
+  }
+
+  const parsedProjectCreatedAt = new Date(projectCreatedAt);
+  const projectTimestamp = parsedProjectCreatedAt.getTime();
+  if (Number.isNaN(projectTimestamp)) {
+    return dealDateReceived;
+  }
+
+  return dealTimestamp < projectTimestamp ? projectCreatedAt : dealDateReceived;
 }
 
 function getEmptyStateMessage(viewMode: ProjectDealsViewMode): string {
@@ -322,6 +346,8 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
     return deal.geography_display === "state" ? deal.state : deal.region;
   };
 
+  const projectCreatedAt = project?.created_at;
+
   const visibleDeals = getVisibleDeals(deals, viewMode);
   const emptyStateMessage = getEmptyStateMessage(viewMode);
   const selectedDeal = useMemo(
@@ -382,8 +408,9 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         flex: 0.9,
         minWidth: 120,
         cellClassName: "row-hover-text",
-        valueGetter: (_, row) => row.date_received,
-        renderCell: (params) => formatDateReceived(params.row.date_received),
+        valueGetter: (_, row) => getEffectiveDateReceived(row.date_received, projectCreatedAt),
+        renderCell: (params) =>
+          formatDateReceived(getEffectiveDateReceived(params.row.date_received, projectCreatedAt)),
       },
       {
         field: "revenue_year_3",
@@ -451,63 +478,8 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
             <span style={{ color: "#9CA3AF" }}>—</span>
           ),
       },
-      {
-        field: "actions",
-        headerName: "Actions",
-        flex: 1.2,
-        minWidth: 200,
-        sortable: false,
-        filterable: false,
-        renderCell: (params) => {
-          const actions = getDealActions(params.row, {
-            onNavigate: (href) => router.push(href),
-            onPursue: (dealId) => void handlePursue(dealId),
-            onDecline: (dealId) => void handleDecline(dealId),
-            actionLoadingDealId: actionLoading,
-          });
-
-          return (
-            <Stack direction="row" spacing={1}>
-              {actions.map((action) => (
-                <Button
-                  key={action.label}
-                  variant={action.variant ?? "contained"}
-                  size="small"
-                  sx={{
-                    textTransform: "none",
-                    borderRadius: 1,
-                    px: 1.75,
-                    fontWeight: 600,
-                    ...(action.variant === "outlined"
-                      ? {
-                        borderColor: "var(--color-border)",
-                        borderWidth: 2,
-                          color: "var(--color-secondary)",
-                          "&:hover": {
-                            borderColor: "var(--color-secondary)",
-                            backgroundColor: "var(--color-faint)",
-                          },
-                        }
-                      : {
-                          backgroundColor: "var(--color-primary)",
-                          "&:hover": { backgroundColor: "var(--color-btn-hover)" },
-                        }),
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    action.onClick();
-                  }}
-                  disabled={action.disabled}
-                >
-                  {action.label}
-                </Button>
-              ))}
-            </Stack>
-          );
-        },
-      },
     ];
-  }, [actionLoading, handleDecline, handlePursue, router]);
+  }, [projectCreatedAt]);
 
   const sortedDeals = useMemo(() => {
     const activeSort = sortModel[0];
@@ -525,7 +497,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         case "geography":
           return getGeography(deal) || "";
         case "date_received":
-          return getDateReceivedSortValue(deal.date_received);
+          return getDateReceivedSortValue(getEffectiveDateReceived(deal.date_received, projectCreatedAt));
         case "revenue_year_3":
           return deal.revenue_year_3 ?? Number.NEGATIVE_INFINITY;
         case "ebitda_year_3":
@@ -562,7 +534,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         }) * direction
       );
     });
-  }, [sortModel, visibleDeals]);
+  }, [projectCreatedAt, sortModel, visibleDeals]);
 
   useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(sortedDeals.length / paginationModel.pageSize) - 1);

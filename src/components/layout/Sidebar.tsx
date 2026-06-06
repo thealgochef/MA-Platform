@@ -21,7 +21,7 @@ import {
 } from "@mui/material";
 import {
   LayoutDashboard,
-  Search,
+  //Search,
   FolderKanban,
   FilePlus,
   Briefcase,
@@ -85,7 +85,7 @@ export default function Sidebar({
 
   const commonItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={20} /> },
-    { label: "Browse Deals", href: "/browse", icon: <Search size={20} /> },
+    //{ label: "Browse Deals", href: "/browse", icon: <Search size={20} /> },
   ];
 
   const roleItems: NavItem[] =
