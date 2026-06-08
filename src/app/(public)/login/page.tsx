@@ -27,7 +27,7 @@ function LoginContent() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-surface text-text">
-      <div className="bg-bg rounded-xl shadow-md p-8 w-full max-w-md">
+      <div className="bg-bg rounded-xl border border-border-color p-8 w-full max-w-md">
 
         <div className="text-center mb-8">
           <h1 className="text-4xl font-display font-bold mb-2">Geneva Holdings</h1>

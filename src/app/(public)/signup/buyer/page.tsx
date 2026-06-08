@@ -178,7 +178,7 @@ export default function BuyerSignupPage() {
   return (
     <main className="min-h-screen bg-surface py-12 text-text">
       <div className="max-w-2xl mx-auto">
-        <div className="bg-bg rounded-xl shadow-md p-8">
+        <div className="bg-bg rounded-xl border border-border-color p-8">
           <h1 className="text-3xl font-bold font-display text-primary mb-2">
             Buyer Application
           </h1>
@@ -198,7 +198,7 @@ export default function BuyerSignupPage() {
             </p>
             <div>
               <label className="block text-sm font-medium mb-1">
-                First Name *
+                First Name <span className="text-primary">*</span>
               </label>
               <input
                 type="text"
@@ -214,7 +214,7 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Last Name *
+                Last Name <span className="text-primary">*</span>
               </label>
               <input
                 type="text"
@@ -230,7 +230,7 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Title *
+                Title <span className="text-primary">*</span>
               </label>
               <input
                 type="text"
@@ -246,7 +246,7 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Phone Number *
+                Phone Number <span className="text-primary">*</span>
               </label>
               <input
                 type="tel"
@@ -283,7 +283,7 @@ export default function BuyerSignupPage() {
             </p>
             <div>
               <label className="block text-sm font-medium mb-1">
-                Firm Name *
+                Firm Name <span className="text-primary">*</span>
               </label>
               <input
                 type="text"
@@ -294,6 +294,22 @@ export default function BuyerSignupPage() {
               />
               {getFieldError("firmName") && (
                 <p className="mt-1 text-sm text-error">{getFieldError("firmName")}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Location <span className="text-primary">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => updateField("location", e.target.value)}
+                aria-invalid={Boolean(getFieldError("location"))}
+                className={getInputClassName("location")}
+              />
+              {getFieldError("location") && (
+                <p className="mt-1 text-sm text-error">{getFieldError("location")}</p>
               )}
             </div>
 
@@ -316,7 +332,7 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Firm Type *
+                Type <span className="text-primary">*</span>
               </label>
               <select
                 value={formData.firmType}
@@ -338,7 +354,7 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Assets Under Management ($M) *
+                Assets Under Management ($M) <span className="text-primary">*</span>
               </label>
               <input
                 type="text"
@@ -355,23 +371,7 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Location *
-              </label>
-              <input
-                type="text"
-                value={formData.location}
-                onChange={(e) => updateField("location", e.target.value)}
-                aria-invalid={Boolean(getFieldError("location"))}
-                className={getInputClassName("location")}
-              />
-              {getFieldError("location") && (
-                <p className="mt-1 text-sm text-error">{getFieldError("location")}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Description *
+                Description <span className="text-primary">*</span>
               </label>
               <textarea
                 rows={4}
@@ -391,7 +391,7 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Basis for Accreditation *
+                Basis for Accreditation <span className="text-primary">*</span>
               </label>
               <select
                 value={formData.accreditation}
@@ -422,7 +422,7 @@ export default function BuyerSignupPage() {
 
             <div>
               <label className="block text-sm font-medium mb-2">
-                Industry Focus * (select all that apply)
+                Industry Focus <span className="text-primary">*</span> (select all that apply)
               </label>
               <div className="flex flex-wrap gap-2">
                 {INDUSTRIES.map((industry) => (
@@ -430,7 +430,7 @@ export default function BuyerSignupPage() {
                     key={industry}
                     type="button"
                     onClick={() => handleIndustryToggle(industry)}
-                    className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${
+                    className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors focus:outline-none focus:ring-2 focus:ring-secondary focus:border-primary ${
                       formData.industryFocus.includes(industry)
                         ? "bg-primary text-bg border-primary"
                         : "bg-bg text-[#757280] border-border-color hover:border-primary"
@@ -546,7 +546,7 @@ export default function BuyerSignupPage() {
 
               <div>
                 <label className="block text-md font-medium text-primary mb-1">
-                  Electronic Signature *
+                  Electronic Signature <span className="text-primary">*</span>
                 </label>
                 <input
                   type="text"

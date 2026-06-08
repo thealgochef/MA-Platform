@@ -17,6 +17,16 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role, status")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "buyer" || profile.status !== "approved") {
+    return NextResponse.json({ error: "NDA not available" }, { status: 403 });
+  }
+
   // Fetch deal NDA info
   const { data: deal } = await supabase
     .from("deals")
@@ -28,6 +38,14 @@ export async function GET(
     return NextResponse.json({ error: "NDA not available" }, { status: 403 });
   }
 
+  if (deal.nda_type === "custom" && !deal.nda_document_path) {
+    console.error("NDA unavailable: custom NDA is missing a document path", {
+      dealId: params.id,
+      buyerUserId: user.id,
+    });
+    return NextResponse.json({ error: "NDA not available" }, { status: 403 });
+  }
+
   // Fetch engagement to verify buyer has access to NDA
   const { data: engagement } = await supabase
     .from("deal_engagements")
@@ -36,7 +54,15 @@ export async function GET(
     .eq("buyer_user_id", user.id)
     .single();
 
-  if (!engagement || !NDA_AVAILABLE_STAGES.includes(engagement.stage) || engagement.nda_status !== "sent") {
+  if (!engagement) {
+    return NextResponse.json({ error: "NDA not available" }, { status: 403 });
+  }
+
+  const canSignOrDecline =
+    NDA_AVAILABLE_STAGES.includes(engagement.stage) && engagement.nda_status === "sent";
+  const canViewSigned = engagement.nda_status === "signed";
+
+  if (!canSignOrDecline && !canViewSigned) {
     return NextResponse.json({ error: "NDA not available" }, { status: 403 });
   }
 
@@ -56,6 +82,16 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role, status")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.role !== "buyer" || profile.status !== "approved") {
+    return NextResponse.json({ error: "NDA not available" }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = ndaActionSchema.safeParse(body);
 
@@ -64,6 +100,25 @@ export async function POST(
   }
 
   const { action } = parsed.data;
+
+  // Fetch deal NDA metadata to verify NDA availability
+  const { data: dealNdaMetadata } = await supabase
+    .from("deals")
+    .select("nda_type, nda_document_path")
+    .eq("id", params.id)
+    .single();
+
+  if (!dealNdaMetadata) {
+    return NextResponse.json({ error: "NDA not available" }, { status: 403 });
+  }
+
+  if (dealNdaMetadata.nda_type === "custom" && !dealNdaMetadata.nda_document_path) {
+    console.error("NDA unavailable: custom NDA is missing a document path", {
+      dealId: params.id,
+      buyerUserId: user.id,
+    });
+    return NextResponse.json({ error: "NDA not available" }, { status: 403 });
+  }
 
   // Fetch engagement
   const { data: engagement } = await supabase
@@ -74,7 +129,7 @@ export async function POST(
     .single();
 
   if (!engagement) {
-    return NextResponse.json({ error: "Engagement not found" }, { status: 404 });
+    return NextResponse.json({ error: "NDA not available" }, { status: 403 });
   }
 
   if (!NDA_AVAILABLE_STAGES.includes(engagement.stage) || engagement.nda_status !== "sent") {

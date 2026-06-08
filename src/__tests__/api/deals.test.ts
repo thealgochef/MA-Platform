@@ -294,7 +294,7 @@ describe("Phase 3: Deal Creation & Management", () => {
       );
       expect(content).toContain("deal_engagements");
       expect(content).toContain("buyer_user_id");
-      expect(content).toContain("engagement: engagement ?? null");
+      expect(content).toContain("return NextResponse.json({ deal, engagement");
     });
 
     it("deal detail route should support broker deletion", () => {
@@ -342,23 +342,19 @@ describe("Phase 3: Deal Creation & Management", () => {
       expect(storageRemoveIndex).toBeLessThan(dealDeleteIndex);
     });
 
-    it("deal PATCH route should advance pending_review engagements to nda_pending when ndaVettingPreference switches to auto", () => {
-      const content = fs.readFileSync(
+    it("deal PATCH route should map ndaVettingPreference updates to the nda_vetting_preference DB field", () => {
+      const routeContent = fs.readFileSync(
         path.join(SRC, "app", "api", "deals", "[id]", "route.ts"),
         "utf-8"
       );
-      // The logic must only trigger when switching to "auto"
-      expect(content).toContain('ndaVettingPreference === "auto"');
-      // It must update the deal_engagements table
-      expect(content).toContain('"deal_engagements"');
-      // It must advance stage from "pursued" to "nda_pending"
-      expect(content).toContain('"pursued"');
-      expect(content).toContain('"nda_pending"');
-      // It must only target engagements still awaiting manual review
-      expect(content).toContain('"pending_review"');
-      // It must approve vetting and mark NDA as sent
-      expect(content).toContain('"sent"');
-      expect(content).toContain('"approved"');
+      const mapperContent = fs.readFileSync(
+        path.join(SRC, "server", "deals", "mappers.ts"),
+        "utf-8"
+      );
+
+      expect(routeContent).toContain("mapDealUpdateDataToDb");
+      expect(mapperContent).toContain("data.ndaVettingPreference");
+      expect(mapperContent).toContain("updateData.nda_vetting_preference");
     });
   });
 

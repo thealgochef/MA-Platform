@@ -113,7 +113,7 @@ export default function DealPreviewPage() {
         )}
 
         {/* Deal Card — Buyer View */}
-        <div className="bg-surface-alt rounded-lg shadow-md p-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6">
           <div className="flex items-start justify-between mb-4">
             <h1 className="text-xl font-bold text-primary">{deal.headline}</h1>
             <span className={`px-3 py-1 rounded-full text-xs font-medium ${

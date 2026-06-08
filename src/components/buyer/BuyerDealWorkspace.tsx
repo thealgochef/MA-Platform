@@ -16,6 +16,7 @@ interface Deal {
   headline: string;
   description: string;
   industry: string;
+  nda_type: "platform" | "custom";
   geography_display: string;
   status: string;
   revenue_year_1: number | null;
@@ -83,6 +84,9 @@ export default function BuyerDealWorkspace() {
   const stage = engagement?.stage;
   const ndaSent = engagement?.nda_status === "sent";
   const ndaSigned = engagement?.nda_status === "signed";
+  const ndaViewHref = deal.nda_type === "custom"
+    ? `/api/deals/${dealId}/nda/document`
+    : `/deals/${dealId}/nda`;
   const cimReleased = engagement?.cim_released === true;
   const canAccessIoiWorkflow = canBuyerAccessIoiWorkflow({
     isApprovedBuyer: true,
@@ -119,7 +123,7 @@ export default function BuyerDealWorkspace() {
         </div>
 
         {/* Deal Overview */}
-        <div className="bg-surface-alt rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 mb-6">
           <h2 className="text-lg font-semibold text-primary mb-3">Overview</h2>
           <p className="text-text-secondary mb-4">{deal.description}</p>
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -135,7 +139,7 @@ export default function BuyerDealWorkspace() {
         </div>
 
         {/* Financials */}
-        <div className="bg-surface-alt rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 mb-6">
           <h2 className="text-lg font-semibold text-primary mb-3">Financials</h2>
           <table className="w-full text-sm">
             <thead>
@@ -164,7 +168,7 @@ export default function BuyerDealWorkspace() {
         </div>
 
         {/* Engagement Status & Actions */}
-        <div className="bg-surface-alt rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 mb-6">
           <h2 className="text-lg font-semibold text-primary mb-3">Your Engagement</h2>
           {engagement ? (
             <div className="space-y-4">
@@ -185,6 +189,15 @@ export default function BuyerDealWorkspace() {
                   </Link>
                 )}
 
+                {ndaSigned && (
+                  <Link
+                    href={ndaViewHref}
+                    className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
+                  >
+                    View NDA
+                  </Link>
+                )}
+
                 {ndaSigned && cimReleased && (
                   <Link
                     href={`/api/deals/${dealId}/cim`}
@@ -194,32 +207,34 @@ export default function BuyerDealWorkspace() {
                   </Link>
                 )}
 
-                {canAccessIoiWorkflow && (
-                  <Link
-                    href={`/deals/${dealId}/ioi`}
-                    className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
-                  >
-                    Submit IOI
-                  </Link>
-                )}
+                <div className="ml-auto flex flex-wrap justify-end gap-3">
+                  {canAccessIoiWorkflow && (
+                    <Link
+                      href={`/deals/${dealId}/ioi`}
+                      className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
+                    >
+                      Submit IOI
+                    </Link>
+                  )}
 
-                {canAccessLoiWorkflow && (
-                  <Link
-                    href={`/deals/${dealId}/loi`}
-                    className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
-                  >
-                    Submit LOI
-                  </Link>
-                )}
+                  {canAccessLoiWorkflow && (
+                    <Link
+                      href={`/deals/${dealId}/loi`}
+                      className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
+                    >
+                      Submit LOI
+                    </Link>
+                  )}
 
-                {canReportClosure && (
-                  <Link
-                    href={`/deals/${dealId}/close`}
-                    className="px-4 py-2 border border-border-gray text-text rounded-md text-sm font-medium hover:bg-bg-alt transition-colors"
-                  >
-                    Report Closure
-                  </Link>
-                )}
+                  {canReportClosure && (
+                    <Link
+                      href={`/deals/${dealId}/close`}
+                      className="px-4 py-2 border border-border-gray text-text rounded-md text-sm font-medium hover:bg-bg-alt transition-colors"
+                    >
+                      Report Closure
+                    </Link>
+                  )}
+                </div>
               </div>
 
               {/* Messaging link */}

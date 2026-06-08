@@ -1,11 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { Tab } from "@mui/material";
 import { describe, expect, it, vi } from "vitest";
 
 import { PrimaryTabs } from "./PrimaryTabs";
 
 describe("PrimaryTabs", () => {
-  it("makes all tabs tabbable", async () => {
+  it("uses roving tabindex semantics", () => {
     render(
       <PrimaryTabs value="matches" onChange={() => {}}>
         <Tab label="Matches" value="matches" />
@@ -14,16 +14,16 @@ describe("PrimaryTabs", () => {
       </PrimaryTabs>
     );
 
-    await waitFor(() => {
-      const tabs = screen.getAllByRole("tab");
-      expect(tabs).toHaveLength(3);
-      tabs.forEach((tab) => {
-        expect(tab).toHaveAttribute("tabindex", "0");
-      });
-    });
+    const matchesTab = screen.getByRole("tab", { name: "Matches" });
+    const activeTab = screen.getByRole("tab", { name: "Active" });
+    const archivedTab = screen.getByRole("tab", { name: "Archived" });
+
+    expect(matchesTab).toHaveAttribute("tabindex", "0");
+    expect(activeTab).toHaveAttribute("tabindex", "-1");
+    expect(archivedTab).toHaveAttribute("tabindex", "-1");
   });
 
-  it("keeps all tabs tabbable after active value changes", async () => {
+  it("updates roving tabindex when active value changes", () => {
     const { rerender } = render(
       <PrimaryTabs value="matches" onChange={() => {}}>
         <Tab label="Matches" value="matches" />
@@ -40,12 +40,9 @@ describe("PrimaryTabs", () => {
       </PrimaryTabs>
     );
 
-    await waitFor(() => {
-      const tabs = screen.getAllByRole("tab");
-      tabs.forEach((tab) => {
-        expect(tab).toHaveAttribute("tabindex", "0");
-      });
-    });
+    expect(screen.getByRole("tab", { name: "Matches" })).toHaveAttribute("tabindex", "-1");
+    expect(screen.getByRole("tab", { name: "Active" })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("tab", { name: "Archived" })).toHaveAttribute("tabindex", "-1");
   });
 
   it("propagates onChange when a tab is clicked", () => {

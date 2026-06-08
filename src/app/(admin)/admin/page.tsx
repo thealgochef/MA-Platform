@@ -131,7 +131,7 @@ export default function AdminPage() {
         </h1>
 
         {pendingUsers.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <div className="bg-white rounded-lg border border-border-color p-8 text-center">
             <p className="text-text-secondary">
               No pending applications at this time.
             </p>
@@ -141,7 +141,7 @@ export default function AdminPage() {
             {pendingUsers.map((user) => (
               <div
                 key={user.id}
-                className="bg-white rounded-lg shadow-md p-6"
+                className="bg-white rounded-lg border border-border-color p-6"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

@@ -71,7 +71,7 @@ export default function NewProjectPage() {
           <div className="bg-error/10 border border-error/20 text-error rounded-md p-3 mb-6 text-sm">{error}</div>
         )}
 
-        <div className="bg-surface-alt rounded-lg shadow-md p-6 space-y-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium text-text mb-1">Project Name *</label>
             <input
@@ -178,7 +178,7 @@ export default function NewProjectPage() {
               <button
                 type="button"
                 onClick={addKeyword}
-                className="px-3 py-2 bg-bg-alt border border-border-gray rounded-md text-sm hover:bg-neutral-btn-hover"
+                className="px-3 py-2 bg-bg border border-border-color rounded-md text-sm hover:bg-bg-alt"
               >
                 Add
               </button>

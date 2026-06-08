@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  ACCREDITATIONS,
   BROKER_NOTIFICATION_EVENTS,
   BUYER_NOTIFICATION_EVENTS,
   BUYER_TYPE_VALUES,
@@ -12,6 +13,7 @@ import {
 type NonEmptyTuple<T> = readonly [T, ...T[]];
 
 const buyerTypeValues = BUYER_TYPE_VALUES as NonEmptyTuple<(typeof BUYER_TYPE_VALUES)[number]>;
+const accreditationValues = ACCREDITATIONS.map(({ value }) => value) as unknown as NonEmptyTuple<(typeof ACCREDITATIONS)[number]["value"]>;
 const dealStatusValues = DEAL_STATUSES as NonEmptyTuple<(typeof DEAL_STATUSES)[number]>;
 const passReasonValues = PASS_REASONS as NonEmptyTuple<(typeof PASS_REASONS)[number]>;
 const vettingRejectionReasonValues = VETTING_REJECTION_REASONS as NonEmptyTuple<(typeof VETTING_REJECTION_REASONS)[number]>;
@@ -99,7 +101,7 @@ export const buyerSignupSchema = z.object({
   location: z.string().min(1, "Location is required"),
   firmType: z.enum(buyerTypeValues),
   firmDescription: z.string().min(1, "Firm description is required"),
-  accreditation: z.enum(["income", "net_worth", "entity", "professional", "none"]),
+  accreditation: z.enum(accreditationValues),
   industryFocus: z.array(z.string()).min(1, "Select at least one industry"),
   aum: z.string().min(1, "Assets under management is required"),
   otherMembers: z.string().optional(),
@@ -163,8 +165,25 @@ export const validateBuyerSignup = (data: BuyerSignupInput) => {
   };
 };
 export const settingsProfileUpdateSchema = z.object({
+  fullName: z.string().trim().max(255).optional(),
+  title: z.string().trim().max(255).optional(),
+  avatarPath: z.union([storageObjectKeySchema("avatarPath"), z.null()]).optional(),
+  phone: z.string().trim().max(50).optional(),
+  linkedIn: z.union([z.string().trim().url("Valid URL is required"), z.literal(""), z.null()]).optional(),
+  location: z.string().trim().max(255).optional(),
+  industryFocus: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+  licenseCredentials: z.string().trim().max(500).optional(),
+  dealTypes: z.string().trim().max(500).optional(),
   buyerType: z.union([z.enum(buyerTypeValues), z.literal(""), z.null()]).optional(),
-}).passthrough();
+  accreditation: z.union([z.enum(accreditationValues), z.literal(""), z.null()]).optional(),
+  aum: z.string().trim().max(255).optional(),
+  firmName: z.string().trim().max(255).optional(),
+  description: z.string().trim().max(5000).optional(),
+  website: z.union([z.string().trim().url("Valid URL is required"), z.literal(""), z.null()]).optional(),
+  firmLocation: z.string().trim().max(255).optional(),
+  otherMembers: z.string().trim().max(5000).optional(),
+  firmIndustryFocus: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+}).strict();
 
 export type SettingsProfileUpdateData = z.infer<typeof settingsProfileUpdateSchema>;
 

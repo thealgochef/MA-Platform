@@ -96,8 +96,8 @@ export default function ProjectsPage() {
             return "—";
           }
 
-          return `${revenue_min != null ? formatCurrency(revenue_min) : "Any"} – ${
-            revenue_max != null ? formatCurrency(revenue_max) : "Any"
+          return `${revenue_min != null ? formatCurrency(revenue_min) + 'M': "Any"} – ${
+            revenue_max != null ? formatCurrency(revenue_max) + 'M': "Any"
           }`;
         },
       },
@@ -114,8 +114,8 @@ export default function ProjectsPage() {
             return "—";
           }
 
-          return `${ebitda_min != null ? formatCurrency(ebitda_min) : "Any"} – ${
-            ebitda_max != null ? formatCurrency(ebitda_max) : "Any"
+          return `${ebitda_min != null ? formatCurrency(ebitda_min) + 'M': "Any"} – ${
+            ebitda_max != null ? formatCurrency(ebitda_max) + 'M': "Any"
           }`;
         },
       },
@@ -195,31 +195,29 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-alt">
-      <div className="bg-bg border-b border-border-gray pt-8 pb-6">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-primary">Acquisition Projects</h1>
-            <Link
-              href="/projects/new"
-              className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
-            >
-              New Project
-            </Link>
-          </div>
-
-          {error && (
-            <div className="bg-error/10 border border-error rounded-md p-4 mt-6">
-              <p className="text-sm text-error">{error}</p>
-            </div>
-          )}
+    <div className="min-h-screen bg-bg-alt py-8">
+      <div className="w-full px-5 sm:px-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-primary">Acquisition Projects</h1>
+          <Link
+            href="/projects/new"
+            className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
+          >
+            New Project
+          </Link>
         </div>
+
+        {error && (
+          <div className="bg-error/10 border border-error rounded-md p-4 mt-6">
+            <p className="text-sm text-error">{error}</p>
+          </div>
+        )}
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 pb-8">
-        <div className="pt-4">
+      <div className="w-full px-4 pb-8">
+        <div>
           {projects.length === 0 ? (
-            <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-8 text-center">
               <p className="text-text-secondary mb-4">
                 Create your first acquisition project to start matching with deals.
               </p>

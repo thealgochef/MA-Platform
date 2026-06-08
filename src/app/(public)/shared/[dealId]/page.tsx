@@ -18,7 +18,7 @@ export default function SharedDealPage() {
   return (
     <main className="min-h-screen bg-surface py-12 text-text">
       <div className="max-w-2xl mx-auto px-4">
-        <div className="bg-bg rounded-lg shadow-md p-8 text-center">
+        <div className="bg-bg rounded-lg border border-border-color p-8 text-center">
           <h1 className="text-2xl font-display font-bold text-primary mb-4">
             Someone has shared a deal with you on Geneva Holdings
           </h1>

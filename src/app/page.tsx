@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function HomePage() {
   const navLinkClass = "text-sm font-medium text-secondary transition-colors hover:text-primary";
-  const valuePropCardClass = "rounded-lg bg-surface p-6 shadow-md";
+  const valuePropCardClass = "rounded-lg bg-surface p-6 border border-border-color";
   const valuePropTitleClass = "mb-3 font-display text-xl font-semibold text-primary";
   const howItWorksCardClass = "flex h-full flex-col rounded-lg border border-border-color bg-bg p-6";
   const footerLinkClass = "font-medium text-secondary transition-colors hover:text-primary";

@@ -59,10 +59,10 @@ describe("Phase 10: Polish & Edge Cases", () => {
 
     it("project deal feed should have no-matches empty state", () => {
       const content = fs.readFileSync(
-        path.join(SRC, "app", "(auth)", "projects", "[id]", "page.tsx"),
+        path.join(SRC, "components", "buyer", "ProjectDealsView.tsx"),
         "utf-8"
       );
-      expect(content).toContain("No matching deals");
+      expect(content).toContain("No matching deals found");
     });
 
     it("browse deals should have no-results empty state", () => {
@@ -111,10 +111,10 @@ describe("Phase 10: Polish & Edge Cases", () => {
 
     it("project deal feed should have loading state", () => {
       const content = fs.readFileSync(
-        path.join(SRC, "app", "(auth)", "projects", "[id]", "page.tsx"),
+        path.join(SRC, "components", "buyer", "ProjectDealsView.tsx"),
         "utf-8"
       );
-      expect(content).toContain("loading");
+      expect(content).toContain("Loading deals");
     });
 
     it("messaging inbox should have loading state", () => {

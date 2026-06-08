@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import { useAutoDismissFlag } from "@/lib/useAutoDismissFlag";
 import { ProjectDealsTable } from "@/components/ui/ProjectDealsTable";
+import { ProjectDealDrawer, type ProjectDealDrawerDeal } from "@/components/buyer/ProjectDealDrawer";
+import { canBuyerAccessIoiWorkflow, canBuyerAccessLoiWorkflow } from "@/lib/buyer-workflow-gating";
 import { Box, Button, Chip, Stack, Tab } from "@mui/material";
 import { PrimaryTabs } from "@/components/ui/PrimaryTabs";
 import {
@@ -18,23 +20,13 @@ import {
 
 type ProjectDealsViewMode = "matches" | "active" | "archive";
 
-interface Deal {
-  id: string;
-  headline: string;
-  industry: string;
-  state: string | null;
-  region: string | null;
-  geography_display: string;
-  status: string;
-  revenue_year_3: number | null;
-  ebitda_year_3: number | null;
-  ioi_due_date: string | null;
-  loi_due_date: string | null;
-  engagement: {
-    id: string;
-    stage: string;
-    nda_status: string;
-  } | null;
+type Deal = ProjectDealDrawerDeal;
+
+interface DealActionConfig {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  variant?: "contained" | "outlined";
 }
 
 interface Project {
@@ -46,6 +38,30 @@ interface Project {
 
 const ARCHIVED_STAGES = new Set(["declined", "passed"]);
 const INACTIVE_STAGES = new Set(["declined", "passed", "terminated", "closed"]);
+
+export function isProjectDealsViewMode(value: unknown): value is ProjectDealsViewMode {
+  return value === "matches" || value === "active" || value === "archive";
+}
+
+function getRouteForViewMode(projectId: string, viewMode: ProjectDealsViewMode): string {
+  if (viewMode === "matches") {
+    return `/projects/${projectId}`;
+  }
+
+  if (viewMode === "active") {
+    return `/projects/${projectId}/active`;
+  }
+
+  return `/projects/${projectId}/archive`;
+}
+
+export function getProjectDealsRouteForTabChange(projectId: string, value: unknown): string | null {
+  if (!isProjectDealsViewMode(value)) {
+    return null;
+  }
+
+  return getRouteForViewMode(projectId, value);
+}
 
 function getViewModeFromPath(pathname: string | null): ProjectDealsViewMode {
   if (pathname?.endsWith("/active")) {
@@ -83,6 +99,35 @@ function getVisibleDeals(deals: Deal[], viewMode: ProjectDealsViewMode): Deal[] 
   });
 }
 
+function formatDateReceived(value: string | null | undefined): string {
+  if (!value) {
+    return "—";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "—";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  }).format(parsed);
+}
+
+function getDateReceivedSortValue(value: string | null | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  const timestamp = parsed.getTime();
+
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
 function getEmptyStateMessage(viewMode: ProjectDealsViewMode): string {
   if (viewMode === "active") {
     return "No deals with active engagements yet.";
@@ -93,6 +138,95 @@ function getEmptyStateMessage(viewMode: ProjectDealsViewMode): string {
   }
 
   return "No matching deals found. Try adjusting your project criteria.";
+}
+
+function getDealActions(
+  deal: Deal,
+  options: {
+    onNavigate: (href: string) => void;
+    onPursue: (dealId: string) => void;
+    onDecline: (dealId: string) => void;
+    actionLoadingDealId: string | null;
+  }
+): DealActionConfig[] {
+  const stage = deal.engagement?.stage;
+  const isNdaPending = stage === "nda_pending";
+  const isEngaged = Boolean(deal.engagement) && stage !== "declined";
+  const isDeclined = stage === "declined";
+  const isLoading = options.actionLoadingDealId === deal.id;
+  const canAccessIoiWorkflow = canBuyerAccessIoiWorkflow({
+    isApprovedBuyer: true,
+    dealStatus: deal.status,
+    engagement: deal.engagement,
+  });
+  const canAccessLoiWorkflow = canBuyerAccessLoiWorkflow({
+    isApprovedBuyer: true,
+    dealStatus: deal.status,
+    engagement: deal.engagement,
+  });
+
+  const primaryAction = (() => {
+    if (stage === "nda_pending") {
+      return {
+      label: "Sign NDA",
+      onClick: () => options.onNavigate(`/deals/${deal.id}/nda`),
+      };
+    }
+
+    if (stage === "nda_signed" && canAccessIoiWorkflow) {
+      return {
+      label: "Submit IOI",
+      onClick: () => options.onNavigate(`/deals/${deal.id}/ioi`),
+      };
+    }
+
+    if (stage === "ioi_submitted" && canAccessIoiWorkflow) {
+      return {
+      label: "View IOI",
+      onClick: () => options.onNavigate(`/deals/${deal.id}/ioi`),
+      };
+    }
+
+    if ((stage === "ioi_submitted" || stage === "loi_submitted") && canAccessLoiWorkflow) {
+      return {
+      label: stage === "loi_submitted" ? "View LOI" : "Submit LOI",
+      onClick: () => options.onNavigate(`/deals/${deal.id}/loi`),
+      };
+    }
+
+    if (!isEngaged || isDeclined) {
+      return {
+        label: "Pursue",
+        onClick: () => options.onPursue(deal.id),
+        disabled: isLoading,
+      };
+    }
+
+    return null;
+  })();
+
+  const shouldRenderSinglePrimaryAction = Boolean(primaryAction) && (isNdaPending || isDeclined || isEngaged);
+  if (shouldRenderSinglePrimaryAction && primaryAction) {
+    return [primaryAction];
+  }
+
+  if (!isNdaPending && !isEngaged && !isDeclined) {
+    return [
+      {
+        label: "Pursue",
+        onClick: () => options.onPursue(deal.id),
+        disabled: isLoading,
+      },
+      {
+        label: "Decline",
+        onClick: () => options.onDecline(deal.id),
+        disabled: isLoading,
+        variant: "outlined",
+      },
+    ];
+  }
+
+  return [];
 }
 
 export default function ProjectDealsView({ projectId }: { projectId: string }) {
@@ -117,6 +251,8 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
     page: 0,
     pageSize: 10,
   });
+  const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
+  const drawerTriggerRef = useRef<HTMLElement | null>(null);
 
   const fetchDeals = useCallback(
     async (cursor?: string) => {
@@ -188,30 +324,55 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
 
   const visibleDeals = getVisibleDeals(deals, viewMode);
   const emptyStateMessage = getEmptyStateMessage(viewMode);
+  const selectedDeal = useMemo(
+    () => deals.find((deal) => deal.id === selectedDealId) ?? null,
+    [deals, selectedDealId]
+  );
+  const selectedDealActions = useMemo(() => {
+    if (!selectedDeal) {
+      return [];
+    }
+
+    return getDealActions(selectedDeal, {
+      onNavigate: (href) => router.push(href),
+      onPursue: (dealId) => void handlePursue(dealId),
+      onDecline: (dealId) => void handleDecline(dealId),
+      actionLoadingDealId: actionLoading,
+    });
+  }, [actionLoading, handleDecline, handlePursue, router, selectedDeal]);
+
+  const openDealDrawer = useCallback((deal: Deal, trigger?: HTMLElement | null) => {
+    drawerTriggerRef.current =
+      trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    setSelectedDealId(deal.id);
+  }, []);
+
+  const closeDealDrawer = useCallback(() => {
+    setSelectedDealId(null);
+  }, []);
 
   const headlineColumn = useMemo<GridColDef<Deal>>(() => {
     return {
       field: "headline",
       headerName: "Headline",
-      width: 240,
-      minWidth: 220,
       cellClassName: "row-hover-text",
       renderCell: (params) => (
         <Box sx={{ color: "inherit" }}>
-          <Link
-            href={`/deals/${params.row.id}`}
+          <button
+            type="button"
             tabIndex={params.hasFocus ? 0 : -1}
             onClick={(event) => {
               event.stopPropagation();
+              openDealDrawer(params.row, event.currentTarget);
             }}
-            className="rounded-sm text-inherit focus-visible:outline-none focus-visible:underline"
+            className="rounded-sm text-left text-inherit focus-visible:outline-none focus-visible:underline"
           >
             {params.row.headline}
-          </Link>
+          </button>
         </Box>
       ),
     };
-  }, []);
+  }, [openDealDrawer]);
 
   const detailColumns = useMemo<GridColDef<Deal>[]>(() => {
     return [
@@ -219,8 +380,10 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "date_received",
         headerName: "Date Received",
         flex: 0.9,
-        minWidth: 130,
+        minWidth: 120,
         cellClassName: "row-hover-text",
+        valueGetter: (_, row) => row.date_received,
+        renderCell: (params) => formatDateReceived(params.row.date_received),
       },
       {
         field: "revenue_year_3",
@@ -246,14 +409,14 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "industry",
         headerName: "Industry",
         flex: 1,
-        minWidth: 140,
+        minWidth: 120,
         cellClassName: "row-hover-text",
       },
       {
         field: "geography",
-        headerName: "Geography",
+        headerName: "Location",
         flex: 0.9,
-        minWidth: 130,
+        minWidth: 120,
         cellClassName: "row-hover-text",
         valueGetter: (_, row) => getGeography(row) || "—",
       },
@@ -261,19 +424,19 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         field: "status",
         headerName: "Deal Status",
         flex: 1,
-        minWidth: 130,
+        minWidth: 160,
         sortable: false,
         renderCell: (params) => (
           <Chip
             label={DEAL_STATUS_LABELS[params.row.status] || params.row.status}
             size="small"
-            sx={{ backgroundColor: "#10B9811A", color: "#10B981", fontWeight: 500 }}
+            sx={{ backgroundColor: "#10B9811A", color: "#10B981", fontWeight: 600 }}
           />
         ),
       },
       {
         field: "engagement_status",
-        headerName: "Engagement Status",
+        headerName: "Engagement",
         flex: 1,
         minWidth: 160,
         sortable: false,
@@ -282,8 +445,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
             <Chip
               label={params.row.engagement.stage.replace(/_/g, " ")}
               size="small"
-              sx={{ textTransform: "capitalize" }}
-              variant="outlined"
+              sx={{ textTransform: "capitalize", backgroundColor: "var(--color-subtle)", color: "var(--color-primary)", fontWeight: 600 }}
             />
           ) : (
             <span style={{ color: "#9CA3AF" }}>—</span>
@@ -297,101 +459,50 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         sortable: false,
         filterable: false,
         renderCell: (params) => {
-          const stage = params.row.engagement?.stage;
-          const isNdaPending = stage === "nda_pending";
-          const isEngaged = Boolean(params.row.engagement) && stage !== "declined";
-          const isDeclined = stage === "declined";
+          const actions = getDealActions(params.row, {
+            onNavigate: (href) => router.push(href),
+            onPursue: (dealId) => void handlePursue(dealId),
+            onDecline: (dealId) => void handleDecline(dealId),
+            actionLoadingDealId: actionLoading,
+          });
 
           return (
-            <>
-              {isNdaPending && (
+            <Stack direction="row" spacing={1}>
+              {actions.map((action) => (
                 <Button
-                  variant="contained"
+                  key={action.label}
+                  variant={action.variant ?? "contained"}
                   size="small"
                   sx={{
                     textTransform: "none",
                     borderRadius: 1,
                     px: 1.75,
                     fontWeight: 600,
-                    backgroundColor: "var(--color-primary)",
-                    "&:hover": { backgroundColor: "var(--color-btn-hover)" }
+                    ...(action.variant === "outlined"
+                      ? {
+                        borderColor: "var(--color-border)",
+                        borderWidth: 2,
+                          color: "var(--color-secondary)",
+                          "&:hover": {
+                            borderColor: "var(--color-secondary)",
+                            backgroundColor: "var(--color-faint)",
+                          },
+                        }
+                      : {
+                          backgroundColor: "var(--color-primary)",
+                          "&:hover": { backgroundColor: "var(--color-btn-hover)" },
+                        }),
                   }}
                   onClick={(event) => {
                     event.stopPropagation();
-                    router.push(`/deals/${params.row.id}/nda`);
+                    action.onClick();
                   }}
+                  disabled={action.disabled}
                 >
-                  Sign NDA
+                  {action.label}
                 </Button>
-              )}
-              {!isNdaPending && !isEngaged && !isDeclined && (
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    sx={{
-                    textTransform: "none",
-                    borderRadius: 1,
-                    px: 1.75,
-                    fontWeight: 600,
-                    backgroundColor: "var(--color-primary)",
-                    "&:hover": { backgroundColor: "var(--color-btn-hover)" }
-                    }}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handlePursue(params.row.id);
-                    }}
-                    disabled={actionLoading === params.row.id}
-                  >
-                    Pursue
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                    textTransform: "none",
-                    borderRadius: 1,
-                    px: 1.75,
-                    fontWeight: 600,
-                    borderColor: "var(--color-border)",
-                    color: "var(--color-secondary)",
-                    "&:hover": {
-                      borderColor: "var(--color-secondary)",
-                      backgroundColor: "var(--color-faint)",
-                    },
-                    }}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleDecline(params.row.id);
-                    }}
-                    disabled={actionLoading === params.row.id}
-                  >
-                    Decline
-                  </Button>
-                </Stack>
-              )}
-              {!isNdaPending && isDeclined && (
-                <Button
-                  variant="contained"
-                  size="small"
-                  sx={{
-                    textTransform: "none",
-                    borderRadius: 1,
-                    px: 1.75,
-                    fontWeight: 600,
-                    backgroundColor: "var(--color-primary)",
-                    "&:hover": { backgroundColor: "var(--color-btn-hover)" }
-                    }}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void handlePursue(params.row.id);
-                  }}
-                  disabled={actionLoading === params.row.id}
-                >
-                  Pursue
-                </Button>
-              )}
-            </>
+              ))}
+            </Stack>
           );
         },
       },
@@ -413,6 +524,8 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
           return deal.industry;
         case "geography":
           return getGeography(deal) || "";
+        case "date_received":
+          return getDateReceivedSortValue(deal.date_received);
         case "revenue_year_3":
           return deal.revenue_year_3 ?? Number.NEGATIVE_INFINITY;
         case "ebitda_year_3":
@@ -425,6 +538,18 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
     return [...visibleDeals].sort((a, b) => {
       const aValue = getValue(a);
       const bValue = getValue(b);
+
+      if (aValue == null && bValue == null) {
+        return 0;
+      }
+
+      if (aValue == null) {
+        return 1;
+      }
+
+      if (bValue == null) {
+        return -1;
+      }
 
       if (typeof aValue === "number" && typeof bValue === "number") {
         return (aValue - bValue) * direction;
@@ -461,7 +586,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
 
   return (
     <main className="min-h-screen bg-bg-alt">
-      <div className="bg-bg pt-8 border-b border-border-gray">
+      <div className="bg-bg pt-8 border-b border-border-color">
         <div className="w-full px-5 sm:px-6">
           {showSavedBanner && (
             <div className="mb-6 flex items-start justify-between gap-4 rounded-md border border-success/20 bg-success/10 px-4 py-3 text-sm text-success">
@@ -477,7 +602,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
             </div>
           )}
 
-          <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-primary">{project?.name || "Project"}</h1>
               <p className="text-sm text-text-secondary">
@@ -501,30 +626,15 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
 
           <div>
             <PrimaryTabs
+              data-testid="project-deals-primary-tabs"
               value={viewMode}
               onChange={(_, newValue) => {
-                const routes: Record<ProjectDealsViewMode, string> = {
-                  matches: `/projects/${projectId}`,
-                  active: `/projects/${projectId}/active`,
-                  archive: `/projects/${projectId}/archive`,
-                };
-
-                if (newValue !== "matches" && newValue !== "active" && newValue !== "archive") {
-                  return;
+                const route = getProjectDealsRouteForTabChange(projectId, newValue);
+                if (route) {
+                  router.push(route);
                 }
-
-                if (newValue === "matches") {
-                  router.push(routes.matches);
-                  return;
-                }
-
-                if (newValue === "active") {
-                  router.push(routes.active);
-                  return;
-                }
-
-                router.push(routes.archive);
               }}
+              className="-mb-px"
             >
               <Tab label="Matches" value="matches" />
               <Tab label="Active" value="active" />
@@ -537,7 +647,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
       <div className="w-full px-4 pb-8">
         <div className="pt-4">
           {visibleDeals.length === 0 ? (
-            <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center text-text-secondary">
+            <div className="bg-surface-alt rounded-lg border border-border-color p-8 text-center text-text-secondary">
               {emptyStateMessage}
             </div>
           ) : (
@@ -549,7 +659,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
               onRowSelectionModelChange={setRowSelectionModel}
               sortModel={sortModel}
               onSortModelChange={setSortModel}
-              onRowClick={(row) => router.push(`/deals/${row.id}`)}
+              onRowClick={openDealDrawer}
               sortedCount={sortedDeals.length}
               paginationModel={paginationModel}
               onPageChange={(page) => setPaginationModel((prev) => ({ ...prev, page }))}
@@ -570,6 +680,16 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
           )}
         </div>
       </div>
+
+      {selectedDeal && (
+        <ProjectDealDrawer
+          deal={selectedDeal}
+          workspaceHref={`/deals/${selectedDeal.id}`}
+          onClose={closeDealDrawer}
+          restoreFocusRef={drawerTriggerRef}
+          actionButtons={selectedDealActions}
+        />
+      )}
     </main>
   );
 }

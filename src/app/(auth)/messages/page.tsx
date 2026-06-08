@@ -51,14 +51,14 @@ export default function InboxPage() {
         <h1 className="text-2xl font-bold text-primary mb-6">Messages</h1>
 
         {threads.length === 0 ? (
-          <div className="bg-surface-alt rounded-lg shadow-md p-8 text-center">
+          <div className="bg-surface-alt rounded-lg border border-border-color p-8 text-center">
             <p className="text-text-secondary">No message threads yet.</p>
             <p className="text-sm text-text-secondary mt-2">
               Threads are created when you engage with a deal.
             </p>
           </div>
         ) : (
-          <div className="bg-surface-alt rounded-lg shadow-md divide-y">
+          <div className="bg-surface-alt rounded-lg border border-border-color divide-y">
             {threads.map((thread) => (
               <Link
                 key={thread.engagementId}

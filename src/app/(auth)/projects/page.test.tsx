@@ -196,6 +196,44 @@ describe("ProjectsPage", () => {
     expect(mockState.push).toHaveBeenCalledWith("/projects/project-1");
   });
 
+  it("uses ProjectDealsView-aligned width wrappers for header and content containers", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project Orion",
+        industry: "Industrial",
+        revenue_min: null,
+        revenue_max: null,
+        ebitda_min: null,
+        ebitda_max: null,
+        location: "TX",
+        keywords: [],
+        created_at: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+
+    mockProjectsResponse(projects);
+
+    render(<ProjectsPage />);
+
+    const heading = await screen.findByRole("heading", { name: "Acquisition Projects" });
+    const dataGrid = await screen.findByTestId("projects-data-grid");
+
+    const headerWrapper = heading.closest("div")?.parentElement;
+    const contentWrapper = dataGrid.parentElement?.parentElement;
+
+    expect(headerWrapper).toBeTruthy();
+    expect(contentWrapper).toBeTruthy();
+
+    expect(headerWrapper).toHaveClass("w-full", "px-5", "sm:px-6");
+    expect(headerWrapper).not.toHaveClass("max-w-7xl", "max-w-6xl");
+    expect(headerWrapper).not.toHaveClass("mx-auto");
+
+    expect(contentWrapper).toHaveClass("w-full", "px-4", "pb-8");
+    expect(contentWrapper).not.toHaveClass("max-w-7xl", "max-w-6xl");
+    expect(contentWrapper).not.toHaveClass("mx-auto");
+  });
+
   it("integrates sorting and pagination callbacks with displayed rows", async () => {
     const projects = [
       { id: "project-1", name: "Project Zulu", created_at: "2026-01-01T00:00:00.000Z" },

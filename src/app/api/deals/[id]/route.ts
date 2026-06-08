@@ -10,6 +10,7 @@ const BUYER_DEAL_DETAIL_SELECT = `
   id,
   headline,
   description,
+  nda_type,
   geography_display,
   state,
   region,

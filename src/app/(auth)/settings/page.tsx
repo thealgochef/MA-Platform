@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Button,
@@ -11,20 +12,83 @@ import {
   TextInput,
 } from "@/components/ui";
 import {
+  ACCREDITATIONS,
   INDUSTRIES,
   BUYER_TYPES,
-  BUYER_TYPE_VALUES,
   BROKER_NOTIFICATION_EVENTS,
   BUYER_NOTIFICATION_EVENTS,
 } from "@/lib/constants";
 
 type NotificationPrefs = Record<string, { email: boolean; in_platform: boolean }>;
 
+const appendCacheBustParam = (url: string) => `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`;
+
+const getErrorMessage = async (response: Response, fallback: string) => {
+  try {
+    const payload: unknown = await response.json();
+    if (
+      payload &&
+      typeof payload === "object" &&
+      "error" in payload &&
+      typeof (payload as { error?: unknown }).error === "string"
+    ) {
+      return (payload as { error: string }).error;
+    }
+  } catch {
+    // noop: fallback handled below
+  }
+
+  return fallback;
+};
+
+type SettingsProfileResponse = {
+  profile?: {
+    role?: string | null;
+    full_name?: string | null;
+    title?: string | null;
+    avatar_path?: string | null;
+    avatar_url?: string | null;
+    avatarUrl?: string | null;
+    location?: string | null;
+    industry_focus?: string[] | null;
+    license_credentials?: string | null;
+    deal_types?: string | null;
+    buyer_type?: string | null;
+    accreditation?: string | null;
+    aum?: string | null;
+    phone?: string | null;
+    linkedin?: string | null;
+  };
+  firm?: {
+    name?: string | null;
+    description?: string | null;
+    website?: string | null;
+    location?: string | null;
+    team_members_requested?: string | null;
+  } | null;
+  avatar_url?: string | null;
+  avatarUrl?: string | null;
+};
+
+const splitFullName = (fullName: string | null | undefined) => {
+  const normalized = (fullName || "").trim();
+  if (!normalized) {
+    return { firstName: "", lastName: "" };
+  }
+
+  const [firstName, ...rest] = normalized.split(/\s+/);
+  return {
+    firstName,
+    lastName: rest.join(" "),
+  };
+};
+
 export default function SettingsPage() {
   const router = useRouter();
 
   // Profile state
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [role, setRole] = useState("");
   const [title, setTitle] = useState("");
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
@@ -34,6 +98,7 @@ export default function SettingsPage() {
   const [credentials, setCredentials] = useState("");
   const [dealTypes, setDealTypes] = useState("");
   const [buyerType, setBuyerType] = useState("");
+  const [accreditation, setAccreditation] = useState("");
   const [aum, setAum] = useState("");
   const [phone, setPhone] = useState("");
   const [linkedIn, setLinkedIn] = useState("");
@@ -58,42 +123,74 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [profileMessage, setProfileMessage] = useState("");
   const [notifMessage, setNotifMessage] = useState("");
+  const [deleteMessage, setDeleteMessage] = useState("");
 
   // Load profile and notification preferences
   useEffect(() => {
     async function loadData() {
-      const [profileRes, notifRes] = await Promise.all([
-        fetch("/api/settings/profile"),
-        fetch("/api/settings/notifications"),
-      ]);
+      setProfileMessage("");
+      setNotifMessage("");
 
-      if (profileRes.ok) {
-        const { profile, firm } = await profileRes.json();
-        setRole(profile.role || "");
-        setFullName(profile.full_name || "");
-        setTitle(profile.title || "");
-        setAvatarPath(profile.avatar_path || null);
-        setAvatarUrl(profile.avatar_url || null);
-        setLocation(profile.location || "");
-        setIndustryFocus(profile.industry_focus || []);
-        setCredentials(profile.license_credentials || "");
-        setDealTypes(profile.deal_types || "");
-        setBuyerType(profile.buyer_type || "");
-        setAum(profile.aum || "");
-        setPhone(profile.phone || "");
-        setLinkedIn(profile.linkedin || "");
+      try {
+        const [profileRes, notifRes] = await Promise.all([
+          fetch("/api/settings/profile"),
+          fetch("/api/settings/notifications"),
+        ]);
 
-        if (firm) {
-          setFirmName(firm.name || "");
-          setDescription(firm.description || "");
-          setWebsite(firm.website || "");
-          setFirmLocation(firm.location || "");
+        if (profileRes.ok) {
+          const payload = (await profileRes.json()) as SettingsProfileResponse;
+          const profile = payload.profile ?? {};
+          const firm = payload.firm;
+          const resolvedAvatarUrl = profile.avatar_url ?? profile.avatarUrl ?? payload.avatar_url ?? payload.avatarUrl ?? null;
+          const parsedName = splitFullName(profile.full_name);
+
+          setRole(profile.role || "");
+          setFirstName(parsedName.firstName);
+          setLastName(parsedName.lastName);
+          setTitle(profile.title || "");
+          setAvatarPath(profile.avatar_path || null);
+          setAvatarUrl(resolvedAvatarUrl);
+          setLocation(profile.location || "");
+          setIndustryFocus(profile.industry_focus || []);
+          setCredentials(profile.license_credentials || "");
+          setDealTypes(profile.deal_types || "");
+          setBuyerType(profile.buyer_type || "");
+          setAccreditation(profile.accreditation || "");
+          setAum(profile.aum || "");
+          setPhone(profile.phone || "");
+          setLinkedIn(profile.linkedin || "");
+
+          if (firm) {
+            setFirmName(firm.name || "");
+            setDescription(firm.description || "");
+            setWebsite(firm.website || "");
+            setFirmLocation(firm.location || "");
+          }
+        } else {
+          setProfileMessage(await getErrorMessage(profileRes, "Failed to load profile."));
         }
-      }
 
-      if (notifRes.ok) {
-        const { preferences } = await notifRes.json();
-        setNotificationPrefs(preferences || {});
+        if (notifRes.ok) {
+          const payload: unknown = await notifRes.json();
+          if (
+            payload &&
+            typeof payload === "object" &&
+            "preferences" in payload &&
+            typeof (payload as { preferences?: unknown }).preferences === "object" &&
+            (payload as { preferences?: unknown }).preferences !== null
+          ) {
+            setNotificationPrefs(
+              (payload as { preferences: NotificationPrefs }).preferences
+            );
+          } else {
+            setNotificationPrefs({});
+          }
+        } else {
+          setNotifMessage(await getErrorMessage(notifRes, "Failed to load preferences."));
+        }
+      } catch {
+        setProfileMessage("Failed to load settings.");
+        setNotifMessage("Failed to load preferences.");
       }
     }
     loadData();
@@ -128,13 +225,29 @@ export default function SettingsPage() {
       });
 
       if (!res.ok) {
-        const { error } = await res.json().catch(() => ({}));
-        throw new Error(error || "Failed to upload profile picture.");
+        throw new Error(await getErrorMessage(res, "Failed to upload profile picture."));
       }
 
-      const { avatarPath: newPath, avatarUrl: newUrl } = await res.json();
+      const payload: unknown = await res.json();
+      if (!payload || typeof payload !== "object") {
+        throw new Error("Failed to upload profile picture.");
+      }
+
+      const newPath =
+        "avatarPath" in payload && typeof payload.avatarPath === "string"
+          ? payload.avatarPath
+          : null;
+      const newUrl =
+        "avatarUrl" in payload && typeof payload.avatarUrl === "string"
+          ? payload.avatarUrl
+          : null;
+
+      if (!newPath) {
+        throw new Error("Failed to upload profile picture.");
+      }
+
       setAvatarPath(newPath);
-      setAvatarUrl(newUrl ? `${newUrl}?t=${Date.now()}` : null);
+      setAvatarUrl(newUrl ? appendCacheBustParam(newUrl) : null);
       setProfileMessage("Profile picture updated.");
     } catch (error) {
       setProfileMessage(
@@ -159,7 +272,7 @@ export default function SettingsPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to remove profile picture.");
+        throw new Error(await getErrorMessage(res, "Failed to remove profile picture."));
       }
 
       setAvatarPath(null);
@@ -177,6 +290,9 @@ export default function SettingsPage() {
   const handleProfileSave = async () => {
     setProfileSaving(true);
     setProfileMessage("");
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const isBuyer = role === "buyer";
+    const isBroker = role === "broker";
     const payload: Record<string, unknown> = {
       fullName,
       title,
@@ -184,34 +300,41 @@ export default function SettingsPage() {
       linkedIn,
       location,
       industryFocus,
-      licenseCredentials: credentials,
-      dealTypes,
-      aum,
       firmName,
       description,
       website,
       firmLocation,
     };
 
-    if (
-      role === "buyer" &&
-      (buyerType === "" ||
-        BUYER_TYPE_VALUES.includes(buyerType as (typeof BUYER_TYPE_VALUES)[number]))
-    ) {
-      payload.buyerType = buyerType;
+    if (isBuyer) {
+      payload.aum = aum;
     }
 
-    const res = await fetch("/api/settings/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    setProfileSaving(false);
-    setProfileMessage(res.ok ? "Profile saved." : "Failed to save profile.");
+    if (isBroker) {
+      payload.licenseCredentials = credentials;
+      payload.dealTypes = dealTypes;
+    }
+
+    try {
+      const res = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      setProfileMessage(
+        res.ok ? "Profile saved." : await getErrorMessage(res, "Failed to save profile.")
+      );
+    } catch {
+      setProfileMessage("Failed to save profile.");
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const notificationEvents =
     role === "broker" ? BROKER_NOTIFICATION_EVENTS : BUYER_NOTIFICATION_EVENTS;
+  const displayName = `${firstName} ${lastName}`.trim();
 
   const toggleNotification = (eventKey: string, channel: "email" | "in_platform") => {
     setNotificationPrefs((prev) => {
@@ -226,40 +349,59 @@ export default function SettingsPage() {
   const handleNotifSave = async () => {
     setNotifSaving(true);
     setNotifMessage("");
-    const res = await fetch("/api/settings/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preferences: notificationPrefs }),
-    });
-    setNotifSaving(false);
-    setNotifMessage(res.ok ? "Preferences saved." : "Failed to save preferences.");
+    try {
+      const res = await fetch("/api/settings/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: notificationPrefs }),
+      });
+      setNotifMessage(
+        res.ok ? "Preferences saved." : await getErrorMessage(res, "Failed to save preferences.")
+      );
+    } catch {
+      setNotifMessage("Failed to save preferences.");
+    } finally {
+      setNotifSaving(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
     if (confirmDelete !== "DELETE") return;
+    setDeleteMessage("");
     setDeleting(true);
-    const res = await fetch("/api/settings/delete-account", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ confirmation: "DELETE" }),
-    });
-    if (res.ok) {
-      router.push("/");
-    } else {
+
+    try {
+      const res = await fetch("/api/settings/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: "DELETE" }),
+      });
+
+      if (res.ok) {
+        router.push("/");
+      } else {
+        setDeleteMessage(await getErrorMessage(res, "Failed to delete account."));
+      }
+    } catch {
+      setDeleteMessage("Failed to delete account.");
+    } finally {
       setDeleting(false);
     }
   };
 
   return (
     <main className="min-h-screen bg-bg-alt py-8">
-      <div className="max-w-3xl mx-auto px-4 space-y-8">
-        <h1 className="text-3xl font-bold text-primary">Settings</h1>
+      <div className="max-w-3xl mx-auto px-4">
+        <h1 className="text-3xl font-bold text-primary mb-6">Settings</h1>
 
         {/* ─── Edit Profile ────────────────────────────────────── */}
-        <Card>
+        <Card className="mb-6">
           <h2 className="text-xl font-semibold text-primary mb-4">Edit Profile</h2>
-
           <div className="space-y-4">
+
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Personal
+            </p>
 
             {/* ─── Avatar Upload ───────────────────────────────── */}
             <div>
@@ -268,14 +410,17 @@ export default function SettingsPage() {
               </label>
               <div className="flex flex-col gap-4 rounded-lg border border-dashed border-gray-300 p-4 sm:flex-row sm:items-center">
                 {avatarUrl ? (
-                  <img
+                  <Image
                     src={avatarUrl}
-                    alt={`${fullName || "User"} profile picture`}
+                    alt={`${displayName || "User"} profile picture`}
+                    width={80}
+                    height={80}
+                    unoptimized
                     className="h-20 w-20 rounded-full object-cover border border-gray-200"
                   />
                 ) : (
                   <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-xl font-semibold text-primary">
-                    {(fullName || "User")
+                    {(displayName || "User")
                       .split(" ")
                       .map((part) => part[0])
                       .join("")
@@ -313,12 +458,19 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* ─── Profile Fields ────────────────────────────────── */}
+            {/* ─── Personal Profile Fields ────────────────────────────────── */}
             <TextInput
-              label="Full Name"
+              label="First Name"
               type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
+
+            <TextInput
+              label="Last Name"
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
             />
 
             <TextInput
@@ -337,12 +489,24 @@ export default function SettingsPage() {
             />
 
             <TextInput
+              label="Location"
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+
+            <TextInput
               label="LinkedIn Profile"
               type="url"
               value={linkedIn}
               onChange={(e) => setLinkedIn(e.target.value)}
               placeholder="https://www.linkedin.com/in/your-profile"
             />
+
+            {/* ─── Firm Profile Fields ────────────────────────────────────── */}
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Firm
+            </p>
 
             <TextInput
               label="Firm Name"
@@ -351,6 +515,47 @@ export default function SettingsPage() {
               onChange={(e) => setFirmName(e.target.value)}
             />
 
+            <TextInput
+              label="Location"
+              type="text"
+              value={firmLocation}
+              onChange={(e) => setFirmLocation(e.target.value)}
+            />
+
+            <TextInput
+              label="Website"
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+
+            {/* Buyer-specific fields */}
+            {role === "buyer" && (
+              <>
+                <SelectInput
+                  label="Type"
+                  value={buyerType}
+                  onChange={(e) => setBuyerType(e.target.value)}
+                  disabled
+                >
+                  <option value="">Select firm type</option>
+                  {BUYER_TYPES.map((bt) => (
+                    <option key={bt.value} value={bt.value}>
+                      {bt.label}
+                    </option>
+                  ))}
+                </SelectInput>
+              </>
+            )}
+            {role === "buyer" && (
+              <TextInput
+                label="Assets Under Management (AUM)"
+                type="text"
+                value={aum}
+                onChange={(e) => setAum(e.target.value)}
+              />
+            )}
+
             <TextareaInput
               label="Description"
               value={description}
@@ -358,12 +563,58 @@ export default function SettingsPage() {
               rows={3}
             />
 
-            <TextInput
-              label="Location"
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
+
+            {/* Broker-specific field */}
+            {role === "broker" && (
+              <>
+                <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+                Credentials & Accreditation
+                </p>
+                <TextInput
+                  label="License & Credentials"
+                  type="text"
+                  value={credentials}
+                  onChange={(e) => setCredentials(e.target.value)}
+                />
+              </>
+            )}
+
+            {/* Buyer-specific field */}
+            {role === "buyer" && (
+              <>
+                <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+                Credentials & Accreditation
+                </p>
+                <SelectInput
+                  label="Basis for Accreditation"
+                  value={accreditation}
+                  onChange={(e) => setAccreditation(e.target.value)}
+                  disabled
+                >
+                  <option value="">Select basis for accreditation</option>
+                  {ACCREDITATIONS.map((acc) => (
+                    <option key={acc.value} value={acc.value}>
+                      {acc.label}
+                    </option>
+                  ))}
+                </SelectInput>
+              </>
+            )}
+            
+            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
+              Focus
+            </p>
+            {/* Broker-specific field */}
+            {role === "broker" && (
+              <>
+                <TextInput
+                  label="Types of Deals Typically Represented"
+                  type="text"
+                  value={dealTypes}
+                  onChange={(e) => setDealTypes(e.target.value)}
+                />
+              </>
+            )}
 
             <SelectInput
               label="Industry Focus"
@@ -381,55 +632,6 @@ export default function SettingsPage() {
               ))}
             </SelectInput>
 
-            <TextInput
-              label="Website"
-              type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-            />
-
-            {/* Broker-specific fields */}
-            {role === "broker" && (
-              <>
-                <TextInput
-                  label="License & Credentials"
-                  type="text"
-                  value={credentials}
-                  onChange={(e) => setCredentials(e.target.value)}
-                />
-                <TextInput
-                  label="Deal Types"
-                  type="text"
-                  value={dealTypes}
-                  onChange={(e) => setDealTypes(e.target.value)}
-                />
-              </>
-            )}
-
-            {/* Buyer-specific fields */}
-            {role === "buyer" && (
-              <>
-                <SelectInput
-                  label="Buyer Type"
-                  value={buyerType}
-                  onChange={(e) => setBuyerType(e.target.value)}
-                >
-                  <option value="">Select type</option>
-                  {BUYER_TYPES.map((bt) => (
-                    <option key={bt.value} value={bt.value}>
-                      {bt.label}
-                    </option>
-                  ))}
-                </SelectInput>
-                <TextInput
-                  label="Assets Under Management (AUM)"
-                  type="text"
-                  value={aum}
-                  onChange={(e) => setAum(e.target.value)}
-                />
-              </>
-            )}
-
             <div className="flex items-center gap-3">
               <Button
                 onClick={handleProfileSave}
@@ -446,7 +648,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* ─── Notification Preferences ─────────────────────── */}
-        <Card>
+        <Card className="mb-6">
           <h2 className="text-xl font-semibold text-primary mb-4">
             Notification Preferences
           </h2>
@@ -519,7 +721,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* ─── Delete Account ───────────────────────────────── */}
-        <Card className="border border-red-200">
+        <Card className="border border-red-200 mb-6">
           <h2 className="text-xl font-semibold text-red-600 mb-2">
             Delete Account
           </h2>
@@ -531,7 +733,10 @@ export default function SettingsPage() {
           {!showDeleteModal ? (
             <Button
               variant="danger"
-              onClick={() => setShowDeleteModal(true)}
+              onClick={() => {
+                setDeleteMessage("");
+                setShowDeleteModal(true);
+              }}
             >
               Delete My Account
             </Button>
@@ -576,6 +781,7 @@ export default function SettingsPage() {
                 <Button
                   variant="secondary"
                   onClick={() => {
+                    setDeleteMessage("");
                     setShowDeleteModal(false);
                     setConfirmDelete("");
                   }}
@@ -583,6 +789,9 @@ export default function SettingsPage() {
                   Cancel
                 </Button>
               </div>
+              {deleteMessage && (
+                <StatusMessage>{deleteMessage}</StatusMessage>
+              )}
             </div>
           )}
         </Card>

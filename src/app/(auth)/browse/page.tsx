@@ -134,7 +134,7 @@ export default function BrowseDealsPage() {
         <h1 className="text-2xl font-bold text-primary mb-6">Browse All Deals</h1>
 
         {/* Filter Bar */}
-        <div className="bg-surface-alt rounded-lg shadow-md p-4 mb-6">
+        <div className="bg-surface-alt rounded-lg border border-border-color p-4 mb-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
 
             <select
@@ -200,7 +200,7 @@ export default function BrowseDealsPage() {
         {loading ? (
           <p className="text-text-secondary">Loading deals...</p>
         ) : (
-          <div className="bg-surface-alt rounded-lg shadow-md overflow-x-auto">
+          <div className="bg-surface-alt rounded-lg border border-border-color overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border-gray bg-bg-alt">

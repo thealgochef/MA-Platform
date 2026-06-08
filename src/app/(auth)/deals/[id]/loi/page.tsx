@@ -141,7 +141,7 @@ export default function LOISubmissionPage() {
         )}
 
         {previousLOIs.length > 0 && (
-          <div className="bg-surface-alt rounded-lg shadow-md p-4 mb-6">
+          <div className="bg-surface-alt rounded-lg border border-border-color p-4 mb-6">
             <h3 className="text-sm font-medium text-text mb-3">
               Previous LOIs ({previousLOIs.length})
             </h3>
@@ -158,7 +158,7 @@ export default function LOISubmissionPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-surface-alt rounded-lg shadow-md p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-surface-alt rounded-lg border border-border-color p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-text mb-1">Offer Price ($) *</label>

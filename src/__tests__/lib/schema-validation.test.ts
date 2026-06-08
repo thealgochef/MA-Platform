@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
-import { BUYER_TYPE_VALUES, FILE_CONSTRAINTS, SIGNED_NDA_ARTIFACT_CONSTRAINTS } from "@/lib/constants";
+import {
+  ACCREDITATIONS,
+  BUYER_TYPE_VALUES,
+  FILE_CONSTRAINTS,
+  SIGNED_NDA_ARTIFACT_CONSTRAINTS,
+} from "@/lib/constants";
 import {
   adminInvitationCreateSchema,
   browseQuerySchema,
@@ -351,6 +356,95 @@ describe("Settings profile validation", () => {
     expect(settingsProfileUpdateSchema.parse({ buyerType: null }).buyerType).toBeNull();
     expect(settingsProfileUpdateSchema.parse({ fullName: "Ada Lovelace" }).fullName)
       .toBe("Ada Lovelace");
+  });
+
+  it("allows canonical accreditation values and empty values", () => {
+    const canonicalAccreditationValues = ACCREDITATIONS.map(({ value }) => value);
+
+    for (const accreditationValue of canonicalAccreditationValues) {
+      expect(
+        settingsProfileUpdateSchema.parse({ accreditation: accreditationValue }).accreditation
+      ).toBe(accreditationValue);
+    }
+
+    expect(settingsProfileUpdateSchema.parse({ accreditation: "" }).accreditation).toBe("");
+    expect(settingsProfileUpdateSchema.parse({ accreditation: null }).accreditation).toBeNull();
+  });
+
+  it("rejects invalid accreditation values", () => {
+    expect(settingsProfileUpdateSchema.safeParse({ accreditation: "accredited" }).success)
+      .toBe(false);
+    expect(settingsProfileUpdateSchema.safeParse({ accreditation: "not_a_real_value" }).success)
+      .toBe(false);
+  });
+
+  it("accepts the expected settings profile and firm update fields", () => {
+    const parsed = settingsProfileUpdateSchema.parse({
+      fullName: "Ada Lovelace",
+      title: "Partner",
+      avatarPath: "avatars/ada.png",
+      phone: "555-1234",
+      linkedIn: "https://www.linkedin.com/in/ada",
+      location: "Austin, TX",
+      industryFocus: ["Technology", "Healthcare"],
+      licenseCredentials: "Series 7",
+      dealTypes: "Control",
+      buyerType: "family_office",
+      aum: "$1B",
+      firmName: "Analytical Capital",
+      description: "Thesis-driven lower middle market investor",
+      website: "https://analytical.example",
+      firmLocation: "New York, NY",
+      otherMembers: "Ari, Ben",
+      firmIndustryFocus: ["Technology"],
+    });
+
+    expect(parsed).toMatchObject({
+      fullName: "Ada Lovelace",
+      title: "Partner",
+      avatarPath: "avatars/ada.png",
+      phone: "555-1234",
+      linkedIn: "https://www.linkedin.com/in/ada",
+      location: "Austin, TX",
+      industryFocus: ["Technology", "Healthcare"],
+      licenseCredentials: "Series 7",
+      dealTypes: "Control",
+      buyerType: "family_office",
+      aum: "$1B",
+      firmName: "Analytical Capital",
+      description: "Thesis-driven lower middle market investor",
+      website: "https://analytical.example",
+      firmLocation: "New York, NY",
+      otherMembers: "Ari, Ben",
+      firmIndustryFocus: ["Technology"],
+    });
+  });
+
+  it("validates avatarPath as a safe storage key", () => {
+    expect(settingsProfileUpdateSchema.safeParse({ avatarPath: "user-1/avatar" }).success)
+      .toBe(true);
+    expect(settingsProfileUpdateSchema.safeParse({ avatarPath: "/user-1/avatar" }).success)
+      .toBe(false);
+    expect(settingsProfileUpdateSchema.safeParse({ avatarPath: "user-1/../avatar" }).success)
+      .toBe(false);
+    expect(settingsProfileUpdateSchema.safeParse({ avatarPath: "user-1/avatar?dl=1" }).success)
+      .toBe(false);
+  });
+
+  it("rejects unknown extra keys in settings profile payload", () => {
+    expect(
+      settingsProfileUpdateSchema.safeParse({
+        fullName: "Ada Lovelace",
+        avatarUrl: "https://cdn.example.com/avatar.png",
+      }).success
+    ).toBe(false);
+
+    expect(
+      settingsProfileUpdateSchema.safeParse({
+        firmName: "Analytical Capital",
+        unexpectedField: "not-allowed",
+      }).success
+    ).toBe(false);
   });
 });
 
