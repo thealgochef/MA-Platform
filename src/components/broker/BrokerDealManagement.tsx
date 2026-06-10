@@ -443,8 +443,8 @@ export default function BrokerDealManagement({
                       ].map((row, i) => (
                         <tr key={i} className="border-t border-border-gray">
                           <td className="px-3 py-2">{row.label}</td>
-                          <td className="px-3 py-2 text-right">{row.rev != null ? formatCurrency(row.rev) : "—"}</td>
-                          <td className="px-3 py-2 text-right">{row.eb != null ? formatCurrency(row.eb) : "—"}</td>
+                          <td className="px-3 py-2 text-right">{row.rev != null ? formatCurrency(row.rev) + "M": "—"}</td>
+                          <td className="px-3 py-2 text-right">{row.eb != null ? formatCurrency(row.eb) + "M": "—"}</td>
                         </tr>
                       ))}
                     </tbody>

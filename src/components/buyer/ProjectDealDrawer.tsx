@@ -143,7 +143,6 @@ function formatDateTime(value: string | null | undefined): string {
   const hasTime = value.includes("T");
 
   return new Intl.DateTimeFormat("en-US", {
-    timeZone: "UTC",
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -576,8 +575,8 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
                       {getFinancialRows(deal).map((row) => (
                         <tr key={row.key} className="border-t border-border-color">
                           <td className="px-3 py-2 font-medium text-text">{row.label}</td>
-                          <td className="px-3 py-2 text-right text-text-secondary">{formatMetric(row.revenue)}</td>
-                          <td className="px-3 py-2 text-right text-text-secondary">{formatMetric(row.ebitda)}</td>
+                          <td className="px-3 py-2 text-right text-text-secondary">{row.revenue != null ? formatMetric(row.revenue) + "M" : "—"}</td>
+                          <td className="px-3 py-2 text-right text-text-secondary">{row.ebitda != null ? formatMetric(row.ebitda) + "M" : "—"}</td>
                         </tr>
                       ))}
                     </tbody>

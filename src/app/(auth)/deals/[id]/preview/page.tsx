@@ -160,13 +160,13 @@ export default function DealPreviewPage() {
               <div className="bg-bg-alt rounded-md p-3">
                 <p className="text-xs text-text-secondary">Revenue (Last Year)</p>
                 <p className="text-lg font-bold text-primary">
-                  {deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}
+                  {deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) + "M": "—"}
                 </p>
               </div>
               <div className="bg-bg-alt rounded-md p-3">
                 <p className="text-xs text-text-secondary">EBITDA (Last Year)</p>
                 <p className="text-lg font-bold text-primary">
-                  {deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) : "—"}
+                  {deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) + "M": "—"}
                 </p>
               </div>
             </div>
