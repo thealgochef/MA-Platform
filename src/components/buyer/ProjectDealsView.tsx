@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
+import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
 import { formatCurrency } from "@/lib/utils";
 import { useAutoDismissFlag } from "@/lib/useAutoDismissFlag";
 import { ProjectDealsTable } from "@/components/ui/ProjectDealsTable";
@@ -470,9 +471,9 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         renderCell: (params) =>
           params.row.engagement ? (
             <Chip
-              label={params.row.engagement.stage.replace(/_/g, " ")}
+              label={formatEngagementStageLabel(params.row.engagement.stage)}
               size="small"
-              sx={{ textTransform: "capitalize", backgroundColor: "var(--color-subtle)", color: "var(--color-primary)", fontWeight: 600 }}
+              sx={{ backgroundColor: "var(--color-subtle)", color: "var(--color-primary)", fontWeight: 600 }}
             />
           ) : (
             <span style={{ color: "#9CA3AF" }}>—</span>

@@ -4,12 +4,12 @@ import { useEffect, useRef, useState, type MutableRefObject, type ReactNode, typ
 import Link from "next/link";
 import { Button, Tab } from "@mui/material";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
+import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
 import { PrimaryTabs } from "@/components/ui/PrimaryTabs";
 import { formatCurrency } from "@/lib/utils";
 
 export interface ProjectDealDrawerDeal {
   id: string;
-  date_received: string | null;
   headline: string;
   description?: string | null;
   industry: string;
@@ -255,6 +255,15 @@ function getChronologicalTimestamp(value: string | null | undefined): number | n
 
 function getDealUpdates(deal: ProjectDealDrawerDeal): DealUpdateItem[] {
   const updates: DealUpdateItem[] = [];
+  const isClosedDeal = deal.status === "closed";
+
+  if (!(isClosedDeal && deal.closed_at)) {
+    updates.push({
+      key: "deal-status",
+      title: "Current deal status",
+      detail: DEAL_STATUS_LABELS[deal.status] || formatLabel(deal.status),
+    });
+  }
 
   if (deal.published_at) {
     updates.push({
@@ -262,6 +271,27 @@ function getDealUpdates(deal: ProjectDealDrawerDeal): DealUpdateItem[] {
       title: "Deal published",
       detail: "The deal was made visible to buyers.",
       timestamp: deal.published_at,
+    });
+  }
+
+  if (deal.engagement) {
+      updates.push({
+        key: "engagement-stage",
+        title: "Current engagement stage",
+        detail: formatEngagementStageLabel(deal.engagement.stage),
+      });
+
+      updates.push({
+        key: "nda-status",
+        title: "NDA status",
+        detail: formatEngagementStageLabel(deal.engagement.nda_status),
+        timestamp: deal.engagement.nda_signed_at,
+      });
+  } else {
+    updates.push({
+      key: "engagement-not-started",
+      title: "Engagement",
+      detail: "No active engagement yet.",
     });
   }
 
@@ -500,8 +530,8 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
                       {DEAL_STATUS_LABELS[deal.status] || deal.status}
                     </span>
                     {deal.engagement ? (
-                      <span className="rounded-full bg-subtle px-3 py-1 text-xs font-semibold capitalize text-primary">
-                        {formatLabel(deal.engagement.stage)}
+                      <span className="rounded-full bg-subtle px-3 py-1 text-xs font-semibold text-primary">
+                        {formatEngagementStageLabel(deal.engagement.stage)}
                       </span>
                     ) : (
                       <span className="rounded-full bg-bg-alt px-3 py-1 text-xs font-semibold text-text-secondary">
@@ -548,10 +578,11 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
               <DealSection title="Overview">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <DealInfoItem label="Industry" value={deal.industry || "—"} />
-                  <DealInfoItem label="Location" value={getGeography(deal) || "—"} />
+                  <DealInfoItem label="Geography" value={getGeography(deal) || "—"} />
+                  <DealInfoItem label="Geography Display" value={formatLabel(deal.geography_display)} />
+                  <DealInfoItem label="NDA Type" value={formatNdaType(deal.nda_type)} />
                   <DealInfoItem label="IOI Due Date" value={formatDateTime(deal.ioi_due_date)} />
                   <DealInfoItem label="LOI Due Date" value={formatDateTime(deal.loi_due_date)} />
-                  <DealInfoItem label="NDA Type" value={formatNdaType(deal.nda_type)} />
                 </div>
                 <div className="mt-4 rounded-lg border border-border-color bg-bg-alt p-4 mb-2">
                   <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">About the Business</p>
@@ -588,7 +619,12 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 mb-2">
                   <DealInfoItem label="NDA Process" value={formatNdaVettingPreference(deal.nda_vetting_preference)} />
                   <DealInfoItem label="CIM Sharing" value={formatCimSharingPreference(deal.cim_sharing_preference)} />
-                  
+                  {deal.has_teaser_document !== undefined && (
+                    <DealInfoItem label="Teaser" value={formatBooleanAvailability(deal.has_teaser_document)} />
+                  )}
+                  {deal.has_cim_document !== undefined && (
+                    <DealInfoItem label="CIM Document" value={formatCimAvailability(deal)} />
+                  )}
                   {deal.nda_type === "custom" && deal.has_nda_document !== undefined && (
                     <DealInfoItem label="Custom NDA Document" value={formatCustomNdaAvailability(deal)} />
                   )}
@@ -597,10 +633,16 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
 
               <DealSection title="Engagement">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 mb-2">
-                  <DealInfoItem label="NDA Status" value={formatLabel(deal.engagement?.nda_status)} />
+                  <DealInfoItem label="Stage" value={formatEngagementStageLabel(deal.engagement?.stage)} />
+                  <DealInfoItem label="NDA Status" value={formatEngagementStageLabel(deal.engagement?.nda_status)} />
+                  <DealInfoItem label="NDA Signed" value={formatDateTime(deal.engagement?.nda_signed_at)} />
                   <DealInfoItem label="Vetting Status" value={formatLabel(deal.engagement?.vetting_status)} />
                   <DealInfoItem label="CIM Status" value={formatCimStatus(deal.engagement)} />
+                  <DealInfoItem label="CIM Released" value={formatDateTime(deal.engagement?.cim_released_at)} />
+                  <DealInfoItem label="CIM Viewed" value={formatDateTime(deal.engagement?.cim_viewed_at)} />
+                  <DealInfoItem label="CIM Downloaded" value={formatDateTime(deal.engagement?.cim_downloaded_at)} />
                   <DealInfoItem label="Pass Reason" value={deal.engagement?.pass_reason || "—"} />
+                  <DealInfoItem label="Declined At" value={formatDateTime(deal.engagement?.declined_at)} />
                 </div>
                 {(deal.engagement?.pass_reason_detail || deal.engagement?.vetting_rejection_reason) && (
                   <div className="mt-3 grid grid-cols-1 gap-3">
@@ -613,6 +655,15 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
                   </div>
                 )}
               </DealSection>
+
+            {(deal.published_at || deal.closed_at) && (
+              <DealSection title="Timeline">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <DealInfoItem label="Published" value={formatDateTime(deal.published_at)} />
+                  <DealInfoItem label="Closed" value={formatDateTime(deal.closed_at)} />
+                </div>
+              </DealSection>
+            )}
           </div>
 
             <div

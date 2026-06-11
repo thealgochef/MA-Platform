@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
 import { formatCurrency } from "@/lib/utils";
 
 interface Project {
@@ -150,7 +151,7 @@ export default function BuyerDashboard() {
                 <div className="space-y-2">
                   {Object.entries(analytics.dealsByStage).map(([stage, count]) => (
                     <div key={stage} className="flex justify-between text-sm">
-                      <span className="text-text-secondary capitalize">{stage.replace(/_/g, " ")}</span>
+                      <span className="text-text-secondary">{formatEngagementStageLabel(stage)}</span>
                       <span className="text-primary font-medium">{count}</span>
                     </div>
                   ))}

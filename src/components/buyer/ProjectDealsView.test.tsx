@@ -620,13 +620,13 @@ describe("ProjectDealsView", () => {
     const cimViewed = within(eventsPanel as HTMLElement).getByText("CIM viewed");
     const cimDownloaded = within(eventsPanel as HTMLElement).getByText("CIM downloaded");
     const cimReleased = within(eventsPanel as HTMLElement).getByText("CIM released");
-    const ndaSigned = within(eventsPanel as HTMLElement).getByText("NDA signed");
+    const ndaStatus = within(eventsPanel as HTMLElement).getByText("NDA status");
     const dealPublished = within(eventsPanel as HTMLElement).getByText("Deal published");
 
     expect(cimViewed.compareDocumentPosition(cimDownloaded) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(cimDownloaded.compareDocumentPosition(cimReleased) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(cimReleased.compareDocumentPosition(ndaSigned) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(ndaSigned.compareDocumentPosition(dealPublished) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cimReleased.compareDocumentPosition(ndaStatus) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(ndaStatus.compareDocumentPosition(dealPublished) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     expect(within(eventsPanel as HTMLElement).queryByText("—")).not.toBeInTheDocument();
   });

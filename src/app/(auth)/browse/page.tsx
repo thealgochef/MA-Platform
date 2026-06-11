@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
 import { formatCurrency } from "@/lib/utils";
 import { DEAL_STATUS_LABELS, INDUSTRIES, US_STATES } from "@/lib/constants";
 
@@ -288,8 +289,8 @@ export default function BrowseDealsPage() {
                             Pursue
                           </button>
                         ) : (
-                          <span className="text-xs text-secondary capitalize">
-                            {deal.engagement?.stage.replace(/_/g, " ")}
+                          <span className="text-xs text-secondary">
+                            {formatEngagementStageLabel(deal.engagement?.stage)}
                           </span>
                         )}
                       </td>
