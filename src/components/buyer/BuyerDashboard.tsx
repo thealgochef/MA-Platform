@@ -1,9 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { DataGridTable } from "@/components/ui/DataGridTable";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
 import { formatCurrency } from "@/lib/utils";
+import {
+  GridColDef,
+  GridPaginationModel,
+  GridRowSelectionModel,
+  GridSortModel,
+} from "@mui/x-data-grid";
 
 interface Project {
   id: string;
@@ -14,6 +22,8 @@ interface Project {
   ebitda_min: number | null;
   ebitda_max: number | null;
   location: string | null;
+  keywords: string[] | null;
+  created_at: string | null;
 }
 
 interface Analytics {
@@ -39,42 +49,231 @@ interface ActivityItem {
 }
 
 export default function BuyerDashboard() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>({
+    type: "include",
+    ids: new Set(),
+  });
+  const [sortModel, setSortModel] = useState<GridSortModel>([]);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 10,
+  });
+
+  const columns = useMemo<GridColDef<Project>[]>(() => {
+    const dateDisplayFormatter = new Intl.DateTimeFormat("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
+    });
+
+    const getCreatedTimestamp = (value: string | null) => {
+      if (!value) {
+        return Number.NEGATIVE_INFINITY;
+      }
+
+      const timestamp = new Date(value).getTime();
+      return Number.isNaN(timestamp) ? Number.NEGATIVE_INFINITY : timestamp;
+    };
+
+    return [
+      {
+        field: "name",
+        headerName: "Project Name",
+        flex: 1.3,
+        minWidth: 200,
+        cellClassName: "font-bold text-primary",
+      },
+      {
+        field: "industry",
+        headerName: "Industry",
+        flex: 1,
+        minWidth: 140,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => row.industry || "—",
+      },
+      {
+        field: "location",
+        headerName: "Location",
+        flex: 1,
+        minWidth: 130,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => row.location || "—",
+      },
+      {
+        field: "revenue",
+        headerName: "Revenue Range",
+        flex: 1,
+        minWidth: 160,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => row.revenue_min ?? row.revenue_max ?? Number.NEGATIVE_INFINITY,
+        renderCell: (params) => {
+          const { revenue_min, revenue_max } = params.row;
+          if (revenue_min == null && revenue_max == null) {
+            return "—";
+          }
+
+          return `${revenue_min != null ? formatCurrency(revenue_min) + "M" : "Any"} – ${
+            revenue_max != null ? formatCurrency(revenue_max) + "M" : "Any"
+          }`;
+        },
+      },
+      {
+        field: "ebitda",
+        headerName: "EBITDA",
+        flex: 1,
+        minWidth: 160,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => row.ebitda_min ?? row.ebitda_max ?? Number.NEGATIVE_INFINITY,
+        renderCell: (params) => {
+          const { ebitda_min, ebitda_max } = params.row;
+          if (ebitda_min == null && ebitda_max == null) {
+            return "—";
+          }
+
+          return `${ebitda_min != null ? formatCurrency(ebitda_min) + "M" : "Any"} – ${
+            ebitda_max != null ? formatCurrency(ebitda_max) + "M" : "Any"
+          }`;
+        },
+      },
+      {
+        field: "created_at",
+        headerName: "Created",
+        flex: 0.9,
+        minWidth: 120,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => getCreatedTimestamp(row.created_at),
+        renderCell: (params) => {
+          if (!params.row.created_at) {
+            return "—";
+          }
+
+          const date = new Date(params.row.created_at);
+          return Number.isNaN(date.getTime()) ? "—" : dateDisplayFormatter.format(date);
+        },
+      },
+    ];
+  }, []);
+
+  const sortedProjects = useMemo(() => {
+    const activeSort = sortModel[0];
+    if (!activeSort?.field || !activeSort.sort) {
+      return projects;
+    }
+
+    const direction = activeSort.sort === "asc" ? 1 : -1;
+    const getCreatedTimestamp = (value: string | null) => {
+      if (!value) {
+        return Number.NEGATIVE_INFINITY;
+      }
+
+      const timestamp = new Date(value).getTime();
+      return Number.isNaN(timestamp) ? Number.NEGATIVE_INFINITY : timestamp;
+    };
+
+    const getValue = (project: Project) => {
+      switch (activeSort.field) {
+        case "name":
+          return project.name;
+        case "industry":
+          return project.industry || "";
+        case "location":
+          return project.location || "";
+        case "revenue":
+          return project.revenue_min ?? project.revenue_max ?? Number.NEGATIVE_INFINITY;
+        case "ebitda":
+          return project.ebitda_min ?? project.ebitda_max ?? Number.NEGATIVE_INFINITY;
+        case "created_at":
+          return getCreatedTimestamp(project.created_at);
+        default:
+          return "";
+      }
+    };
+
+    return [...projects].sort((a, b) => {
+      const aValue = getValue(a);
+      const bValue = getValue(b);
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return (aValue - bValue) * direction;
+      }
+
+      return (
+        String(aValue).localeCompare(String(bValue), undefined, {
+          sensitivity: "base",
+          numeric: true,
+        }) * direction
+      );
+    });
+  }, [projects, sortModel]);
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedProjects.length / paginationModel.pageSize) - 1);
+    if (paginationModel.page > maxPage) {
+      setPaginationModel((prev) => ({ ...prev, page: maxPage }));
+    }
+  }, [paginationModel.page, paginationModel.pageSize, sortedProjects.length]);
+
+  const pagedProjects = useMemo(() => {
+    const start = paginationModel.page * paginationModel.pageSize;
+    return sortedProjects.slice(start, start + paginationModel.pageSize);
+  }, [paginationModel.page, paginationModel.pageSize, sortedProjects]);
 
   useEffect(() => {
     let isMounted = true;
     const abortController = new AbortController();
+    const isAbortError = (error: unknown) =>
+      error instanceof DOMException && error.name === "AbortError";
 
     const fetchData = async () => {
       try {
-        const [projRes, analyticsRes] = await Promise.all([
+        const [projectsResult, analyticsResult] = await Promise.allSettled([
           fetch("/api/projects", { signal: abortController.signal }),
           fetch("/api/buyer/analytics", { signal: abortController.signal }),
         ]);
 
-        if (!isMounted) return;
-
-        if (projRes.ok) {
-          const data = await projRes.json();
-          if (isMounted) {
-            setProjects(data.projects || []);
+        if (projectsResult.status === "fulfilled") {
+          if (projectsResult.value.ok) {
+            const data = await projectsResult.value.json();
+            if (isMounted) {
+              setProjects(data.projects || []);
+            }
+          } else {
+            console.error("Failed to fetch buyer projects", {
+              status: projectsResult.value.status,
+              statusText: projectsResult.value.statusText,
+            });
           }
+        } else if (!isAbortError(projectsResult.reason)) {
+          console.error("Failed to fetch buyer projects", projectsResult.reason);
         }
 
-        if (analyticsRes.ok) {
-          const data = await analyticsRes.json();
-          if (isMounted) {
-            setAnalytics(data.analytics || null);
-            setActivity(data.activity || []);
+        if (analyticsResult.status === "fulfilled") {
+          if (analyticsResult.value.ok) {
+            const data = await analyticsResult.value.json();
+            if (isMounted) {
+              setAnalytics(data.analytics || null);
+              setActivity(data.activity || []);
+            }
+          } else {
+            console.error("Failed to fetch buyer analytics", {
+              status: analyticsResult.value.status,
+              statusText: analyticsResult.value.statusText,
+            });
           }
+        } else if (!isAbortError(analyticsResult.reason)) {
+          console.error("Failed to fetch buyer analytics", analyticsResult.reason);
         }
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
+        if (isAbortError(error)) {
           return;
         }
+
+        console.error("Failed to load buyer dashboard", error);
       } finally {
         if (isMounted && !abortController.signal.aborted) {
           setLoading(false);
@@ -247,28 +446,19 @@ export default function BuyerDashboard() {
             </a>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((project) => (
-              <a
-                key={project.id}
-                href={`/projects/${project.id}`}
-                className="bg-surface-alt rounded-lg border border-border-color p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-medium text-primary">{project.name}</h3>
-                </div>
-                <div className="space-y-1 text-xs text-text-secondary">
-                  {project.industry && <p>Industry: {project.industry}</p>}
-                  {project.location && <p>Location: {project.location}</p>}
-                  {(project.revenue_min || project.revenue_max) && (
-                    <p>
-                      Revenue: {project.revenue_min ? formatCurrency(project.revenue_min) + "M": "Any"} – {project.revenue_max ? formatCurrency(project.revenue_max) : "Any"}
-                    </p>
-                  )}
-                </div>
-              </a>
-            ))}
-          </div>
+          <DataGridTable
+            rows={pagedProjects}
+            detailColumns={columns}
+            rowSelectionModel={rowSelectionModel}
+            onRowSelectionModelChange={setRowSelectionModel}
+            sortModel={sortModel}
+            onSortModelChange={setSortModel}
+            onRowClick={(row) => router.push(`/projects/${row.id}`)}
+            sortedCount={sortedProjects.length}
+            paginationModel={paginationModel}
+            onPageChange={(page) => setPaginationModel((prev) => ({ ...prev, page }))}
+            onRowsPerPageChange={(pageSize) => setPaginationModel({ page: 0, pageSize })}
+          />
         )}
       </div>
     </main>
