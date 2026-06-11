@@ -122,10 +122,14 @@ export default function BuyerDashboard() {
               <p className="text-xs text-text-secondary">Deals Pursuing</p>
               <p className="text-2xl font-bold text-primary">{analytics.pursuing}</p>
             </Link>
-            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+            <Link
+              href="/projects/engagements"
+              className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="View all deals passed across projects"
+            >
               <p className="text-xs text-text-secondary">Deals Passed</p>
               <p className="text-2xl font-bold text-primary">{analytics.passed}</p>
-            </div>
+            </Link>
             <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <p className="text-xs text-text-secondary">NDAs Signed</p>
               <p className="text-2xl font-bold text-primary">{analytics.ndaSigned}</p>
@@ -173,7 +177,11 @@ export default function BuyerDashboard() {
         {/* Deals by Industry / Stage */}
         {analytics && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+            <Link
+              href="/projects/engagements"
+              className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="View all deals by stage across projects"
+            >
               <h3 className="text-sm font-medium text-text mb-3">Deals by Stage</h3>
               {Object.entries(analytics.dealsByStage).length > 0 ? (
                 <div className="space-y-2">
@@ -187,8 +195,12 @@ export default function BuyerDashboard() {
               ) : (
                 <p className="text-sm text-text-secondary">No active engagements.</p>
               )}
-            </div>
-            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+            </Link>
+            <Link
+              href="/projects/engagements"
+              className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="View all deals by industry across projects"
+            >
               <h3 className="text-sm font-medium text-text mb-3">Deals by Industry</h3>
               {Object.entries(analytics.dealsByIndustry).length > 0 ? (
                 <div className="space-y-2">
@@ -202,7 +214,7 @@ export default function BuyerDashboard() {
               ) : (
                 <p className="text-sm text-text-secondary">No data yet.</p>
               )}
-            </div>
+            </Link>
           </div>
         )}
 
@@ -250,7 +262,7 @@ export default function BuyerDashboard() {
                   {project.location && <p>Location: {project.location}</p>}
                   {(project.revenue_min || project.revenue_max) && (
                     <p>
-                      Revenue: {project.revenue_min ? formatCurrency(project.revenue_min) : "Any"} – {project.revenue_max ? formatCurrency(project.revenue_max) : "Any"}
+                      Revenue: {project.revenue_min ? formatCurrency(project.revenue_min) + "M": "Any"} – {project.revenue_max ? formatCurrency(project.revenue_max) : "Any"}
                     </p>
                   )}
                 </div>

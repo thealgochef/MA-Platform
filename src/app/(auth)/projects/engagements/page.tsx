@@ -65,6 +65,7 @@ function parseValidDate(value: string): Date | null {
 export default function BuyerEngagementsPage() {
   const router = useRouter();
   const [engagements, setEngagements] = useState<EngagementRow[]>([]);
+  const [stageFilter, setStageFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>({
@@ -220,10 +221,30 @@ export default function BuyerEngagementsPage() {
     ];
   }, []);
 
+  const stageCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    rows.forEach((row) => {
+      counts.set(row.stage, (counts.get(row.stage) ?? 0) + 1);
+    });
+
+    return counts;
+  }, [rows]);
+
+  const stages = useMemo(() => Array.from(stageCounts.keys()), [stageCounts]);
+
+  const filteredRows = useMemo(() => {
+    if (stageFilter === "all") {
+      return rows;
+    }
+
+    return rows.filter((row) => row.stage === stageFilter);
+  }, [rows, stageFilter]);
+
   const sortedRows = useMemo(() => {
     const activeSort = sortModel[0];
     if (!activeSort?.field || !activeSort.sort) {
-      return rows;
+      return filteredRows;
     }
 
     const direction = activeSort.sort === "asc" ? 1 : -1;
@@ -252,7 +273,7 @@ export default function BuyerEngagementsPage() {
       }
     };
 
-    return [...rows].sort((a, b) => {
+    return [...filteredRows].sort((a, b) => {
       const aValue = getValue(a);
       const bValue = getValue(b);
 
@@ -267,7 +288,16 @@ export default function BuyerEngagementsPage() {
         }) * direction
       );
     });
-  }, [rows, sortModel]);
+  }, [filteredRows, sortModel]);
+
+  const handleSortModelChange = (model: GridSortModel) => {
+    setSortModel(model);
+    setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
+  };
+
+  useEffect(() => {
+    setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
+  }, [stageFilter]);
 
   useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(sortedRows.length / paginationModel.pageSize) - 1);
@@ -292,14 +322,42 @@ export default function BuyerEngagementsPage() {
   return (
     <main className="min-h-screen bg-bg-alt py-8">
       <div className="w-full px-5 sm:px-6">
-        <h1 className="text-2xl font-bold text-primary mb-2">All Deals Pursued</h1>
-        <p className="text-sm text-text-secondary mb-6">
+        <h1 className="text-2xl font-bold text-primary">Deals Pursued</h1>
+        <p className="text-sm text-text-secondary mb-4">
           A consolidated view of all deals you&apos;ve engaged with.
         </p>
 
         {error && (
           <div className="bg-error/10 border border-error rounded-md p-4 mb-6">
             <p className="text-sm text-error">{error}</p>
+          </div>
+        )}
+
+        {rows.length > 0 && (
+          <div className="flex gap-2 mb-6 flex-wrap">
+            <button
+              onClick={() => setStageFilter("all")}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                stageFilter === "all"
+                  ? "bg-primary text-white"
+                  : "bg-surface-alt text-text-secondary border border-border-gray hover:bg-bg-alt"
+              }`}
+            >
+              All ({rows.length})
+            </button>
+            {stages.map((stage) => (
+              <button
+                key={stage}
+                onClick={() => setStageFilter(stage)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  stageFilter === stage
+                    ? "bg-primary text-white"
+                    : "bg-surface-alt text-text-secondary border border-border-gray hover:bg-bg-alt"
+                }`}
+              >
+                {formatEngagementStageLabel(stage)} ({stageCounts.get(stage) ?? 0})
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -316,7 +374,7 @@ export default function BuyerEngagementsPage() {
             rowSelectionModel={rowSelectionModel}
             onRowSelectionModelChange={setRowSelectionModel}
             sortModel={sortModel}
-            onSortModelChange={setSortModel}
+            onSortModelChange={handleSortModelChange}
             onRowClick={(row) => router.push(`/deals/${encodeURIComponent(row.deal_id)}`)}
             sortedCount={sortedRows.length}
             paginationModel={paginationModel}

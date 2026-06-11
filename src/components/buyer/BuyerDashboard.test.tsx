@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import BuyerDashboard from "./BuyerDashboard";
@@ -55,17 +55,29 @@ describe("BuyerDashboard", () => {
     vi.unstubAllGlobals();
   });
 
-  it("makes only Deals Pursuing KPI card navigate to engagements page", async () => {
+  it("links Deals Pursuing, Deals Passed, Deals by Stage, and Deals by Industry to engagements page", async () => {
     render(<BuyerDashboard />);
 
     const pursuingLink = await screen.findByRole("link", {
       name: "View all deals pursuing across projects",
     });
+    const passedLink = screen.getByRole("link", {
+      name: "View all deals passed across projects",
+    });
+    const byStageLink = screen.getByRole("link", {
+      name: "View all deals by stage across projects",
+    });
+    const byIndustryLink = screen.getByRole("link", {
+      name: "View all deals by industry across projects",
+    });
 
     expect(pursuingLink).toHaveAttribute("href", "/projects/engagements");
+    expect(passedLink).toHaveAttribute("href", "/projects/engagements");
+    expect(byStageLink).toHaveAttribute("href", "/projects/engagements");
+    expect(byIndustryLink).toHaveAttribute("href", "/projects/engagements");
+    expect(within(byIndustryLink).getByText("No data yet.")).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
 
-    expect(screen.queryByRole("link", { name: "Deals Passed" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "NDAs Signed" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "IOIs Submitted" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "LOIs Submitted" })).not.toBeInTheDocument();
