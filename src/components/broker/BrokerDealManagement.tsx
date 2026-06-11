@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { DEAL_STATUS_LABELS, VALID_DEAL_TRANSITIONS, BUYER_TYPES } from "@/lib/constants";
+import {
+  DEAL_STATUS_LABELS,
+  VALID_DEAL_TRANSITIONS,
+  BUYER_TYPES,
+  VETTING_REJECTION_REASONS,
+} from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import { useAutoDismissFlag } from "@/lib/useAutoDismissFlag";
 
@@ -47,12 +52,35 @@ interface Engagement {
   id: string;
   stage: string;
   nda_status: string;
+  vetting_status?: string | null;
+  vetting_rejection_reason?: string | null;
   cim_released: boolean;
+  cim_released_at?: string | null;
   cim_viewed_at: string | null;
   cim_downloaded_at: string | null;
   users: { id: string; full_name: string; email: string; buyer_type: string | null; firms: { id: string; name: string; website: string } | null };
   firms?: { id: string; name: string } | null;
 }
+
+type RowAction = "approve_vetting" | "reject_vetting" | "release_cim";
+
+const INITIAL_LOAD_ERROR_MESSAGE = "Failed to load this deal. Please try again.";
+const DELETE_ERROR_MESSAGE = "Failed to delete this deal. Please try again.";
+
+const ROW_ACTION_ERROR_MESSAGES: Record<RowAction, string> = {
+  approve_vetting: "Unable to approve NDA vetting. Please try again.",
+  reject_vetting: "Unable to reject NDA vetting. Please try again.",
+  release_cim: "Unable to release CIM. Please try again.",
+};
+
+const BENIGN_INITIAL_LOAD_ERRORS = new Set<string>([]);
+const BENIGN_DELETE_ERRORS = new Set<string>([]);
+
+const BENIGN_ROW_ACTION_ERRORS: Record<RowAction, Set<string>> = {
+  approve_vetting: new Set<string>([]),
+  reject_vetting: new Set<string>([]),
+  release_cim: new Set<string>([]),
+};
 
 interface Activity {
   id: string;
@@ -73,6 +101,7 @@ export default function BrokerDealManagement({
   const router = useRouter();
   const dealId = params.id as string;
   const [deal, setDeal] = useState<Deal | null>(null);
+  const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [iois, setIois] = useState<Record<string, unknown>[]>([]);
@@ -84,21 +113,105 @@ export default function BrokerDealManagement({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingDeal, setDeletingDeal] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [rowActionLoading, setRowActionLoading] = useState<Record<string, RowAction | null>>({});
+  const [rowActionErrors, setRowActionErrors] = useState<Record<string, string | null>>({});
+  const [rowRejectReasons, setRowRejectReasons] = useState<Record<string, string>>({});
   const { isVisible: showSavedBanner, setIsVisible: setShowSavedBanner } = useAutoDismissFlag(initialShowSavedBanner);
+  const dealRequestVersionRef = useRef(0);
+  const pipelineRequestVersionRef = useRef(0);
+  const timelineRequestVersionRef = useRef(0);
+
+  const extractApiError = async (res: Response) => {
+    try {
+      const payload = await res.json();
+      if (payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string") {
+        return payload.error.trim();
+      }
+    } catch {
+      // Response may not contain JSON.
+    }
+
+    return null;
+  };
+
+  const mapInitialLoadError = (apiError: string | null) => {
+    if (apiError && BENIGN_INITIAL_LOAD_ERRORS.has(apiError)) {
+      return apiError;
+    }
+
+    return INITIAL_LOAD_ERROR_MESSAGE;
+  };
+
+  const mapDeleteError = (apiError: string | null) => {
+    if (apiError && BENIGN_DELETE_ERRORS.has(apiError)) {
+      return apiError;
+    }
+
+    return DELETE_ERROR_MESSAGE;
+  };
+
+  const mapRowActionError = (action: RowAction, apiError: string | null) => {
+    if (apiError && BENIGN_ROW_ACTION_ERRORS[action].has(apiError)) {
+      return apiError;
+    }
+
+    return ROW_ACTION_ERROR_MESSAGES[action];
+  };
 
   const fetchDeal = useCallback(async () => {
-    const res = await fetch(`/api/deals/${dealId}`);
-    if (res.ok) {
-      const data = await res.json();
-      setDeal(data.deal);
+    const requestVersion = ++dealRequestVersionRef.current;
+
+    try {
+      const res = await fetch(`/api/deals/${dealId}`);
+      if (requestVersion !== dealRequestVersionRef.current) {
+        return;
+      }
+
+      if (res.ok) {
+        const data = await res.json();
+        setDeal(data.deal);
+        setInitialLoadError(null);
+        return;
+      }
+
+      if (res.status === 404) {
+        setDeal(null);
+        setInitialLoadError(null);
+        return;
+      }
+
+      const apiError = await extractApiError(res);
+      const errorMessage = mapInitialLoadError(apiError);
+      setDeal(null);
+      setInitialLoadError(errorMessage);
+    } catch {
+      if (requestVersion !== dealRequestVersionRef.current) {
+        return;
+      }
+
+      setDeal(null);
+      setInitialLoadError("Unable to reach the server. Please try again.");
+    } finally {
+      if (requestVersion === dealRequestVersionRef.current) {
+        setLoading(false);
+      }
     }
-    setLoading(false);
   }, [dealId]);
 
   const fetchPipeline = useCallback(async () => {
+    const requestVersion = ++pipelineRequestVersionRef.current;
+
     const res = await fetch(`/api/deals/${dealId}/buyers`);
+    if (requestVersion !== pipelineRequestVersionRef.current) {
+      return;
+    }
+
     if (res.ok) {
       const data = await res.json();
+      if (requestVersion !== pipelineRequestVersionRef.current) {
+        return;
+      }
+
       setEngagements(data.engagements || []);
       setIois(data.iois || []);
       setLois(data.lois || []);
@@ -114,9 +227,19 @@ export default function BrokerDealManagement({
   }, [dealId]);
 
   const fetchTimeline = useCallback(async () => {
+    const requestVersion = ++timelineRequestVersionRef.current;
+
     const res = await fetch(`/api/deals/${dealId}/timeline`);
+    if (requestVersion !== timelineRequestVersionRef.current) {
+      return;
+    }
+
     if (res.ok) {
       const data = await res.json();
+      if (requestVersion !== timelineRequestVersionRef.current) {
+        return;
+      }
+
       setActivities(data.activities || []);
     }
   }, [dealId]);
@@ -203,12 +326,105 @@ export default function BrokerDealManagement({
         return;
       }
 
-      const payload = await res.json().catch(() => null);
-      setDeleteError(payload?.error || "Failed to delete this deal. Please try again.");
+      const apiError = await extractApiError(res);
+      const errorMessage = mapDeleteError(apiError);
+      setDeleteError(errorMessage);
     } catch {
       setDeleteError("Unable to reach the server. Please try again.");
     } finally {
       setDeletingDeal(false);
+    }
+  };
+
+  const handleApproveVetting = async (engagementId: string) => {
+    setRowActionLoading((prev) => ({ ...prev, [engagementId]: "approve_vetting" }));
+    setRowActionErrors((prev) => ({ ...prev, [engagementId]: null }));
+
+    try {
+      const res = await fetch(`/api/deals/${dealId}/vetting`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ engagementId, action: "approve" }),
+      });
+
+      if (!res.ok) {
+        const apiError = await extractApiError(res);
+        const errorMessage = mapRowActionError("approve_vetting", apiError);
+        setRowActionErrors((prev) => ({ ...prev, [engagementId]: errorMessage }));
+        return;
+      }
+
+      await fetchPipeline();
+      await fetchTimeline();
+    } catch {
+      setRowActionErrors((prev) => ({
+        ...prev,
+        [engagementId]: "Unable to reach the server. Please try again.",
+      }));
+    } finally {
+      setRowActionLoading((prev) => ({ ...prev, [engagementId]: null }));
+    }
+  };
+
+  const handleRejectVetting = async (engagementId: string) => {
+    const selectedReason = rowRejectReasons[engagementId] ?? VETTING_REJECTION_REASONS[0];
+
+    setRowActionLoading((prev) => ({ ...prev, [engagementId]: "reject_vetting" }));
+    setRowActionErrors((prev) => ({ ...prev, [engagementId]: null }));
+
+    try {
+      const res = await fetch(`/api/deals/${dealId}/vetting`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ engagementId, action: "reject", reason: selectedReason }),
+      });
+
+      if (!res.ok) {
+        const apiError = await extractApiError(res);
+        const errorMessage = mapRowActionError("reject_vetting", apiError);
+        setRowActionErrors((prev) => ({ ...prev, [engagementId]: errorMessage }));
+        return;
+      }
+
+      await fetchPipeline();
+      await fetchTimeline();
+    } catch {
+      setRowActionErrors((prev) => ({
+        ...prev,
+        [engagementId]: "Unable to reach the server. Please try again.",
+      }));
+    } finally {
+      setRowActionLoading((prev) => ({ ...prev, [engagementId]: null }));
+    }
+  };
+
+  const handleReleaseCim = async (engagementId: string) => {
+    setRowActionLoading((prev) => ({ ...prev, [engagementId]: "release_cim" }));
+    setRowActionErrors((prev) => ({ ...prev, [engagementId]: null }));
+
+    try {
+      const res = await fetch(`/api/deals/${dealId}/cim`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ engagementId }),
+      });
+
+      if (!res.ok) {
+        const apiError = await extractApiError(res);
+        const errorMessage = mapRowActionError("release_cim", apiError);
+        setRowActionErrors((prev) => ({ ...prev, [engagementId]: errorMessage }));
+        return;
+      }
+
+      await fetchPipeline();
+      await fetchTimeline();
+    } catch {
+      setRowActionErrors((prev) => ({
+        ...prev,
+        [engagementId]: "Unable to reach the server. Please try again.",
+      }));
+    } finally {
+      setRowActionLoading((prev) => ({ ...prev, [engagementId]: null }));
     }
   };
 
@@ -217,6 +433,16 @@ export default function BrokerDealManagement({
       <main className="min-h-screen bg-bg-alt p-8">
         <div className="max-w-6xl mx-auto">
           <p className="text-text-secondary">Loading deal...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (initialLoadError) {
+    return (
+      <main className="min-h-screen bg-bg-alt p-8">
+        <div className="max-w-6xl mx-auto">
+          <p className="text-error" role="alert">{initialLoadError}</p>
         </div>
       </main>
     );
@@ -469,21 +695,108 @@ export default function BrokerDealManagement({
                           <th className="px-3 py-2 text-left">Stage</th>
                           <th className="px-3 py-2 text-left">NDA</th>
                           <th className="px-3 py-2 text-left">CIM</th>
+                          <th className="px-3 py-2 text-left">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {engagements.map((eng) => (
-                          <tr key={eng.id} className="border-t border-border-gray">
-                            <td className="px-3 py-2">{eng.users?.full_name || "—"}</td>
-                            <td className="px-3 py-2">{eng.users?.firms?.name || eng.firms?.name || "—"}</td>
-                            <td className="px-3 py-2">{BUYER_TYPES.find(bt => bt.value === eng.users?.buyer_type)?.label || eng.users?.buyer_type || "—"}</td>
-                            <td className="px-3 py-2">
-                              <span className="px-2 py-0.5 rounded text-xs bg-subtle text-primary font-semibold">{eng.stage}</span>
-                            </td>
-                            <td className="px-3 py-2">{eng.nda_status}</td>
-                            <td className="px-3 py-2">{eng.cim_released ? (eng.cim_viewed_at ? "Viewed" : "Released") : "—"}</td>
-                          </tr>
-                        ))}
+                        {engagements.map((eng) => {
+                          const rowLoadingAction = rowActionLoading[eng.id] ?? null;
+                          const rowError = rowActionErrors[eng.id];
+                          const selectedReason = rowRejectReasons[eng.id] ?? VETTING_REJECTION_REASONS[0];
+                          const showVettingActions =
+                            deal.nda_vetting_preference === "manual" &&
+                            eng.nda_status === "pending_review" &&
+                            eng.vetting_status === "pending";
+                          const showReleaseCimAction =
+                            deal.cim_sharing_preference === "manual" &&
+                            eng.nda_status === "signed" &&
+                            eng.cim_released !== true;
+                          const hasActions = showVettingActions || showReleaseCimAction;
+
+                          return (
+                            <tr key={eng.id} className="border-t border-border-gray align-top">
+                              <td className="px-3 py-2">{eng.users?.full_name || "—"}</td>
+                              <td className="px-3 py-2">{eng.users?.firms?.name || eng.firms?.name || "—"}</td>
+                              <td className="px-3 py-2">{BUYER_TYPES.find(bt => bt.value === eng.users?.buyer_type)?.label || eng.users?.buyer_type || "—"}</td>
+                              <td className="px-3 py-2">
+                                <span className="px-2 py-0.5 rounded text-xs bg-subtle text-primary font-semibold">{eng.stage}</span>
+                              </td>
+                              <td className="px-3 py-2">{eng.nda_status}</td>
+                              <td className="px-3 py-2">{eng.cim_released ? (eng.cim_viewed_at ? "Viewed" : "Released") : "—"}</td>
+                              <td className="px-3 py-2">
+                                {hasActions ? (
+                                  <div className="space-y-2">
+                                    {showVettingActions && (
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleApproveVetting(eng.id)}
+                                          disabled={rowLoadingAction !== null}
+                                          className="rounded-md bg-primary px-2.5 py-1 text-xs text-white transition-opacity hover:bg-btn-hover disabled:cursor-not-allowed disabled:opacity-60"
+                                          aria-label={`Approve NDA vetting for ${eng.users?.full_name || "buyer"}`}
+                                        >
+                                          {rowLoadingAction === "approve_vetting" ? "Approving..." : "Approve"}
+                                        </button>
+
+                                        <label htmlFor={`reject-reason-${eng.id}`} className="sr-only">
+                                          Rejection reason
+                                        </label>
+                                        <select
+                                          id={`reject-reason-${eng.id}`}
+                                          value={selectedReason}
+                                          disabled={rowLoadingAction !== null}
+                                          onChange={(e) => {
+                                            setRowRejectReasons((prev) => ({ ...prev, [eng.id]: e.target.value }));
+                                          }}
+                                          className="rounded-md border border-border-gray bg-surface px-2 py-1 text-xs text-text disabled:cursor-not-allowed disabled:opacity-60"
+                                          aria-label={`Select NDA rejection reason for ${eng.users?.full_name || "buyer"}`}
+                                        >
+                                          {VETTING_REJECTION_REASONS.map((reason) => (
+                                            <option key={reason} value={reason}>
+                                              {reason}
+                                            </option>
+                                          ))}
+                                        </select>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRejectVetting(eng.id)}
+                                          disabled={rowLoadingAction !== null}
+                                          className="rounded-md bg-error px-2.5 py-1 text-xs text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                                          aria-label={`Reject NDA vetting for ${eng.users?.full_name || "buyer"}`}
+                                        >
+                                          {rowLoadingAction === "reject_vetting" ? "Rejecting..." : "Reject"}
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {showReleaseCimAction && (
+                                      <div>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleReleaseCim(eng.id)}
+                                          disabled={rowLoadingAction !== null}
+                                          className="rounded-md bg-primary px-2.5 py-1 text-xs text-white transition-colors hover:bg-btn-hover disabled:cursor-not-allowed disabled:opacity-60"
+                                          aria-label={`Release CIM to ${eng.users?.full_name || "buyer"}`}
+                                        >
+                                          {rowLoadingAction === "release_cim" ? "Releasing..." : "Release CIM"}
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {rowError && (
+                                      <p className="text-xs text-error" role="alert">
+                                        {rowError}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-text-secondary">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

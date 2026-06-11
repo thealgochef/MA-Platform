@@ -549,6 +549,29 @@ describe("Phase 3: Deal Creation & Management", () => {
       );
       expect(content).toContain("Messaging");
     });
+
+    it("should include pipeline Actions column and manual action controls", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "components", "broker", "BrokerDealManagement.tsx"),
+        "utf-8"
+      );
+      expect(content).toContain("Actions");
+      expect(content).toContain("Approve");
+      expect(content).toContain("Reject");
+      expect(content).toContain("Release CIM");
+      expect(content).toContain("showVettingActions");
+      expect(content).toContain("showReleaseCimAction");
+    });
+
+    it("should constrain vetting rejection reasons using shared constants", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "components", "broker", "BrokerDealManagement.tsx"),
+        "utf-8"
+      );
+      expect(content).toContain("VETTING_REJECTION_REASONS");
+      expect(content).toContain("Select NDA rejection reason");
+      expect(content).toContain("action: \"reject\"");
+    });
   });
 
   describe("Draft Preview Page", () => {
