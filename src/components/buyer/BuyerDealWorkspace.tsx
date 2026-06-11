@@ -153,15 +153,15 @@ export default function BuyerDealWorkspace() {
             <tbody>
               <tr className="border-b border-border-gray">
                 <td className="py-2 text-text">Revenue</td>
-                <td className="py-2 text-right">{deal.revenue_year_1 != null ? formatCurrency(deal.revenue_year_1) : "—"}</td>
-                <td className="py-2 text-right">{deal.revenue_year_2 != null ? formatCurrency(deal.revenue_year_2) : "—"}</td>
-                <td className="py-2 text-right">{deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}</td>
+                <td className="py-2 text-right">{deal.revenue_year_1 != null ? formatCurrency(deal.revenue_year_1) + "M": "—"}</td>
+                <td className="py-2 text-right">{deal.revenue_year_2 != null ? formatCurrency(deal.revenue_year_2) + "M" : "—"}</td>
+                <td className="py-2 text-right">{deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) + "M" : "—"}</td>
               </tr>
               <tr>
                 <td className="py-2 text-text">EBITDA</td>
-                <td className="py-2 text-right">{deal.ebitda_year_1 != null ? formatCurrency(deal.ebitda_year_1) : "—"}</td>
-                <td className="py-2 text-right">{deal.ebitda_year_2 != null ? formatCurrency(deal.ebitda_year_2) : "—"}</td>
-                <td className="py-2 text-right">{deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) : "—"}</td>
+                <td className="py-2 text-right">{deal.ebitda_year_1 != null ? formatCurrency(deal.ebitda_year_1) + "M" : "—"}</td>
+                <td className="py-2 text-right">{deal.ebitda_year_2 != null ? formatCurrency(deal.ebitda_year_2) + "M" : "—"}</td>
+                <td className="py-2 text-right">{deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) + "M" : "—"}</td>
               </tr>
             </tbody>
           </table>

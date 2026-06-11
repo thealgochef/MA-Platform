@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
 import { formatCurrency } from "@/lib/utils";
 
@@ -44,26 +45,49 @@ export default function BuyerDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    const abortController = new AbortController();
+
     const fetchData = async () => {
-      const [projRes, analyticsRes] = await Promise.all([
-        fetch("/api/projects"),
-        fetch("/api/buyer/analytics"),
-      ]);
+      try {
+        const [projRes, analyticsRes] = await Promise.all([
+          fetch("/api/projects", { signal: abortController.signal }),
+          fetch("/api/buyer/analytics", { signal: abortController.signal }),
+        ]);
 
-      if (projRes.ok) {
-        const data = await projRes.json();
-        setProjects(data.projects || []);
+        if (!isMounted) return;
+
+        if (projRes.ok) {
+          const data = await projRes.json();
+          if (isMounted) {
+            setProjects(data.projects || []);
+          }
+        }
+
+        if (analyticsRes.ok) {
+          const data = await analyticsRes.json();
+          if (isMounted) {
+            setAnalytics(data.analytics || null);
+            setActivity(data.activity || []);
+          }
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      } finally {
+        if (isMounted && !abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
-
-      if (analyticsRes.ok) {
-        const data = await analyticsRes.json();
-        setAnalytics(data.analytics || null);
-        setActivity(data.activity || []);
-      }
-
-      setLoading(false);
     };
-    fetchData();
+
+    void fetchData();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, []);
 
   if (loading) {
@@ -90,10 +114,14 @@ export default function BuyerDashboard() {
         {/* Analytics Section */}
         {analytics && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+            <Link
+              href="/projects/engagements"
+              className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="View all deals pursuing across projects"
+            >
               <p className="text-xs text-text-secondary">Deals Pursuing</p>
               <p className="text-2xl font-bold text-primary">{analytics.pursuing}</p>
-            </div>
+            </Link>
             <div className="bg-surface-alt rounded-lg border border-border-color p-4">
               <p className="text-xs text-text-secondary">Deals Passed</p>
               <p className="text-2xl font-bold text-primary">{analytics.passed}</p>
