@@ -87,7 +87,7 @@ export default function BrokerDashboard() {
 
   // Preserve legacy KPI behavior from pre-DataGrid dashboard: "Active Deals" intentionally
   // means "not closed/terminated" and therefore includes drafts.
-  const activeDeals = deals.filter(d => !["terminated", "closed"].includes(d.status));
+  const activeDeals = deals.filter(d => !["terminated", "closed", "draft"].includes(d.status));
   const closedDeals = deals.filter(d => d.status === "closed");
   const draftDeals = deals.filter(d => d.status === "draft");
 
