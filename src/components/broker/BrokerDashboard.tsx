@@ -85,8 +85,8 @@ export default function BrokerDashboard() {
     setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
   };
 
-  // Preserve legacy KPI behavior from pre-DataGrid dashboard: "Active Deals" intentionally
-  // means "not closed/terminated" and therefore includes drafts.
+  // Preserve current KPI behavior: "Active Deals" excludes drafts and counts only
+  // non-draft deals that are not closed or terminated.
   const activeDeals = deals.filter(d => !["terminated", "closed", "draft"].includes(d.status));
   const closedDeals = deals.filter(d => d.status === "closed");
   const draftDeals = deals.filter(d => d.status === "draft");
@@ -264,22 +264,34 @@ export default function BrokerDashboard() {
 
         {/* Analytics Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+          <Link
+            href="/deals"
+            className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
             <p className="text-xs text-text-secondary">Total Deals</p>
             <p className="text-2xl font-bold text-primary">{deals.length}</p>
-          </div>
-          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+          </Link>
+          <Link
+            href="/deals"
+            className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
             <p className="text-xs text-text-secondary">Active Deals</p>
             <p className="text-2xl font-bold text-primary">{activeDeals.length}</p>
-          </div>
-          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+          </Link>
+          <Link
+            href="/deals?status=draft"
+            className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
             <p className="text-xs text-text-secondary">Drafts</p>
             <p className="text-2xl font-bold text-primary">{draftDeals.length}</p>
-          </div>
-          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+          </Link>
+          <Link
+            href="/deals"
+            className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
             <p className="text-xs text-text-secondary">Closed</p>
             <p className="text-2xl font-bold text-primary">{closedDeals.length}</p>
-          </div>
+          </Link>
         </div>
 
         {/* Deal List */}

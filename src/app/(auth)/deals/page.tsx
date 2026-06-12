@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { DataGridTable } from "@/components/ui/DataGridTable";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
@@ -33,9 +33,20 @@ const DEAL_STATUS_BADGE_CLASSES: Record<string, string> = {
 };
 
 const DEFAULT_DEAL_STATUS_BADGE_CLASS = "bg-success/10 text-success";
+const VALID_DEAL_FILTERS = new Set<string>(["all", ...Object.keys(DEAL_STATUS_LABELS)]);
+
+const normalizeDealFilter = (statusParam: string | null): string => {
+  if (!statusParam) {
+    return "all";
+  }
+
+  const normalizedStatus = statusParam.toLowerCase();
+  return VALID_DEAL_FILTERS.has(normalizedStatus) ? normalizedStatus : "all";
+};
 
 export default function DealsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +60,11 @@ export default function DealsPage() {
     page: 0,
     pageSize: 10,
   });
+
+  useEffect(() => {
+    const nextFilter = normalizeDealFilter(searchParams.get("status"));
+    setFilter((prevFilter) => (prevFilter === nextFilter ? prevFilter : nextFilter));
+  }, [searchParams]);
 
   useEffect(() => {
     let isMounted = true;

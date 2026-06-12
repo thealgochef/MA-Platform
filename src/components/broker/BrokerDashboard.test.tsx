@@ -153,6 +153,54 @@ describe("BrokerDashboard", () => {
     expect(screen.queryByTestId("broker-data-grid")).not.toBeInTheDocument();
   });
 
+  it("renders each analytics summary card as a deals link with interactive card styling", async () => {
+    const deals: DealRow[] = [
+      {
+        id: "deal-1",
+        project_name: "Project Orion",
+        headline: "Industrial carve-out",
+        status: "closed",
+        industry: "Industrial",
+        view_count: 10,
+        published_at: "2026-01-01T00:00:00.000Z",
+        revenue_year_3: 1000000,
+        ebitda_year_3: 100000,
+      },
+      {
+        id: "deal-2",
+        project_name: "Project Atlas",
+        headline: "Healthcare roll-up",
+        status: "draft",
+        industry: "Healthcare",
+        view_count: 20,
+        published_at: "2026-01-02T00:00:00.000Z",
+        revenue_year_3: 2000000,
+        ebitda_year_3: 300000,
+      },
+    ];
+
+    mockDealsResponse(deals);
+
+    render(<BrokerDashboard />);
+
+    await screen.findByTestId("broker-data-grid");
+
+    const totalDealsLink = screen.getByRole("link", { name: /Total Deals/i });
+    const activeDealsLink = screen.getByRole("link", { name: /Active Deals/i });
+    const draftsLink = screen.getByRole("link", { name: /Drafts/i });
+    const closedLink = screen.getByRole("link", { name: /Closed/i });
+
+    expect(totalDealsLink).toHaveAttribute("href", "/deals");
+    expect(activeDealsLink).toHaveAttribute("href", "/deals");
+    expect(draftsLink).toHaveAttribute("href", "/deals?status=draft");
+    expect(closedLink).toHaveAttribute("href", "/deals");
+
+    const summaryLinks = [totalDealsLink, activeDealsLink, draftsLink, closedLink];
+    for (const link of summaryLinks) {
+      expect(link).toHaveClass("transition-shadow", "hover:shadow-md", "focus-visible:ring-2", "focus-visible:ring-primary");
+    }
+  });
+
   it("renders DataGridTable with deals and navigates to deal detail on row click", async () => {
     const deals: DealRow[] = [
       {
