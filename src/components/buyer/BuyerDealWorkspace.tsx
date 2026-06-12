@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
 import {
   canBuyerAccessCloseWorkflow,
   canBuyerAccessIoiWorkflow,
@@ -129,7 +129,7 @@ export default function BuyerDealWorkspace() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-text-secondary">Industry</p>
-              <p className="font-medium text-text">{deal.industry}</p>
+              <p className="font-medium text-text">{formatIndustryDisplay(deal.industry)}</p>
             </div>
             <div>
               <p className="text-text-secondary">Geography</p>

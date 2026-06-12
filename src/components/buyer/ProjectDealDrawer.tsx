@@ -7,7 +7,7 @@ import { Button, Tab } from "@mui/material";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
 import { PrimaryTabs } from "@/components/ui/PrimaryTabs";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
 
 export interface ProjectDealDrawerDeal {
   id: string;
@@ -51,6 +51,7 @@ export interface ProjectDealDrawerDeal {
     declined_at?: string | null;
     vetting_status?: string | null;
     vetting_rejection_reason?: string | null;
+    date_received?: string | null
   } | null;
 }
 
@@ -558,7 +559,7 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
 
               <DealSection title="Overview">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <DealInfoItem label="Industry" value={deal.industry || "—"} />
+                  <DealInfoItem label="Industry" value={formatIndustryDisplay(deal.industry)} />
                   <DealInfoItem label="Geography" value={getGeography(deal) || "—"} />
                   <DealInfoItem label="Geography Display" value={formatLabel(deal.geography_display)} />
                   <DealInfoItem label="NDA Type" value={formatNdaType(deal.nda_type)} />

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
 import { useAutoDismissFlag } from "@/lib/useAutoDismissFlag";
 import { ProjectDealsTable } from "@/components/ui/ProjectDealsTable";
 import { ProjectDealDrawer, type ProjectDealDrawerDeal } from "@/components/buyer/ProjectDealDrawer";
@@ -438,6 +438,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         headerName: "Industry",
         flex: 1,
         minWidth: 120,
+        valueGetter: (_, row) => formatIndustryDisplay(row.industry),
         cellClassName: "row-hover-text",
       },
       {
@@ -494,7 +495,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
         case "headline":
           return deal.headline;
         case "industry":
-          return deal.industry;
+          return formatIndustryDisplay(deal.industry);
         case "geography":
           return getGeography(deal) || "";
         case "date_received":

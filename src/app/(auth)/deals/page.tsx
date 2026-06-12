@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataGridTable } from "@/components/ui/DataGridTable";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
 import {
   GridColDef,
   GridPaginationModel,
@@ -120,6 +120,7 @@ export default function DealsPage() {
         headerName: "Industry",
         flex: 1,
         minWidth: 140,
+        valueGetter: (_, row) => formatIndustryDisplay(row.industry),
         cellClassName: "text-text-secondary row-hover-text",
       },
       {
@@ -192,7 +193,7 @@ export default function DealsPage() {
         case "headline":
           return deal.headline;
         case "industry":
-          return deal.industry;
+          return formatIndustryDisplay(deal.industry);
         case "revenue":
           return deal.revenue_year_3 ?? Number.NEGATIVE_INFINITY;
         case "ebitda":

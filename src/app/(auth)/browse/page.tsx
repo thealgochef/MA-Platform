@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
 import { DEAL_STATUS_LABELS, INDUSTRIES, US_STATES } from "@/lib/constants";
 
 interface Deal {
@@ -236,7 +236,7 @@ export default function BrowseDealsPage() {
                       aria-label={`Open deal ${deal.headline}`}
                     >
                       <td className="px-4 py-3 font-medium text-primary hover:underline">{deal.headline}</td>
-                      <td className="px-4 py-3 text-text-secondary">{deal.industry}</td>
+                      <td className="px-4 py-3 text-text-secondary">{formatIndustryDisplay(deal.industry)}</td>
                       <td className="px-4 py-3 text-text-secondary">{getGeography(deal) || "—"}</td>
                       <td className="px-4 py-3">{deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}</td>
                       <td className="px-4 py-3">{deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) : "—"}</td>

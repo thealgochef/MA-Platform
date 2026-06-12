@@ -120,6 +120,7 @@ export default function CreateDealPage() {
 
       const payload = {
         ...formData,
+        industry: formData.industry ? [formData.industry] : [],
         teaserDocumentPath: null,
         cimDocumentPath: null,
         ndaDocumentPath: null,
@@ -322,8 +323,9 @@ export default function CreateDealPage() {
 
           {/* Industry */}
           <div>
-            <label className="block text-sm font-medium text-text mb-1">Industry *</label>
+            <label htmlFor="industry" className="block text-sm font-medium text-text mb-1">Industry *</label>
             <select
+              id="industry"
               value={formData.industry}
               onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
               className="w-full border border-border-gray rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"

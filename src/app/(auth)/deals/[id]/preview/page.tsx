@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
 
 interface Deal {
   id: string;
@@ -126,7 +126,7 @@ export default function DealPreviewPage() {
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
               <p className="text-xs text-text-secondary">Industry</p>
-              <p className="text-sm font-medium">{deal.industry}</p>
+              <p className="text-sm font-medium">{formatIndustryDisplay(deal.industry)}</p>
             </div>
             <div>
               <p className="text-xs text-text-secondary">Geography</p>

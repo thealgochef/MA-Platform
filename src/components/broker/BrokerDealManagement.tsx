@@ -9,7 +9,7 @@ import {
   BUYER_TYPES,
   VETTING_REJECTION_REASONS,
 } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
 import { useAutoDismissFlag } from "@/lib/useAutoDismissFlag";
 
 type Tab = "Overview" | "Pipeline" | "Offers" | "Documents" | "Messaging" | "Analytics" | "Timeline";
@@ -612,7 +612,7 @@ export default function BrokerDealManagement({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-text-secondary">Industry</p>
-                    <p className="text-sm font-medium">{deal.industry}</p>
+                    <p className="text-sm font-medium">{formatIndustryDisplay(deal.industry)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-text-secondary">Geography</p>

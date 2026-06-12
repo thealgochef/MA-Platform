@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DataGridTable } from "@/components/ui/DataGridTable";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
 import {
   GridColDef,
   GridPaginationModel,
@@ -173,6 +173,7 @@ export default function BuyerEngagementsPage() {
         headerName: "Industry",
         flex: 1,
         minWidth: 140,
+        valueGetter: (_, row) => formatIndustryDisplay(row.industry),
         cellClassName: "row-hover-text",
       },
       {
@@ -259,7 +260,7 @@ export default function BuyerEngagementsPage() {
         case "deal_status":
           return DEAL_STATUS_LABELS[row.deal_status] || row.deal_status;
         case "industry":
-          return row.industry;
+          return formatIndustryDisplay(row.industry);
         case "geography":
           return row.geography || "";
         case "revenue_year_3":
