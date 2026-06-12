@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type MutableRefObject, type ReactNode, type SyntheticEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Tab } from "@mui/material";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
@@ -91,45 +92,6 @@ function formatLabel(value: string | null | undefined): string {
   return value.replace(/_/g, " ");
 }
 
-function formatBooleanAvailability(value: boolean | undefined): string {
-  if (value == null) {
-    return "Not provided";
-  }
-
-  return value ? "Available" : "Not available";
-}
-
-function formatCustomNdaAvailability(deal: ProjectDealDrawerDeal): string {
-  if (deal.has_nda_document === undefined) {
-    return "Not provided";
-  }
-
-  const ndaStatus = deal.engagement?.nda_status;
-  const ndaIsRelevantToBuyer = ndaStatus === "sent" || ndaStatus === "signed";
-
-  if (!ndaIsRelevantToBuyer) {
-    return "Not yet available";
-  }
-
-  return deal.has_nda_document ? "Available" : "Not uploaded";
-}
-
-function formatCimAvailability(deal: ProjectDealDrawerDeal): string {
-  if (deal.has_cim_document === undefined) {
-    return "Not provided";
-  }
-
-  if (deal.has_cim_document) {
-    return "Available";
-  }
-
-  if (deal.engagement?.nda_status === "signed" && deal.engagement?.cim_released) {
-    return "Not uploaded";
-  }
-
-  return "Not yet available";
-}
-
 function formatDateTime(value: string | null | undefined): string {
   if (!value) {
     return "—";
@@ -186,26 +148,6 @@ function formatNdaVettingPreference(value: string | null | undefined): string {
   return formatLabel(value);
 }
 
-function formatCimStatus(engagement: ProjectDealDrawerDeal["engagement"]): string {
-  if (!engagement) {
-    return "—";
-  }
-
-  if (engagement.cim_downloaded_at) {
-    return "Downloaded";
-  }
-
-  if (engagement.cim_viewed_at) {
-    return "Viewed";
-  }
-
-  if (engagement.cim_released) {
-    return "Released";
-  }
-
-  return "Not released";
-}
-
 function getFinancialRows(deal: ProjectDealDrawerDeal) {
   return [
     {
@@ -242,6 +184,61 @@ interface DealUpdateItem {
   timestamp?: string | null;
 }
 
+interface BuyerAvailableFile {
+  key: string;
+  label: string;
+  href: string;
+}
+
+const DEAL_FILE_ACCESS_REVOKED_STATUSES = new Set(["paused", "terminated", "closed"]);
+const TEASER_ACCESS_REVOKED_ENGAGEMENT_STAGES = new Set(["declined", "passed", "terminated"]);
+const CUSTOM_NDA_ACCESSIBLE_STATUSES = new Set(["sent", "signed"]);
+
+function getBuyerAvailableFiles(deal: ProjectDealDrawerDeal): BuyerAvailableFile[] {
+  const availableFiles: BuyerAvailableFile[] = [];
+  const encodedDealId = encodeURIComponent(deal.id);
+  const dealAllowsFileAccess = !DEAL_FILE_ACCESS_REVOKED_STATUSES.has(deal.status);
+  const hasBuyerEngagement = Boolean(deal.engagement);
+  const teaserAccessAllowedForEngagement =
+    hasBuyerEngagement && !TEASER_ACCESS_REVOKED_ENGAGEMENT_STAGES.has(deal.engagement?.stage ?? "");
+
+  if (dealAllowsFileAccess && deal.has_teaser_document === true && teaserAccessAllowedForEngagement) {
+    availableFiles.push({
+      key: "teaser",
+      label: "Teaser",
+      href: `/api/deals/${encodedDealId}/teaser?action=view`,
+    });
+  }
+
+  if (
+    dealAllowsFileAccess &&
+    deal.has_cim_document === true &&
+    deal.engagement?.cim_released === true &&
+    deal.engagement.nda_status === "signed"
+  ) {
+    availableFiles.push({
+      key: "cim",
+      label: "CIM Document",
+      href: `/api/deals/${encodedDealId}/cim?action=view`,
+    });
+  }
+
+  if (
+    dealAllowsFileAccess &&
+    deal.nda_type === "custom" &&
+    deal.has_nda_document === true &&
+    CUSTOM_NDA_ACCESSIBLE_STATUSES.has(deal.engagement?.nda_status ?? "")
+  ) {
+    availableFiles.push({
+      key: "custom-nda",
+      label: "Custom NDA Document",
+      href: `/api/deals/${encodedDealId}/nda/document?action=view`,
+    });
+  }
+
+  return availableFiles;
+}
+
 function getChronologicalTimestamp(value: string | null | undefined): number | null {
   if (!value) {
     return null;
@@ -254,16 +251,7 @@ function getChronologicalTimestamp(value: string | null | undefined): number | n
 }
 
 function getDealUpdates(deal: ProjectDealDrawerDeal): DealUpdateItem[] {
-  const updates: DealUpdateItem[] = [];
-  const isClosedDeal = deal.status === "closed";
-
-  if (!(isClosedDeal && deal.closed_at)) {
-    updates.push({
-      key: "deal-status",
-      title: "Current deal status",
-      detail: DEAL_STATUS_LABELS[deal.status] || formatLabel(deal.status),
-    });
-  }
+  const updates: DealUpdateItem[] = [];  
 
   if (deal.published_at) {
     updates.push({
@@ -274,20 +262,7 @@ function getDealUpdates(deal: ProjectDealDrawerDeal): DealUpdateItem[] {
     });
   }
 
-  if (deal.engagement) {
-      updates.push({
-        key: "engagement-stage",
-        title: "Current engagement stage",
-        detail: formatEngagementStageLabel(deal.engagement.stage),
-      });
-
-      updates.push({
-        key: "nda-status",
-        title: "NDA status",
-        detail: formatEngagementStageLabel(deal.engagement.nda_status),
-        timestamp: deal.engagement.nda_signed_at,
-      });
-  } else {
+  if (!deal.engagement) {
     updates.push({
       key: "engagement-not-started",
       title: "Engagement",
@@ -401,6 +376,7 @@ function DealSection({ title, children }: { title: string; children: ReactNode }
 }
 
 export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRef, actionButtons = [] }: ProjectDealDrawerProps) {
+  const router = useRouter();
   const drawerRef = useRef<HTMLElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const [activeTab, setActiveTab] = useState<"details" | "updates" | "files">("details");
@@ -411,6 +387,7 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
   const updatesPanelId = `project-deal-drawer-panel-updates-${deal.id}`;
   const filesPanelId = `project-deal-drawer-panel-files-${deal.id}`;
   const dealUpdates = getDealUpdates(deal);
+  const buyerAvailableFiles = getBuyerAvailableFiles(deal);
 
   const handleTabChange = (_event: SyntheticEvent, value: unknown) => {
     if (value !== "details" && value !== "updates" && value !== "files") {
@@ -418,6 +395,10 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
     }
 
     setActiveTab(value);
+  };
+
+  const handleFileRowActivate = (href: string) => {
+    router.push(href);
   };
 
   useEffect(() => {
@@ -619,28 +600,15 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 mb-2">
                   <DealInfoItem label="NDA Process" value={formatNdaVettingPreference(deal.nda_vetting_preference)} />
                   <DealInfoItem label="CIM Sharing" value={formatCimSharingPreference(deal.cim_sharing_preference)} />
-                  {deal.has_teaser_document !== undefined && (
-                    <DealInfoItem label="Teaser" value={formatBooleanAvailability(deal.has_teaser_document)} />
-                  )}
-                  {deal.has_cim_document !== undefined && (
-                    <DealInfoItem label="CIM Document" value={formatCimAvailability(deal)} />
-                  )}
-                  {deal.nda_type === "custom" && deal.has_nda_document !== undefined && (
-                    <DealInfoItem label="Custom NDA Document" value={formatCustomNdaAvailability(deal)} />
-                  )}
                 </div>
               </DealSection>
 
               <DealSection title="Engagement">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 mb-2">
-                  <DealInfoItem label="Stage" value={formatEngagementStageLabel(deal.engagement?.stage)} />
                   <DealInfoItem label="NDA Status" value={formatEngagementStageLabel(deal.engagement?.nda_status)} />
                   <DealInfoItem label="NDA Signed" value={formatDateTime(deal.engagement?.nda_signed_at)} />
                   <DealInfoItem label="Vetting Status" value={formatLabel(deal.engagement?.vetting_status)} />
-                  <DealInfoItem label="CIM Status" value={formatCimStatus(deal.engagement)} />
                   <DealInfoItem label="CIM Released" value={formatDateTime(deal.engagement?.cim_released_at)} />
-                  <DealInfoItem label="CIM Viewed" value={formatDateTime(deal.engagement?.cim_viewed_at)} />
-                  <DealInfoItem label="CIM Downloaded" value={formatDateTime(deal.engagement?.cim_downloaded_at)} />
                   <DealInfoItem label="Pass Reason" value={deal.engagement?.pass_reason || "—"} />
                   <DealInfoItem label="Declined At" value={formatDateTime(deal.engagement?.declined_at)} />
                 </div>
@@ -655,15 +623,6 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
                   </div>
                 )}
               </DealSection>
-
-            {(deal.published_at || deal.closed_at) && (
-              <DealSection title="Timeline">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <DealInfoItem label="Published" value={formatDateTime(deal.published_at)} />
-                  <DealInfoItem label="Closed" value={formatDateTime(deal.closed_at)} />
-                </div>
-              </DealSection>
-            )}
           </div>
 
             <div
@@ -698,13 +657,47 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
               aria-hidden={activeTab !== "files"}
             >
               <DealSection title="Files">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <DealInfoItem label="Teaser" value={formatBooleanAvailability(deal.has_teaser_document)} />
-                  <DealInfoItem label="CIM Document" value={formatCimAvailability(deal)} />
-                  {deal.nda_type === "custom" && (
-                    <DealInfoItem label="Custom NDA Document" value={formatCustomNdaAvailability(deal)} />
-                  )}
-                </div>
+                {buyerAvailableFiles.length === 0 ? (
+                  <p className="rounded-md border border-border-color bg-bg-alt p-4 text-sm text-text-secondary">
+                    No files available yet.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto rounded-sm">
+                    <table className="w-full text-sm">
+                      <thead className="text-xs uppercase tracking-wide text-text-secondary">
+                        <tr>
+                          <th scope="col" className="px-3 py-2 text-left font-medium bg-bg-alt">File</th>
+                          <th scope="col" className="px-3 py-2 text-left font-medium bg-bg-alt">Availability</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {buyerAvailableFiles.map((file) => (
+                          <tr
+                            key={file.key}
+                            role="link"
+                            tabIndex={0}
+                            aria-label={`Open ${file.label}`}
+                            className="cursor-pointer border-t border-border-gray transition-colors hover:bg-bg-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            onClick={() => handleFileRowActivate(file.href)}
+                            onKeyDown={(event) => {
+                              if (event.key !== "Enter" && event.key !== " ") {
+                                return;
+                              }
+
+                              event.preventDefault();
+                              handleFileRowActivate(file.href);
+                            }}
+                          >
+                            <td className="px-3 py-2 font-medium text-text hover:underline decoration-text-secondary/40 underline-offset-2">
+                              {file.label}
+                            </td>
+                            <td className="px-3 py-2 text-text-secondary">Available</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </DealSection>
 
             </div>

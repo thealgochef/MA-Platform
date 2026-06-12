@@ -333,11 +333,11 @@ describe("ProjectDealsView", () => {
     expect(screen.getByRole("heading", { name: "Financials" })).toBeInTheDocument();
     expect(screen.getByText("FY2024")).toBeInTheDocument();
     expect(screen.getByText("FY2025E")).toBeInTheDocument();
-    expect(screen.getByText("$1,000,000")).toBeInTheDocument();
+    expect(screen.getByText("$1,000,000M")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "NDA and CIM Process" })).toBeInTheDocument();
     expect(screen.getByText("Custom NDA")).toBeInTheDocument();
-    expect(screen.getByText("Auto-send NDA when buyer pursues")).toBeInTheDocument();
-    expect(screen.getByText("Broker manually releases CIM")).toBeInTheDocument();
+    expect(screen.getByText("Automatic release")).toBeInTheDocument();
+    expect(screen.getByText("Manual release")).toBeInTheDocument();
     expect(screen.getAllByText("Available").length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: "Engagement" })).toBeInTheDocument();
     expect(screen.getByText("Viewed")).toBeInTheDocument();
@@ -345,17 +345,310 @@ describe("ProjectDealsView", () => {
   });
 
   it("does not expose raw storage paths or show gated documents before buyer access", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        engagement: {
+          id: "engagement-files-available",
+          stage: "pursued",
+          nda_status: "sent",
+          cim_released: false,
+        },
+      },
+    ];
+
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
-    const activePanel = screen.getByRole("tabpanel");
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
 
     expect(screen.queryByText("deal-1/teaser.pdf")).not.toBeInTheDocument();
     expect(screen.queryByText("deal-1/cim.pdf")).not.toBeInTheDocument();
     expect(screen.queryByText("deal-1/nda.pdf")).not.toBeInTheDocument();
-    expect(within(activePanel).getByText("Available")).toBeInTheDocument();
-    expect(within(activePanel).getAllByText("Not yet available")).toHaveLength(2);
+
+    const filesTable = within(filesPanel).getByRole("table");
+    expect(within(filesTable).getByRole("columnheader", { name: "File" })).toBeInTheDocument();
+    expect(within(filesTable).getByRole("columnheader", { name: "Availability" })).toBeInTheDocument();
+
+    const tableRows = within(filesTable).getAllByRole("row");
+    expect(tableRows).toHaveLength(2);
+    expect(within(filesTable).getByRole("cell", { name: "Teaser" })).toBeInTheDocument();
+    expect(within(filesTable).queryByRole("link", { name: "Teaser" })).not.toBeInTheDocument();
+    expect(within(filesTable).getByRole("link", { name: "Open Teaser" })).toBeInTheDocument();
+    expect(within(filesTable).getByRole("cell", { name: "Available" })).toBeInTheDocument();
+    expect(within(filesTable).queryByText("CIM Document")).not.toBeInTheDocument();
+    expect(within(filesTable).queryByText("Custom NDA Document")).not.toBeInTheDocument();
+    expect(within(filesTable).queryByText("Unavailable")).not.toBeInTheDocument();
+    expect(within(filesPanel).queryByText("No files available yet.")).not.toBeInTheDocument();
+  });
+
+  it("hides teaser row when buyer has no engagement", async () => {
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    expect(within(filesPanel).getByText("No files available yet.")).toBeInTheDocument();
+    expect(within(filesPanel).queryByText("Teaser")).not.toBeInTheDocument();
+  });
+
+  it.each(["declined", "passed"] as const)(
+    "hides teaser row when engagement stage is %s",
+    async (engagementStage) => {
+      mockPathname = "/projects/project-1/archive";
+      mockDeals = [
+        {
+          ...sampleDeals[0],
+          engagement: {
+            id: `engagement-teaser-blocked-${engagementStage}`,
+            stage: engagementStage,
+            nda_status: "not_signed",
+          },
+        },
+      ];
+
+      render(<ProjectDealsView projectId="project-1" />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+      const filesTab = screen.getByRole("tab", { name: "Files" });
+      fireEvent.click(filesTab);
+
+      await waitFor(() => {
+        expect(filesTab).toHaveAttribute("aria-selected", "true");
+      });
+
+      const filesPanel = screen.getByRole("tabpanel");
+      expect(within(filesPanel).queryByText("Teaser")).not.toBeInTheDocument();
+      expect(within(filesPanel).getByText("No files available yet.")).toBeInTheDocument();
+    }
+  );
+
+  it("does not render terminated engagements in archived view (no teaser row exposed)", async () => {
+    mockPathname = "/projects/project-1/archive";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        engagement: {
+          id: "engagement-teaser-blocked-terminated",
+          stage: "terminated",
+          nda_status: "not_signed",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByText("No archived deals yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open first row" })).not.toBeInTheDocument();
+  });
+
+  it("hides CIM row when CIM document exists but buyer release is false", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        has_cim_document: true,
+        engagement: {
+          id: "engagement-cim-not-released",
+          stage: "nda_signed",
+          nda_status: "signed",
+          cim_released: false,
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    const filesTable = within(filesPanel).getByRole("table");
+
+    expect(within(filesTable).queryByText("CIM Document")).not.toBeInTheDocument();
+  });
+
+  it("shows CIM row when CIM document exists and buyer release is true", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        has_cim_document: true,
+        engagement: {
+          id: "engagement-cim-released",
+          stage: "nda_signed",
+          nda_status: "signed",
+          cim_released: true,
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    const filesTable = within(filesPanel).getByRole("table");
+
+    expect(within(filesTable).getByRole("cell", { name: "CIM Document" })).toBeInTheDocument();
+    expect(within(filesTable).getByRole("link", { name: "Open CIM Document" })).toBeInTheDocument();
+  });
+
+  it("does not show Custom NDA row when NDA type is platform", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        nda_type: "platform",
+        has_nda_document: true,
+        engagement: {
+          id: "engagement-platform-nda",
+          stage: "nda_pending",
+          nda_status: "pending",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    const filesTable = within(filesPanel).getByRole("table");
+
+    expect(within(filesTable).queryByText("Custom NDA Document")).not.toBeInTheDocument();
+  });
+
+  it("shows Custom NDA row as a view link when custom NDA document exists", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        nda_type: "custom",
+        has_nda_document: true,
+        engagement: {
+          id: "engagement-custom-nda",
+          stage: "nda_pending",
+          nda_status: "sent",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    const filesTable = within(filesPanel).getByRole("table");
+
+    expect(within(filesTable).getByRole("cell", { name: "Custom NDA Document" })).toBeInTheDocument();
+    expect(within(filesTable).getByRole("link", { name: "Open Custom NDA Document" })).toBeInTheDocument();
+  });
+
+  it("hides Custom NDA row when custom NDA exists but NDA status is not sent or signed", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        nda_type: "custom",
+        has_nda_document: true,
+        engagement: {
+          id: "engagement-custom-nda-pending-review",
+          stage: "nda_pending",
+          nda_status: "pending_review",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    const filesTable = within(filesPanel).getByRole("table");
+
+    expect(within(filesTable).queryByText("Custom NDA Document")).not.toBeInTheDocument();
+  });
+
+  it("navigates using encoded deal id when activating a file row", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal/1?#",
+        engagement: {
+          id: "engagement-encoded-id",
+          stage: "pursued",
+          nda_status: "sent",
+          cim_released: false,
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    mockPush.mockClear();
+    fireEvent.click(screen.getByRole("link", { name: "Open Teaser" }));
+
+    expect(mockPush).toHaveBeenCalledWith("/api/deals/deal%2F1%3F%23/teaser?action=view");
   });
 
   it("renders safe fallback values for missing expanded drawer information", async () => {
@@ -393,16 +686,26 @@ describe("ProjectDealsView", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
-    const activePanel = screen.getByRole("tabpanel");
-
     expect(screen.getByRole("dialog", { name: /Sparse Services/ })).toBeInTheDocument();
     expect(screen.getByText("Not yet engaged")).toBeInTheDocument();
     expect(screen.getByText("No business description provided.")).toBeInTheDocument();
     expect(screen.getByText("Year 1")).toBeInTheDocument();
     expect(screen.getByText("Projection")).toBeInTheDocument();
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(8);
-    expect(within(activePanel).getByText("Not available")).toBeInTheDocument();
-    expect(within(activePanel).getByText("Not yet available")).toBeInTheDocument();
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    expect(within(filesPanel).getByText("No files available yet.")).toBeInTheDocument();
+    expect(within(filesPanel).queryByRole("table")).not.toBeInTheDocument();
+    expect(within(filesPanel).queryByText("Teaser")).not.toBeInTheDocument();
+    expect(within(filesPanel).queryByText("CIM Document")).not.toBeInTheDocument();
+    expect(within(filesPanel).queryByText("Custom NDA Document")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Timeline" })).not.toBeInTheDocument();
   });
 
@@ -554,7 +857,7 @@ describe("ProjectDealsView", () => {
     expect(eventsPanel).toHaveAttribute("hidden");
     expect(filesPanel).toHaveAttribute("hidden");
     expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
-    expect(within(detailsPanel as HTMLElement).queryByText("Current deal status")).not.toBeInTheDocument();
+    expect(within(detailsPanel as HTMLElement).queryByText("No active engagement yet.")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Files" })).not.toBeInTheDocument();
 
     fireEvent.click(eventsTab);
@@ -567,7 +870,7 @@ describe("ProjectDealsView", () => {
     expect(eventsPanel).not.toHaveAttribute("hidden");
     expect(filesPanel).toHaveAttribute("hidden");
     expect(within(eventsPanel as HTMLElement).getByRole("heading", { name: "Timeline" })).toBeInTheDocument();
-    expect(screen.getByText("Current deal status")).toBeInTheDocument();
+    expect(within(eventsPanel as HTMLElement).getByText("Engagement")).toBeInTheDocument();
     expect(screen.getByText(/No active engagement/i)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Overview" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Files" })).not.toBeInTheDocument();
@@ -620,13 +923,13 @@ describe("ProjectDealsView", () => {
     const cimViewed = within(eventsPanel as HTMLElement).getByText("CIM viewed");
     const cimDownloaded = within(eventsPanel as HTMLElement).getByText("CIM downloaded");
     const cimReleased = within(eventsPanel as HTMLElement).getByText("CIM released");
-    const ndaStatus = within(eventsPanel as HTMLElement).getByText("NDA status");
+    const ndaSigned = within(eventsPanel as HTMLElement).getByText("NDA signed");
     const dealPublished = within(eventsPanel as HTMLElement).getByText("Deal published");
 
     expect(cimViewed.compareDocumentPosition(cimDownloaded) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(cimDownloaded.compareDocumentPosition(cimReleased) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(cimReleased.compareDocumentPosition(ndaStatus) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(ndaStatus.compareDocumentPosition(dealPublished) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cimReleased.compareDocumentPosition(ndaSigned) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(ndaSigned.compareDocumentPosition(dealPublished) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     expect(within(eventsPanel as HTMLElement).queryByText("—")).not.toBeInTheDocument();
   });
