@@ -8,6 +8,8 @@ import {
   validateBuyerSignup,
 } from "@/lib/validators";
 
+type Industry = (typeof INDUSTRIES)[number];
+
 type BuyerFormData = {
   firstName: string;
   lastName: string;
@@ -20,7 +22,7 @@ type BuyerFormData = {
   firmType: string;
   firmDescription: string;
   accreditation: string;
-  industryFocus: string[];
+  industryFocus: Industry[];
   aum: string;
   otherMembers: string;
   membershipAgreementSigned: boolean;
@@ -47,7 +49,7 @@ export default function BuyerSignupPage() {
     firmType: "",
     firmDescription: "",
     accreditation: "",
-    industryFocus: [] as string[],
+    industryFocus: [],
     aum: "",
     otherMembers: "",
     membershipAgreementSigned: false,
@@ -60,7 +62,7 @@ export default function BuyerSignupPage() {
     formData.firmType === "search_fund" ||
     formData.firmType === "individual_investor";
 
-  const handleIndustryToggle = (industry: string) => {
+  const handleIndustryToggle = (industry: Industry) => {
     setFormData((prev) => ({
       ...prev,
       industryFocus: prev.industryFocus.includes(industry)
@@ -388,7 +390,55 @@ export default function BuyerSignupPage() {
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
               Credentials & Accreditations
             </p>
-
+            
+            {showDocumentUpload && (
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Supporting Documents (PDF only, 50MB max)
+                </label>
+                <p className="text-xs mb-2">
+                  Required for search_fund and individual_investor buyer types.
+                  Upload credentials, track record, or other supporting
+                  documentation.
+                </p>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  multiple
+                  onChange={handleFileChange}
+                  className="w-full text-sm"
+                />
+                {getFieldError("documentPaths") && (
+                  <p className="mt-2 text-sm text-error">{getFieldError("documentPaths")}</p>
+                )}
+                {documents.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {documents.map((doc, i) => (
+                      <div
+                        key={i}
+                        className="text-xs flex items-center gap-2"
+                      >
+                        <span>📄 {doc.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDocuments(documents.filter((_, j) => j !== i));
+                            setFieldErrors((prev) => ({
+                              ...prev,
+                              documentPaths: undefined,
+                            }));
+                          }}
+                          className="text-error hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div>
               <label className="block text-sm font-medium mb-1">
                 Basis for Accreditation <span className="text-primary">*</span>
@@ -445,54 +495,6 @@ export default function BuyerSignupPage() {
               )}
             </div>
 
-            {showDocumentUpload && (
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Supporting Documents (PDF only, 50MB max)
-                </label>
-                <p className="text-xs mb-2">
-                  Required for search_fund and individual_investor buyer types.
-                  Upload credentials, track record, or other supporting
-                  documentation.
-                </p>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  multiple
-                  onChange={handleFileChange}
-                  className="w-full text-sm"
-                />
-                {getFieldError("documentPaths") && (
-                  <p className="mt-2 text-sm text-error">{getFieldError("documentPaths")}</p>
-                )}
-                {documents.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    {documents.map((doc, i) => (
-                      <div
-                        key={i}
-                        className="text-xs flex items-center gap-2"
-                      >
-                        <span>📄 {doc.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDocuments(documents.filter((_, j) => j !== i));
-                            setFieldErrors((prev) => ({
-                              ...prev,
-                              documentPaths: undefined,
-                            }));
-                          }}
-                          className="text-error hover:underline"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
             <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-2.5">
               Invite
             </p>
@@ -537,7 +539,7 @@ export default function BuyerSignupPage() {
                   className="mt-1"
                 />
                 <span className="text-sm">
-                  By submitting your application, you agree to our Terms of Service, Privacy Policy, and authorize Geneva Holdings to send you automated text messages. You can opt out at any time. *
+                  By submitting your application, you agree to our Terms of Service, Privacy Policy, and authorize us to send you automated text messages. You can opt out at any time. *
                 </span>
               </label>
               {getFieldError("membershipAgreementSigned") && (
@@ -566,9 +568,7 @@ export default function BuyerSignupPage() {
               type="submit"
               disabled={
                 loading ||
-                !formData.membershipAgreementSigned ||
-                formData.industryFocus.length === 0 ||
-                !formData.firmType
+                !formData.membershipAgreementSigned
               }
               className="w-full py-3 bg-primary text-bg rounded-md font-medium hover:bg-btn-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >

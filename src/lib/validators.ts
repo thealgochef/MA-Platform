@@ -6,6 +6,7 @@ import {
   BUYER_TYPE_VALUES,
   DEAL_STATUSES,
   FILE_CONSTRAINTS,
+  INDUSTRIES,
   PASS_REASONS,
   VETTING_REJECTION_REASONS,
 } from "./constants";
@@ -15,14 +16,135 @@ type NonEmptyTuple<T> = readonly [T, ...T[]];
 const buyerTypeValues = BUYER_TYPE_VALUES as NonEmptyTuple<(typeof BUYER_TYPE_VALUES)[number]>;
 const accreditationValues = ACCREDITATIONS.map(({ value }) => value) as unknown as NonEmptyTuple<(typeof ACCREDITATIONS)[number]["value"]>;
 const dealStatusValues = DEAL_STATUSES as NonEmptyTuple<(typeof DEAL_STATUSES)[number]>;
+const industryValues = INDUSTRIES as NonEmptyTuple<(typeof INDUSTRIES)[number]>;
 const passReasonValues = PASS_REASONS as NonEmptyTuple<(typeof PASS_REASONS)[number]>;
 const vettingRejectionReasonValues = VETTING_REJECTION_REASONS as NonEmptyTuple<(typeof VETTING_REJECTION_REASONS)[number]>;
+const industryValueSchema = z.enum(industryValues);
 const notificationEventKeys = [
   ...BROKER_NOTIFICATION_EVENTS.map(({ key }) => key),
   ...BUYER_NOTIFICATION_EVENTS.map(({ key }) => key),
 ] as const;
 
 const optionalTrimmedString = (max = 255) => z.string().trim().max(max).optional().nullable();
+const PHONE_REQUIRED_MESSAGE = "Phone number is required";
+const PHONE_MAX_LENGTH_MESSAGE = "Phone number must be 50 characters or less";
+const PHONE_FORMAT_MESSAGE = "Phone number format is invalid";
+const PHONE_DIGIT_COUNT_MESSAGE = "Phone number must contain between 7 and 15 digits";
+const PHONE_MAX_LENGTH = 50;
+
+const normalizePhoneValue = (value: unknown) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return value.trim().replace(/\s+/g, " ");
+};
+
+const extractPhoneMainNumber = (phone: string) => {
+  const extensionMatch = phone.match(/\s*(?:x|ext\.?|extension)\s*\d+\s*$/i);
+
+  if (!extensionMatch) {
+    return phone;
+  }
+
+  return phone.slice(0, extensionMatch.index).trim();
+};
+
+const hasValidPhoneFormat = (phone: string) => {
+  const extensionPattern = /\s*(?:x|ext\.?|extension)\s*\d+\s*$/i;
+  const hasExtension = extensionPattern.test(phone);
+  const mainNumber = extractPhoneMainNumber(phone);
+  const validMainNumberChars = /^[\d()+\-.\s]+$/;
+
+  if (!mainNumber || !validMainNumberChars.test(mainNumber)) {
+    return false;
+  }
+
+  if (!hasExtension) {
+    return true;
+  }
+
+  return extensionPattern.test(phone);
+};
+
+const hasValidPhoneDigitCount = (phone: string) => {
+  const mainNumber = extractPhoneMainNumber(phone);
+  const digits = mainNumber.replace(/\D/g, "");
+  return digits.length >= 7 && digits.length <= 15;
+};
+
+const requiredPhoneSchema = z.preprocess(
+  normalizePhoneValue,
+  z
+    .string()
+    .min(1, PHONE_REQUIRED_MESSAGE)
+    .max(PHONE_MAX_LENGTH, PHONE_MAX_LENGTH_MESSAGE)
+    .refine(hasValidPhoneFormat, PHONE_FORMAT_MESSAGE)
+    .refine(hasValidPhoneDigitCount, PHONE_DIGIT_COUNT_MESSAGE)
+);
+
+const optionalPhoneSchema = z.preprocess(
+  normalizePhoneValue,
+  z
+    .union([
+      z.literal(""),
+      z
+        .string()
+        .max(PHONE_MAX_LENGTH, PHONE_MAX_LENGTH_MESSAGE)
+        .refine(hasValidPhoneFormat, PHONE_FORMAT_MESSAGE)
+        .refine(hasValidPhoneDigitCount, PHONE_DIGIT_COUNT_MESSAGE),
+    ])
+    .optional()
+);
+
+const normalizeOptionalUrlValue = (value: unknown) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  return trimmed === "" ? "" : trimmed;
+};
+
+const normalizeNfcStringValue = (value: unknown) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return value.normalize("NFC");
+};
+
+const normalizeEmptyStringToUndefined = (value: unknown) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return value.trim() === "" ? undefined : value;
+};
+
+const nfcNormalizedString = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(normalizeNfcStringValue, schema);
+
+const optionalUrlString = z.preprocess(
+  normalizeOptionalUrlValue,
+  z.union([z.string().url("Valid URL is required"), z.literal("")]).optional()
+);
+const optionalNullableUrlString = z.preprocess(
+  normalizeOptionalUrlValue,
+  z.union([z.string().url("Valid URL is required"), z.literal(""), z.null()]).optional()
+);
+const OPTIONAL_OTHER_MEMBERS_MAX_LENGTH_MESSAGE = "Other members must be 5000 characters or less";
+const optionalOtherMembersSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmed = value.trim();
+    return trimmed === "" ? undefined : trimmed;
+  },
+  z.string().max(5000, OPTIONAL_OTHER_MEMBERS_MAX_LENGTH_MESSAGE).optional()
+);
 const MAX_ENTERPRISE_VALUE = 1_000_000_000_000;
 
 export const isValidStorageObjectKey = (
@@ -65,24 +187,24 @@ export const fileValidation = z.object({
 });
 
 export const brokerSignupSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  title: z.string().min(1, "Title is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  linkedIn: z.union([z.string().url("Valid URL is required"), z.literal("")]).optional(),
-  firmName: z.string().min(1, "Firm name is required"),
-  firmWebsite: z.union([z.string().url("Valid URL is required"), z.literal("")]).optional(),
-  location: z.string().min(1, "Location is required"),
-  licenseCredentials: z.string().min(1, "License and credentials are required"),
-  firmDescription: z.string().min(1, "Firm description is required"),
-  dealTypes: z.string().min(1, "Types of deals is required"),
-  industryFocus: z.array(z.string()).min(1, "Select at least one industry"),
-  otherMembers: z.string().optional(),
+  firstName: nfcNormalizedString(z.string().trim().min(1, "First name is required").max(50, "First name must be 50 characters or less")),
+  lastName: nfcNormalizedString(z.string().trim().min(1, "Last name is required").max(50, "Last name must be 50 characters or less")),
+  title: nfcNormalizedString(z.string().trim().min(1, "Title is required").max(255, "Title must be 255 characters or less")),
+  phoneNumber: requiredPhoneSchema,
+  linkedIn: optionalUrlString,
+  firmName: nfcNormalizedString(z.string().trim().min(1, "Firm name is required").max(255, "Firm name must be 255 characters or less")),
+  firmWebsite: optionalUrlString,
+  location: z.string().trim().min(1, "Location is required").max(255, "Location must be 255 characters or less"),
+  licenseCredentials: z.string().trim().min(1, "License and credentials are required").max(500, "License and credentials must be 500 characters or less"),
+  firmDescription: z.string().trim().min(1, "Firm description is required").max(5000, "Firm description must be 5000 characters or less"),
+  dealTypes: z.string().trim().min(1, "Types of deals is required").max(500, "Types of deals must be 500 characters or less"),
+  industryFocus: z.array(industryValueSchema).min(1, "Select at least one industry"),
+  otherMembers: optionalOtherMembersSchema,
   membershipAgreementSigned: z.literal(true, {
     errorMap: () => ({ message: "You must sign the membership agreement" }),
   }),
-  signature: z.string().trim().min(1, "Electronic signature is required"),
-});
+  signature: nfcNormalizedString(z.string().trim().min(1, "Electronic signature is required").max(120, "Electronic signature must be 120 characters or less")),
+}).strict();
 
 export const buyerDocumentSchema = z.object({
   fileName: z.string().min(1, "Document file name is required"),
@@ -91,26 +213,38 @@ export const buyerDocumentSchema = z.object({
 });
 
 export const buyerSignupSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  title: z.string().min(1, "Title is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  linkedIn: z.union([z.string().url("Valid URL is required"), z.literal("")]).optional(),
-  firmName: z.string().min(1, "Firm name is required"),
-  firmWebsite: z.union([z.string().url("Valid URL is required"), z.literal("")]).optional(),
-  location: z.string().min(1, "Location is required"),
-  firmType: z.enum(buyerTypeValues),
-  firmDescription: z.string().min(1, "Firm description is required"),
-  accreditation: z.enum(accreditationValues),
-  industryFocus: z.array(z.string()).min(1, "Select at least one industry"),
-  aum: z.string().min(1, "Assets under management is required"),
-  otherMembers: z.string().optional(),
+  firstName: nfcNormalizedString(z.string().trim().min(1, "First name is required").max(50, "First name must be 50 characters or less")),
+  lastName: nfcNormalizedString(z.string().trim().min(1, "Last name is required").max(50, "Last name must be 50 characters or less")),
+  title: nfcNormalizedString(z.string().trim().min(1, "Title is required").max(255, "Title must be 255 characters or less")),
+  phoneNumber: requiredPhoneSchema,
+  linkedIn: optionalUrlString,
+  firmName: nfcNormalizedString(z.string().trim().min(1, "Firm name is required").max(255, "Firm name must be 255 characters or less")),
+  firmWebsite: optionalUrlString,
+  location: z.string().trim().min(1, "Location is required").max(255, "Location must be 255 characters or less"),
+  firmType: z.preprocess(
+    normalizeEmptyStringToUndefined,
+    z.enum(buyerTypeValues, {
+      required_error: "Buyer type is required",
+      invalid_type_error: "Buyer type is required",
+    })
+  ),
+  firmDescription: z.string().trim().min(1, "Firm description is required").max(5000, "Firm description must be 5000 characters or less"),
+  accreditation: z.preprocess(
+    normalizeEmptyStringToUndefined,
+    z.enum(accreditationValues, {
+      required_error: "Accreditation is required",
+      invalid_type_error: "Accreditation is required",
+    })
+  ),
+  industryFocus: z.array(industryValueSchema).min(1, "Select at least one industry"),
+  aum: z.string().trim().min(1, "Assets under management is required").max(20, "Assets under management must be 20 characters or less"),
+  otherMembers: optionalOtherMembersSchema,
   membershipAgreementSigned: z.literal(true, {
     errorMap: () => ({ message: "You must sign the membership agreement" }),
   }),
-  signature: z.string().trim().min(1, "Electronic signature is required"),
+  signature: nfcNormalizedString(z.string().trim().min(1, "Electronic signature is required").max(120, "Electronic signature must be 120 characters or less")),
   documentPaths: z.array(buyerDocumentSchema).optional().default([]),
-}).superRefine((data, ctx) => {
+}).strict().superRefine((data, ctx) => {
   const requiresDocuments =
     data.firmType === "search_fund" || data.firmType === "individual_investor";
 
@@ -168,21 +302,21 @@ export const settingsProfileUpdateSchema = z.object({
   fullName: z.string().trim().max(255).optional(),
   title: z.string().trim().max(255).optional(),
   avatarPath: z.union([storageObjectKeySchema("avatarPath"), z.null()]).optional(),
-  phone: z.string().trim().max(50).optional(),
-  linkedIn: z.union([z.string().trim().url("Valid URL is required"), z.literal(""), z.null()]).optional(),
+  phone: optionalPhoneSchema,
+  linkedIn: optionalNullableUrlString,
   location: z.string().trim().max(255).optional(),
-  industryFocus: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+  industryFocus: z.array(industryValueSchema).max(50).optional(),
   licenseCredentials: z.string().trim().max(500).optional(),
   dealTypes: z.string().trim().max(500).optional(),
   buyerType: z.union([z.enum(buyerTypeValues), z.literal(""), z.null()]).optional(),
   accreditation: z.union([z.enum(accreditationValues), z.literal(""), z.null()]).optional(),
-  aum: z.string().trim().max(255).optional(),
+  aum: z.string().trim().max(20, "Assets under management must be 20 characters or less").optional(),
   firmName: z.string().trim().max(255).optional(),
   description: z.string().trim().max(5000).optional(),
-  website: z.union([z.string().trim().url("Valid URL is required"), z.literal(""), z.null()]).optional(),
+  website: optionalNullableUrlString,
   firmLocation: z.string().trim().max(255).optional(),
   otherMembers: z.string().trim().max(5000).optional(),
-  firmIndustryFocus: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+  firmIndustryFocus: z.array(industryValueSchema).max(50).optional(),
 }).strict();
 
 export type SettingsProfileUpdateData = z.infer<typeof settingsProfileUpdateSchema>;
@@ -228,7 +362,7 @@ export const dealCreateSchema = z.object({
   geographyDisplay: z.enum(["state", "region"]),
   state: z.string().nullable().optional(),
   region: z.string().nullable().optional(),
-  industry: z.string().min(1, "Industry is required"),
+  industry: z.array(industryValueSchema).min(1, "Select at least one industry"),
   financials: z.object({
     year1: financialYearSchema.optional(),
     year2: financialYearSchema.optional(),
@@ -332,8 +466,8 @@ export const closeActionSchema = z.object({
 
 // Project schemas
 export const projectCreateSchema = z.object({
-  projectName: z.string().min(1, "Project name is required"),
-  industry: z.string().nullable().optional(),
+  projectName: z.string().trim().min(1, "Project name is required").max(255, "Project name must be 255 characters or less"),
+  industry: z.array(industryValueSchema).nullable().optional(), 
   revenueMin: z.number().nullable().optional(),
   revenueMax: z.number().nullable().optional(),
   ebitdaMin: z.number().nullable().optional(),

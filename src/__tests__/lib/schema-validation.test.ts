@@ -5,11 +5,14 @@ import {
   ACCREDITATIONS,
   BUYER_TYPE_VALUES,
   FILE_CONSTRAINTS,
+  INDUSTRIES,
   SIGNED_NDA_ARTIFACT_CONSTRAINTS,
 } from "@/lib/constants";
 import {
   adminInvitationCreateSchema,
+  brokerSignupSchema,
   browseQuerySchema,
+  buyerSignupSchema,
   closeReportSchema,
   dealDocumentCreateSchema,
   dealStatusUpdateSchema,
@@ -445,6 +448,1088 @@ describe("Settings profile validation", () => {
         unexpectedField: "not-allowed",
       }).success
     ).toBe(false);
+  });
+});
+
+describe("Industry enum validation", () => {
+  const validIndustry = INDUSTRIES[0];
+  const anotherValidIndustry = INDUSTRIES[1];
+  const invalidIndustry = "Completely Custom Industry";
+
+  const validBrokerSignupInput = {
+    firstName: "Ada",
+    lastName: "Lovelace",
+    title: "Managing Director",
+    phoneNumber: "555-1111",
+    firmName: "Analytical Capital",
+    location: "Austin, TX",
+    licenseCredentials: "Series 7",
+    firmDescription: "Lower middle market advisor",
+    dealTypes: "Control",
+    industryFocus: [validIndustry],
+    membershipAgreementSigned: true as const,
+    signature: "Ada Lovelace",
+  };
+
+  const validBuyerSignupInput = {
+    firstName: "Grace",
+    lastName: "Hopper",
+    title: "Partner",
+    phoneNumber: "555-2222",
+    firmName: "Compiler Ventures",
+    location: "New York, NY",
+    firmType: "family_office" as const,
+    firmDescription: "Long-term investor",
+    accreditation: "none" as const,
+    industryFocus: [validIndustry],
+    aum: "$1B",
+    membershipAgreementSigned: true as const,
+    signature: "Grace Hopper",
+    documentPaths: [],
+  };
+
+  it("accepts industry values from INDUSTRIES for broker and buyer signup", () => {
+    expect(
+      brokerSignupSchema.safeParse({
+        ...validBrokerSignupInput,
+        industryFocus: [validIndustry, anotherValidIndustry],
+      }).success
+    ).toBe(true);
+
+    expect(
+      buyerSignupSchema.safeParse({
+        ...validBuyerSignupInput,
+        industryFocus: [validIndustry, anotherValidIndustry],
+      }).success
+    ).toBe(true);
+  });
+
+  it("accepts industry values from INDUSTRIES for settings profile fields", () => {
+    const result = settingsProfileUpdateSchema.safeParse({
+      industryFocus: [validIndustry, anotherValidIndustry],
+      firmIndustryFocus: [validIndustry],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects free-text industry values for broker and buyer signup", () => {
+    const brokerResult = brokerSignupSchema.safeParse({
+      ...validBrokerSignupInput,
+      industryFocus: [invalidIndustry],
+    });
+    const buyerResult = buyerSignupSchema.safeParse({
+      ...validBuyerSignupInput,
+      industryFocus: [invalidIndustry],
+    });
+
+    expect(brokerResult.success).toBe(false);
+    expect(buyerResult.success).toBe(false);
+  });
+
+  it("rejects free-text industry values for settings profile fields", () => {
+    expect(
+      settingsProfileUpdateSchema.safeParse({ industryFocus: [invalidIndustry] }).success
+    ).toBe(false);
+    expect(
+      settingsProfileUpdateSchema.safeParse({ firmIndustryFocus: [invalidIndustry] }).success
+    ).toBe(false);
+  });
+
+  it("keeps signup industryFocus minimum-selection validation message for empty arrays", () => {
+    const brokerResult = brokerSignupSchema.safeParse({
+      ...validBrokerSignupInput,
+      industryFocus: [],
+    });
+    const buyerResult = buyerSignupSchema.safeParse({
+      ...validBuyerSignupInput,
+      industryFocus: [],
+    });
+
+    expect(brokerResult.success).toBe(false);
+    expect(buyerResult.success).toBe(false);
+    expect(brokerResult.error?.flatten().fieldErrors.industryFocus).toContain(
+      "Select at least one industry"
+    );
+    expect(buyerResult.error?.flatten().fieldErrors.industryFocus).toContain(
+      "Select at least one industry"
+    );
+  });
+});
+
+describe("Signup strict payload and NFC normalization", () => {
+  const validBrokerSignupInput = {
+    firstName: "Ada",
+    lastName: "Lovelace",
+    title: "Managing Director",
+    phoneNumber: "555-1111",
+    firmName: "Analytical Capital",
+    location: "Austin, TX",
+    licenseCredentials: "Series 7",
+    firmDescription: "Lower middle market advisor",
+    dealTypes: "Control",
+    industryFocus: ["Technology"],
+    membershipAgreementSigned: true as const,
+    signature: "Ada Lovelace",
+  };
+
+  const validBuyerSignupInput = {
+    firstName: "Grace",
+    lastName: "Hopper",
+    title: "Partner",
+    phoneNumber: "555-2222",
+    firmName: "Compiler Ventures",
+    location: "New York, NY",
+    firmType: "family_office" as const,
+    firmDescription: "Long-term investor",
+    accreditation: "none" as const,
+    industryFocus: ["Technology"],
+    aum: "$1B",
+    membershipAgreementSigned: true as const,
+    signature: "Grace Hopper",
+    documentPaths: [],
+  };
+
+  it("rejects unknown keys in broker signup payloads", () => {
+    const result = brokerSignupSchema.safeParse({
+      ...validBrokerSignupInput,
+      unexpectedField: "not-allowed",
+    });
+
+    expect(result.success).toBe(false);
+
+    const unrecognizedKeysIssue = !result.success
+      ? result.error.issues.find((issue) => issue.code === "unrecognized_keys")
+      : undefined;
+
+    expect(unrecognizedKeysIssue).toBeDefined();
+    expect(
+      unrecognizedKeysIssue && "keys" in unrecognizedKeysIssue
+        ? unrecognizedKeysIssue.keys
+        : []
+    ).toContain("unexpectedField");
+  });
+
+  it("rejects unknown keys in buyer signup payloads", () => {
+    const result = buyerSignupSchema.safeParse({
+      ...validBuyerSignupInput,
+      unexpectedField: "not-allowed",
+    });
+
+    expect(result.success).toBe(false);
+
+    const unrecognizedKeysIssue = !result.success
+      ? result.error.issues.find((issue) => issue.code === "unrecognized_keys")
+      : undefined;
+
+    expect(unrecognizedKeysIssue).toBeDefined();
+    expect(
+      unrecognizedKeysIssue && "keys" in unrecognizedKeysIssue
+        ? unrecognizedKeysIssue.keys
+        : []
+    ).toContain("unexpectedField");
+  });
+
+  it("normalizes broker name-like fields from decomposed Unicode to NFC", () => {
+    const parsed = brokerSignupSchema.parse({
+      ...validBrokerSignupInput,
+      firstName: "Jose\u0301",
+      lastName: "Garci\u0301a",
+      title: "Sen\u0303or Broker",
+      firmName: "Cafe\u0301 Capital",
+      signature: "Jose\u0301 Garci\u0301a",
+    });
+
+    expect(parsed.firstName).toBe("José");
+    expect(parsed.lastName).toBe("García");
+    expect(parsed.title).toBe("Señor Broker");
+    expect(parsed.firmName).toBe("Café Capital");
+    expect(parsed.signature).toBe("José García");
+  });
+
+  it("normalizes buyer name-like fields from decomposed Unicode to NFC", () => {
+    const parsed = buyerSignupSchema.parse({
+      ...validBuyerSignupInput,
+      firstName: "Rene\u0301e",
+      lastName: "Nin\u0303o",
+      title: "Associ\u0065\u0301",
+      firmName: "Cafe\u0301 Ventures",
+      signature: "Rene\u0301e Nin\u0303o",
+    });
+
+    expect(parsed.firstName).toBe("Renée");
+    expect(parsed.lastName).toBe("Niño");
+    expect(parsed.title).toBe("Associé");
+    expect(parsed.firmName).toBe("Café Ventures");
+    expect(parsed.signature).toBe("Renée Niño");
+  });
+});
+
+describe("Signup and settings URL normalization", () => {
+  const validBrokerSignupInput = {
+    firstName: "Ada",
+    lastName: "Lovelace",
+    title: "Managing Director",
+    phoneNumber: "555-1111",
+    firmName: "Analytical Capital",
+    location: "Austin, TX",
+    licenseCredentials: "Series 7",
+    firmDescription: "Lower middle market advisor",
+    dealTypes: "Control",
+    industryFocus: ["Technology"],
+    membershipAgreementSigned: true as const,
+    signature: "Ada Lovelace",
+  };
+
+  const validBuyerSignupInput = {
+    firstName: "Grace",
+    lastName: "Hopper",
+    title: "Partner",
+    phoneNumber: "555-2222",
+    firmName: "Compiler Ventures",
+    location: "New York, NY",
+    firmType: "family_office" as const,
+    firmDescription: "Long-term investor",
+    accreditation: "none" as const,
+    industryFocus: ["Technology"],
+    aum: "$1B",
+    membershipAgreementSigned: true as const,
+    signature: "Grace Hopper",
+    documentPaths: [],
+  };
+
+  it("accepts broker LinkedIn and firm website URLs surrounded by whitespace", () => {
+    const parsed = brokerSignupSchema.parse({
+      ...validBrokerSignupInput,
+      linkedIn: "  https://www.linkedin.com/in/ada  ",
+      firmWebsite: "  https://analytical.example  ",
+    });
+
+    expect(parsed.linkedIn).toBe("https://www.linkedin.com/in/ada");
+    expect(parsed.firmWebsite).toBe("https://analytical.example");
+  });
+
+  it("treats whitespace-only broker URL fields as optional empty values", () => {
+    const parsed = brokerSignupSchema.parse({
+      ...validBrokerSignupInput,
+      linkedIn: "   ",
+      firmWebsite: "\t\n  ",
+    });
+
+    expect(parsed.linkedIn).toBe("");
+    expect(parsed.firmWebsite).toBe("");
+  });
+
+  it("matches broker URL normalization behavior for buyer LinkedIn and firm website", () => {
+    const parsedTrimmed = buyerSignupSchema.parse({
+      ...validBuyerSignupInput,
+      linkedIn: "  https://www.linkedin.com/in/grace  ",
+      firmWebsite: "  https://compiler.example  ",
+    });
+    const parsedWhitespaceOnly = buyerSignupSchema.parse({
+      ...validBuyerSignupInput,
+      linkedIn: "   ",
+      firmWebsite: "\n\t ",
+    });
+
+    expect(parsedTrimmed.linkedIn).toBe("https://www.linkedin.com/in/grace");
+    expect(parsedTrimmed.firmWebsite).toBe("https://compiler.example");
+    expect(parsedWhitespaceOnly.linkedIn).toBe("");
+    expect(parsedWhitespaceOnly.firmWebsite).toBe("");
+  });
+
+  it("rejects malformed broker URLs even after trimming surrounding whitespace", () => {
+    // Arrange
+    const malformedLinkedInInput = {
+      ...validBrokerSignupInput,
+      linkedIn: "  not-a-url  ",
+    };
+    const malformedFirmWebsiteInput = {
+      ...validBrokerSignupInput,
+      firmWebsite: "  not-a-url  ",
+    };
+
+    // Act
+    const linkedInResult = brokerSignupSchema.safeParse(malformedLinkedInInput);
+    const firmWebsiteResult = brokerSignupSchema.safeParse(malformedFirmWebsiteInput);
+
+    // Assert
+    expect(linkedInResult.success).toBe(false);
+    expect(firmWebsiteResult.success).toBe(false);
+  });
+
+  it("rejects malformed buyer URLs even after trimming surrounding whitespace", () => {
+    // Arrange
+    const malformedLinkedInInput = {
+      ...validBuyerSignupInput,
+      linkedIn: "  not-a-url  ",
+    };
+    const malformedFirmWebsiteInput = {
+      ...validBuyerSignupInput,
+      firmWebsite: "  not-a-url  ",
+    };
+
+    // Act
+    const linkedInResult = buyerSignupSchema.safeParse(malformedLinkedInInput);
+    const firmWebsiteResult = buyerSignupSchema.safeParse(malformedFirmWebsiteInput);
+
+    // Assert
+    expect(linkedInResult.success).toBe(false);
+    expect(firmWebsiteResult.success).toBe(false);
+  });
+
+  it("rejects malformed settings LinkedIn and website URLs after trimming", () => {
+    // Arrange
+    const malformedLinkedInInput = { linkedIn: "  not-a-url  " };
+    const malformedWebsiteInput = { website: "  not-a-url  " };
+
+    // Act
+    const linkedInResult = settingsProfileUpdateSchema.safeParse(malformedLinkedInInput);
+    const websiteResult = settingsProfileUpdateSchema.safeParse(malformedWebsiteInput);
+
+    // Assert
+    expect(linkedInResult.success).toBe(false);
+    expect(websiteResult.success).toBe(false);
+  });
+
+  it("rejects null for optional broker signup URL fields", () => {
+    // Arrange
+    const nullLinkedInInput = {
+      ...validBrokerSignupInput,
+      linkedIn: null,
+    };
+    const nullFirmWebsiteInput = {
+      ...validBrokerSignupInput,
+      firmWebsite: null,
+    };
+
+    // Act
+    const linkedInResult = brokerSignupSchema.safeParse(nullLinkedInInput);
+    const firmWebsiteResult = brokerSignupSchema.safeParse(nullFirmWebsiteInput);
+
+    // Assert
+    expect(linkedInResult.success).toBe(false);
+    expect(firmWebsiteResult.success).toBe(false);
+  });
+
+  it("rejects null for optional buyer signup URL fields", () => {
+    // Arrange
+    const nullLinkedInInput = {
+      ...validBuyerSignupInput,
+      linkedIn: null,
+    };
+    const nullFirmWebsiteInput = {
+      ...validBuyerSignupInput,
+      firmWebsite: null,
+    };
+
+    // Act
+    const linkedInResult = buyerSignupSchema.safeParse(nullLinkedInInput);
+    const firmWebsiteResult = buyerSignupSchema.safeParse(nullFirmWebsiteInput);
+
+    // Assert
+    expect(linkedInResult.success).toBe(false);
+    expect(firmWebsiteResult.success).toBe(false);
+  });
+
+  it("normalizes settings LinkedIn and website URLs and converts whitespace-only values to empty", () => {
+    const parsedTrimmed = settingsProfileUpdateSchema.parse({
+      linkedIn: "  https://www.linkedin.com/in/settings-user  ",
+      website: "  https://settings.example  ",
+    });
+    const parsedWhitespaceOnly = settingsProfileUpdateSchema.parse({
+      linkedIn: "  ",
+      website: "\t\n ",
+    });
+
+    expect(parsedTrimmed.linkedIn).toBe("https://www.linkedin.com/in/settings-user");
+    expect(parsedTrimmed.website).toBe("https://settings.example");
+    expect(parsedWhitespaceOnly.linkedIn).toBe("");
+    expect(parsedWhitespaceOnly.website).toBe("");
+  });
+
+  it("continues to allow null settings LinkedIn and website values", () => {
+    const parsed = settingsProfileUpdateSchema.parse({
+      linkedIn: null,
+      website: null,
+    });
+
+    expect(parsed.linkedIn).toBeNull();
+    expect(parsed.website).toBeNull();
+  });
+});
+
+describe("Signup and settings phone normalization and validation", () => {
+  const validBrokerSignupInput = {
+    firstName: "Ada",
+    lastName: "Lovelace",
+    title: "Managing Director",
+    phoneNumber: "555-1111",
+    firmName: "Analytical Capital",
+    location: "Austin, TX",
+    licenseCredentials: "Series 7",
+    firmDescription: "Lower middle market advisor",
+    dealTypes: "Control",
+    industryFocus: ["Technology"],
+    membershipAgreementSigned: true as const,
+    signature: "Ada Lovelace",
+  };
+
+  const validBuyerSignupInput = {
+    firstName: "Grace",
+    lastName: "Hopper",
+    title: "Partner",
+    phoneNumber: "555-2222",
+    firmName: "Compiler Ventures",
+    location: "New York, NY",
+    firmType: "family_office" as const,
+    firmDescription: "Long-term investor",
+    accreditation: "none" as const,
+    industryFocus: ["Technology"],
+    aum: "$1B",
+    membershipAgreementSigned: true as const,
+    signature: "Grace Hopper",
+    documentPaths: [],
+  };
+
+  it("normalizes signup and settings phone values by trimming and collapsing internal spaces", () => {
+    // Arrange
+    const rawPhone = "  +1   (212)   555-7890   extension   1234  ";
+
+    // Act
+    const brokerParsed = brokerSignupSchema.parse({ ...validBrokerSignupInput, phoneNumber: rawPhone });
+    const buyerParsed = buyerSignupSchema.parse({ ...validBuyerSignupInput, phoneNumber: rawPhone });
+    const settingsParsed = settingsProfileUpdateSchema.parse({ phone: rawPhone });
+
+    // Assert
+    expect(brokerParsed.phoneNumber).toBe("+1 (212) 555-7890 extension 1234");
+    expect(buyerParsed.phoneNumber).toBe("+1 (212) 555-7890 extension 1234");
+    expect(settingsParsed.phone).toBe("+1 (212) 555-7890 extension 1234");
+  });
+
+  it("rejects whitespace-only signup phone numbers with the required message", () => {
+    // Arrange
+    const brokerInput = { ...validBrokerSignupInput, phoneNumber: "   \t\n  " };
+    const buyerInput = { ...validBuyerSignupInput, phoneNumber: "   " };
+
+    // Act
+    const brokerResult = brokerSignupSchema.safeParse(brokerInput);
+    const buyerResult = buyerSignupSchema.safeParse(buyerInput);
+
+    // Assert
+    expect(brokerResult.success).toBe(false);
+    expect(buyerResult.success).toBe(false);
+    expect(brokerResult.error?.flatten().fieldErrors.phoneNumber).toContain("Phone number is required");
+    expect(buyerResult.error?.flatten().fieldErrors.phoneNumber).toContain("Phone number is required");
+  });
+
+  it("accepts common valid phone formats including x, ext, and extension suffixes", () => {
+    // Arrange
+    const validPhones = [
+      "555-1234",
+      "+1 (212) 555-7890",
+      "212.555.7890",
+      "2125557890 x123",
+      "2125557890 ext 456",
+      "2125557890 extension 789",
+    ];
+
+    // Act + Assert
+    for (const phone of validPhones) {
+      expect(brokerSignupSchema.safeParse({ ...validBrokerSignupInput, phoneNumber: phone }).success)
+        .toBe(true);
+      expect(buyerSignupSchema.safeParse({ ...validBuyerSignupInput, phoneNumber: phone }).success)
+        .toBe(true);
+      expect(settingsProfileUpdateSchema.safeParse({ phone }).success).toBe(true);
+    }
+  });
+
+  it("rejects invalid phone formats with unsupported characters or malformed extensions", () => {
+    // Arrange
+    const invalidPhones = [
+      "555-ABCD",
+      "555-1234@55",
+      "2125557890 ext",
+      "2125557890 extension abc",
+      "2125557890 x12x",
+    ];
+
+    // Act + Assert
+    for (const phone of invalidPhones) {
+      expect(brokerSignupSchema.safeParse({ ...validBrokerSignupInput, phoneNumber: phone }).success)
+        .toBe(false);
+      expect(buyerSignupSchema.safeParse({ ...validBuyerSignupInput, phoneNumber: phone }).success)
+        .toBe(false);
+      expect(settingsProfileUpdateSchema.safeParse({ phone }).success).toBe(false);
+    }
+  });
+
+  it("enforces 7 to 15 main-number digits while excluding extension digits from the count", () => {
+    // Arrange
+    const tooShortMainNumber = "123456 x999";
+    const tooLongMainNumber = "+1234567890123456 ext 1";
+    const maxValidMainNumberWithExtension = "+123456789012345 extension 9999999999";
+
+    // Act
+    const tooShortResult = brokerSignupSchema.safeParse({
+      ...validBrokerSignupInput,
+      phoneNumber: tooShortMainNumber,
+    });
+    const tooLongResult = brokerSignupSchema.safeParse({
+      ...validBrokerSignupInput,
+      phoneNumber: tooLongMainNumber,
+    });
+    const buyerTooShortResult = buyerSignupSchema.safeParse({
+      ...validBuyerSignupInput,
+      phoneNumber: tooShortMainNumber,
+    });
+    const buyerTooLongResult = buyerSignupSchema.safeParse({
+      ...validBuyerSignupInput,
+      phoneNumber: tooLongMainNumber,
+    });
+    const validResult = brokerSignupSchema.safeParse({
+      ...validBrokerSignupInput,
+      phoneNumber: maxValidMainNumberWithExtension,
+    });
+
+    // Assert
+    expect(tooShortResult.success).toBe(false);
+    expect(tooLongResult.success).toBe(false);
+    expect(buyerTooShortResult.success).toBe(false);
+    expect(buyerTooLongResult.success).toBe(false);
+    expect(validResult.success).toBe(true);
+    expect(tooShortResult.error?.flatten().fieldErrors.phoneNumber).toContain(
+      "Phone number must contain between 7 and 15 digits"
+    );
+    expect(tooLongResult.error?.flatten().fieldErrors.phoneNumber).toContain(
+      "Phone number must contain between 7 and 15 digits"
+    );
+    expect(buyerTooShortResult.error?.flatten().fieldErrors.phoneNumber).toContain(
+      "Phone number must contain between 7 and 15 digits"
+    );
+    expect(buyerTooLongResult.error?.flatten().fieldErrors.phoneNumber).toContain(
+      "Phone number must contain between 7 and 15 digits"
+    );
+  });
+
+  it("enforces the 50-character phone limit for required and optional phone fields", () => {
+    // Arrange
+    const extensionPrefix = "+1 (212) 555-7890 ext ";
+    const maxLengthPhone = `${extensionPrefix}${"1".repeat(50 - extensionPrefix.length)}`;
+    const overMaxLengthPhone = `${maxLengthPhone}1`;
+
+    // Act
+    const requiredAtMaxResult = brokerSignupSchema.safeParse({
+      ...validBrokerSignupInput,
+      phoneNumber: maxLengthPhone,
+    });
+    const requiredOverMaxResult = brokerSignupSchema.safeParse({
+      ...validBrokerSignupInput,
+      phoneNumber: overMaxLengthPhone,
+    });
+    const buyerOverMaxResult = buyerSignupSchema.safeParse({
+      ...validBuyerSignupInput,
+      phoneNumber: overMaxLengthPhone,
+    });
+    const optionalAtMaxResult = settingsProfileUpdateSchema.safeParse({ phone: maxLengthPhone });
+    const optionalOverMaxResult = settingsProfileUpdateSchema.safeParse({ phone: overMaxLengthPhone });
+
+    // Assert
+    expect(maxLengthPhone).toHaveLength(50);
+    expect(requiredAtMaxResult.success).toBe(true);
+    expect(optionalAtMaxResult.success).toBe(true);
+    expect(requiredOverMaxResult.success).toBe(false);
+    expect(buyerOverMaxResult.success).toBe(false);
+    expect(optionalOverMaxResult.success).toBe(false);
+    expect(requiredOverMaxResult.error?.flatten().fieldErrors.phoneNumber).toContain(
+      "Phone number must be 50 characters or less"
+    );
+    expect(buyerOverMaxResult.error?.flatten().fieldErrors.phoneNumber).toContain(
+      "Phone number must be 50 characters or less"
+    );
+    expect(optionalOverMaxResult.error?.flatten().fieldErrors.phone).toContain(
+      "Phone number must be 50 characters or less"
+    );
+  });
+
+  it("treats whitespace-only optional settings phone as empty and accepts omitted or empty phone", () => {
+    // Arrange
+    const whitespaceOnlyInput = { phone: " \t\n " };
+    const emptyStringInput = { phone: "" };
+    const omittedPhoneInput = {};
+
+    // Act
+    const whitespaceParsed = settingsProfileUpdateSchema.parse(whitespaceOnlyInput);
+    const emptyParsed = settingsProfileUpdateSchema.parse(emptyStringInput);
+    const omittedParsed = settingsProfileUpdateSchema.parse(omittedPhoneInput);
+
+    // Assert
+    expect(whitespaceParsed.phone).toBe("");
+    expect(emptyParsed.phone).toBe("");
+    expect(omittedParsed.phone).toBeUndefined();
+  });
+});
+
+describe("Buyer signup required text field trim/max parity", () => {
+  const validBuyerSignupInput = {
+    firstName: "Grace",
+    lastName: "Hopper",
+    title: "Partner",
+    phoneNumber: "555-2222",
+    firmName: "Compiler Ventures",
+    location: "New York, NY",
+    firmType: "family_office" as const,
+    firmDescription: "Long-term investor",
+    accreditation: "none" as const,
+    industryFocus: ["Technology"],
+    aum: "$1B",
+    membershipAgreementSigned: true as const,
+    signature: "Grace Hopper",
+    documentPaths: [],
+  };
+
+  const constrainedFields = [
+    {
+      field: "firstName",
+      max: 50,
+      requiredMessage: "First name is required",
+      maxMessage: "First name must be 50 characters or less",
+    },
+    {
+      field: "lastName",
+      max: 50,
+      requiredMessage: "Last name is required",
+      maxMessage: "Last name must be 50 characters or less",
+    },
+    {
+      field: "title",
+      max: 255,
+      requiredMessage: "Title is required",
+      maxMessage: "Title must be 255 characters or less",
+    },
+    {
+      field: "firmName",
+      max: 255,
+      requiredMessage: "Firm name is required",
+      maxMessage: "Firm name must be 255 characters or less",
+    },
+    {
+      field: "location",
+      max: 255,
+      requiredMessage: "Location is required",
+      maxMessage: "Location must be 255 characters or less",
+    },
+    {
+      field: "firmDescription",
+      max: 5000,
+      requiredMessage: "Firm description is required",
+      maxMessage: "Firm description must be 5000 characters or less",
+    },
+    {
+      field: "signature",
+      max: 120,
+      requiredMessage: "Electronic signature is required",
+      maxMessage: "Electronic signature must be 120 characters or less",
+    },
+  ] as const;
+
+  it("rejects whitespace-only required buyer text fields after trim", () => {
+    for (const { field, requiredMessage } of constrainedFields) {
+      // Arrange
+      const input = {
+        ...validBuyerSignupInput,
+        [field]: "   \t\n   ",
+      };
+
+      // Act
+      const result = buyerSignupSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.error?.flatten().fieldErrors[field]).toContain(requiredMessage);
+    }
+  });
+
+  it("accepts required buyer text fields exactly at max length", () => {
+    for (const { field, max } of constrainedFields) {
+      // Arrange
+      const input = {
+        ...validBuyerSignupInput,
+        [field]: "x".repeat(max),
+      };
+
+      // Act
+      const result = buyerSignupSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects required buyer text fields when length is max + 1", () => {
+    for (const { field, max, maxMessage } of constrainedFields) {
+      // Arrange
+      const input = {
+        ...validBuyerSignupInput,
+        [field]: "x".repeat(max + 1),
+      };
+
+      // Act
+      const result = buyerSignupSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.error?.flatten().fieldErrors[field]).toContain(maxMessage);
+    }
+  });
+});
+
+describe("Buyer signup enum required and invalid-type messages", () => {
+  const validBuyerSignupInput = {
+    firstName: "Grace",
+    lastName: "Hopper",
+    title: "Partner",
+    phoneNumber: "555-2222",
+    firmName: "Compiler Ventures",
+    location: "New York, NY",
+    firmType: "family_office" as const,
+    firmDescription: "Long-term investor",
+    accreditation: "none" as const,
+    industryFocus: ["Technology"],
+    aum: "$1B",
+    membershipAgreementSigned: true as const,
+    signature: "Grace Hopper",
+    documentPaths: [],
+  };
+
+  it("returns 'Buyer type is required' when firmType is missing", () => {
+    // Arrange
+    const { firmType: _firmType, ...inputWithoutFirmType } = validBuyerSignupInput;
+
+    // Act
+    const result = buyerSignupSchema.safeParse(inputWithoutFirmType);
+
+    // Assert
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.firmType).toContain("Buyer type is required");
+  });
+
+  it("returns 'Accreditation is required' when accreditation is missing", () => {
+    // Arrange
+    const { accreditation: _accreditation, ...inputWithoutAccreditation } = validBuyerSignupInput;
+
+    // Act
+    const result = buyerSignupSchema.safeParse(inputWithoutAccreditation);
+
+    // Assert
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.accreditation).toContain("Accreditation is required");
+  });
+
+  it("returns required messages when enum select fields are empty strings", () => {
+    // Arrange
+    const input = {
+      ...validBuyerSignupInput,
+      firmType: "",
+      accreditation: "",
+    };
+
+    // Act
+    const result = buyerSignupSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.firmType).toContain("Buyer type is required");
+    expect(result.error?.flatten().fieldErrors.accreditation).toContain("Accreditation is required");
+  });
+
+  it("returns required messages when enum select fields are whitespace-only strings", () => {
+    // Arrange
+    const input = {
+      ...validBuyerSignupInput,
+      firmType: "   \t\n  ",
+      accreditation: "   ",
+    };
+
+    // Act
+    const result = buyerSignupSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.firmType).toContain("Buyer type is required");
+    expect(result.error?.flatten().fieldErrors.accreditation).toContain("Accreditation is required");
+  });
+
+  it("returns 'Buyer type is required' for invalid firmType types", () => {
+    // Arrange
+    const invalidFirmTypes = [null, 123];
+
+    for (const invalidFirmType of invalidFirmTypes) {
+      const input = {
+        ...validBuyerSignupInput,
+        firmType: invalidFirmType,
+      };
+
+      // Act
+      const result = buyerSignupSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.error?.flatten().fieldErrors.firmType).toContain("Buyer type is required");
+    }
+  });
+
+  it("returns 'Accreditation is required' for invalid accreditation types", () => {
+    // Arrange
+    const invalidAccreditations = [null, 123];
+
+    for (const invalidAccreditation of invalidAccreditations) {
+      const input = {
+        ...validBuyerSignupInput,
+        accreditation: invalidAccreditation,
+      };
+
+      // Act
+      const result = buyerSignupSchema.safeParse(input);
+
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.error?.flatten().fieldErrors.accreditation).toContain("Accreditation is required");
+    }
+  });
+
+  it("keeps enum validation errors for non-empty invalid enum strings", () => {
+    // Arrange
+    const input = {
+      ...validBuyerSignupInput,
+      firmType: "not_a_real_buyer_type",
+      accreditation: "not_a_real_accreditation",
+    };
+
+    // Act
+    const result = buyerSignupSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+
+    const firmTypeErrors = result.error?.flatten().fieldErrors.firmType ?? [];
+    const accreditationErrors = result.error?.flatten().fieldErrors.accreditation ?? [];
+
+    expect(firmTypeErrors).not.toContain("Buyer type is required");
+    expect(accreditationErrors).not.toContain("Accreditation is required");
+    expect(firmTypeErrors.some((message) => message.toLowerCase().includes("invalid enum"))).toBe(
+      true
+    );
+    expect(
+      accreditationErrors.some((message) => message.toLowerCase().includes("invalid enum"))
+    ).toBe(true);
+  });
+});
+
+describe("Signup otherMembers normalization and max-length validation", () => {
+  const OTHER_MEMBERS_MAX_MESSAGE = "Other members must be 5000 characters or less";
+
+  const validBrokerSignupInput = {
+    firstName: "Ada",
+    lastName: "Lovelace",
+    title: "Managing Director",
+    phoneNumber: "555-1111",
+    firmName: "Analytical Capital",
+    location: "Austin, TX",
+    licenseCredentials: "Series 7",
+    firmDescription: "Lower middle market advisor",
+    dealTypes: "Control",
+    industryFocus: ["Technology"],
+    membershipAgreementSigned: true as const,
+    signature: "Ada Lovelace",
+  };
+
+  const validBuyerSignupInput = {
+    firstName: "Grace",
+    lastName: "Hopper",
+    title: "Partner",
+    phoneNumber: "555-2222",
+    firmName: "Compiler Ventures",
+    location: "New York, NY",
+    firmType: "family_office" as const,
+    firmDescription: "Long-term investor",
+    accreditation: "none" as const,
+    industryFocus: ["Technology"],
+    aum: "$1B",
+    membershipAgreementSigned: true as const,
+    signature: "Grace Hopper",
+    documentPaths: [],
+  };
+
+  const signupSchemas = [
+    { label: "broker", schema: brokerSignupSchema, baseInput: validBrokerSignupInput },
+    { label: "buyer", schema: buyerSignupSchema, baseInput: validBuyerSignupInput },
+  ] as const;
+
+  it("trims non-empty otherMembers values for broker and buyer signup", () => {
+    for (const { schema, baseInput } of signupSchemas) {
+      const parsed = schema.parse({
+        ...baseInput,
+        otherMembers: "  Alice, Bob  ",
+      });
+
+      expect(parsed.otherMembers).toBe("Alice, Bob");
+    }
+  });
+
+  it("normalizes whitespace-only otherMembers values to undefined for broker and buyer signup", () => {
+    for (const { schema, baseInput } of signupSchemas) {
+      const parsed = schema.parse({
+        ...baseInput,
+        otherMembers: "  \t\n  ",
+      });
+
+      expect(parsed.otherMembers).toBeUndefined();
+    }
+  });
+
+  it("accepts otherMembers values at the 5000-character boundary for broker and buyer signup", () => {
+    const maxLengthValue = "x".repeat(5000);
+
+    for (const { schema, baseInput } of signupSchemas) {
+      const parsed = schema.parse({
+        ...baseInput,
+        otherMembers: maxLengthValue,
+      });
+
+      expect(parsed.otherMembers).toBe(maxLengthValue);
+    }
+  });
+
+  it("rejects otherMembers values longer than 5000 characters for broker and buyer signup", () => {
+    const overLimitValue = "x".repeat(5001);
+
+    for (const { label, schema, baseInput } of signupSchemas) {
+      const result = schema.safeParse({
+        ...baseInput,
+        otherMembers: overLimitValue,
+      });
+
+      expect(result.success, `${label} should reject over-limit otherMembers`).toBe(false);
+      expect(result.error?.flatten().fieldErrors.otherMembers).toContain(OTHER_MEMBERS_MAX_MESSAGE);
+    }
+  });
+});
+
+describe("Buyer and settings AUM trim and max-length validation", () => {
+  const BUYER_AUM_REQUIRED_MESSAGE = "Assets under management is required";
+  const AUM_MAX_MESSAGE = "Assets under management must be 20 characters or less";
+
+  const validBuyerSignupInput = {
+    firstName: "Grace",
+    lastName: "Hopper",
+    title: "Partner",
+    phoneNumber: "555-2222",
+    firmName: "Compiler Ventures",
+    location: "New York, NY",
+    firmType: "family_office" as const,
+    firmDescription: "Long-term investor",
+    accreditation: "none" as const,
+    industryFocus: ["Technology"],
+    aum: "$1B",
+    membershipAgreementSigned: true as const,
+    signature: "Grace Hopper",
+    documentPaths: [],
+  };
+
+  it("trims buyer AUM when a valid value includes surrounding whitespace", () => {
+    // Arrange
+    const input = {
+      ...validBuyerSignupInput,
+      aum: "   $500M   ",
+    };
+
+    // Act
+    const parsed = buyerSignupSchema.parse(input);
+
+    // Assert
+    expect(parsed.aum).toBe("$500M");
+  });
+
+  it("rejects buyer AUM when value is whitespace-only after trimming", () => {
+    // Arrange
+    const input = {
+      ...validBuyerSignupInput,
+      aum: "   \t\n   ",
+    };
+
+    // Act
+    const result = buyerSignupSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.aum).toContain(BUYER_AUM_REQUIRED_MESSAGE);
+  });
+
+  it("rejects buyer AUM longer than 20 characters with the max-length message", () => {
+    // Arrange
+    const input = {
+      ...validBuyerSignupInput,
+      aum: "x".repeat(21),
+    };
+
+    // Act
+    const result = buyerSignupSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.aum).toContain(AUM_MAX_MESSAGE);
+  });
+
+  it("accepts buyer AUM exactly at the 20-character boundary", () => {
+    // Arrange
+    const input = {
+      ...validBuyerSignupInput,
+      aum: "x".repeat(20),
+    };
+
+    // Act
+    const result = buyerSignupSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(true);
+  });
+
+  it("trims settings AUM when a valid value includes surrounding whitespace", () => {
+    // Arrange
+    const input = { aum: "   $250M   " };
+
+    // Act
+    const parsed = settingsProfileUpdateSchema.parse(input);
+
+    // Assert
+    expect(parsed.aum).toBe("$250M");
+  });
+
+  it("accepts settings AUM as an empty string and when omitted", () => {
+    // Arrange
+    const emptyStringInput = { aum: "" };
+    const omittedInput = {};
+
+    // Act
+    const emptyStringParsed = settingsProfileUpdateSchema.parse(emptyStringInput);
+    const omittedParsed = settingsProfileUpdateSchema.parse(omittedInput);
+
+    // Assert
+    expect(emptyStringParsed.aum).toBe("");
+    expect(omittedParsed.aum).toBeUndefined();
+  });
+
+  it("rejects settings AUM longer than 20 characters with the max-length message", () => {
+    // Arrange
+    const input = { aum: "x".repeat(21) };
+
+    // Act
+    const result = settingsProfileUpdateSchema.safeParse(input);
+
+    // Assert
+    expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors.aum).toContain(AUM_MAX_MESSAGE);
   });
 });
 
