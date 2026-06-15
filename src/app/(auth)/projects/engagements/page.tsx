@@ -51,6 +51,10 @@ interface EngagementTableRow {
   };
 }
 
+const ALL_INDUSTRIES_FILTER = "__ALL_INDUSTRIES__" as const;
+
+type IndustryFilter = typeof ALL_INDUSTRIES_FILTER | string;
+
 const DATE_DISPLAY_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "2-digit",
   day: "2-digit",
@@ -66,6 +70,8 @@ export default function BuyerEngagementsPage() {
   const router = useRouter();
   const [engagements, setEngagements] = useState<EngagementRow[]>([]);
   const [stageFilter, setStageFilter] = useState("all");
+  const [industryFilter, setIndustryFilter] = useState<IndustryFilter>(ALL_INDUSTRIES_FILTER);
+  const [showIndustryFilters, setShowIndustryFilters] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>({
@@ -234,13 +240,43 @@ export default function BuyerEngagementsPage() {
 
   const stages = useMemo(() => Array.from(stageCounts.keys()), [stageCounts]);
 
-  const filteredRows = useMemo(() => {
+  const stageFilteredRows = useMemo(() => {
     if (stageFilter === "all") {
       return rows;
     }
 
     return rows.filter((row) => row.stage === stageFilter);
   }, [rows, stageFilter]);
+
+  const industryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    stageFilteredRows.forEach((row) => {
+      counts.set(row.industry, (counts.get(row.industry) ?? 0) + 1);
+    });
+
+    return counts;
+  }, [stageFilteredRows]);
+
+  const industries = useMemo(() => Array.from(industryCounts.keys()), [industryCounts]);
+
+  useEffect(() => {
+    if (industryFilter === ALL_INDUSTRIES_FILTER) {
+      return;
+    }
+
+    if (!industries.includes(industryFilter)) {
+      setIndustryFilter(ALL_INDUSTRIES_FILTER);
+    }
+  }, [industries, industryFilter]);
+
+  const filteredRows = useMemo(() => {
+    if (industryFilter === ALL_INDUSTRIES_FILTER) {
+      return stageFilteredRows;
+    }
+
+    return stageFilteredRows.filter((row) => row.industry === industryFilter);
+  }, [industryFilter, stageFilteredRows]);
 
   const sortedRows = useMemo(() => {
     const activeSort = sortModel[0];
@@ -298,7 +334,7 @@ export default function BuyerEngagementsPage() {
 
   useEffect(() => {
     setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
-  }, [stageFilter]);
+  }, [industryFilter, stageFilter]);
 
   useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(sortedRows.length / paginationModel.pageSize) - 1);
@@ -359,6 +395,43 @@ export default function BuyerEngagementsPage() {
                 {formatEngagementStageLabel(stage)} ({stageCounts.get(stage) ?? 0})
               </button>
             ))}
+            <button
+                onClick={() => setShowIndustryFilters((prev) => !prev)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                showIndustryFilters || industryFilter !== ALL_INDUSTRIES_FILTER
+                  ? "bg-primary text-white"
+                  : "bg-surface-alt text-text-secondary border border-border-gray hover:bg-bg-alt"
+              }`}
+            >
+              Industry
+            </button>
+            {showIndustryFilters && (
+              <>
+                <button
+                  onClick={() => setIndustryFilter(ALL_INDUSTRIES_FILTER)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    industryFilter === ALL_INDUSTRIES_FILTER
+                      ? "bg-primary text-white"
+                      : "bg-surface-alt text-text-secondary border border-border-gray hover:bg-bg-alt"
+                  }`}
+                >
+                  All Industries ({stageFilteredRows.length})
+                </button>
+                {industries.map((industry) => (
+                  <button
+                    key={industry}
+                    onClick={() => setIndustryFilter(industry)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                      industryFilter === industry
+                        ? "bg-primary text-white"
+                        : "bg-surface-alt text-text-secondary border border-border-gray hover:bg-bg-alt"
+                    }`}
+                  >
+                    {formatIndustryDisplay(industry)} ({industryCounts.get(industry) ?? 0})
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>

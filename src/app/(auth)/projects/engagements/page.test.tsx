@@ -5,6 +5,7 @@ type EngagementTableRow = {
   id: string;
   deal_id: string;
   stage: string;
+  industry?: string;
   last_updated: string;
 };
 
@@ -52,7 +53,11 @@ function mockEngagementsResponse(engagements: Array<Record<string, unknown>>) {
   );
 }
 
-function createEngagement(index: number, stage: "nda_pending" | "pursued") {
+function createEngagement(
+  index: number,
+  stage: "nda_pending" | "pursued",
+  industry: string = "Tech"
+) {
   return {
     id: `eng-${index}`,
     stage,
@@ -64,7 +69,7 @@ function createEngagement(index: number, stage: "nda_pending" | "pursued") {
     deal: {
       id: `deal-${index}`,
       headline: `Deal ${index}`,
-      industry: "Tech",
+      industry,
       status: "accepting_iois",
       geography: null,
       geography_display: null,
@@ -264,6 +269,103 @@ describe("BuyerEngagementsPage", () => {
       expect(latestGridProps?.rows.some((row) => row.stage === "pursued")).toBe(true);
       expect(latestGridProps?.sortedCount).toBe(12);
       expect(latestGridProps?.paginationModel.page).toBe(0);
+    });
+  });
+
+  it("shows an Industry button and filters DataGrid rows by selected industry", async () => {
+    const engagements = Array.from({ length: 12 }, (_, i) =>
+      createEngagement(i + 1, i % 2 === 0 ? "nda_pending" : "pursued", i % 2 === 0 ? "Tech" : "Healthcare")
+    );
+
+    mockEngagementsResponse(engagements);
+
+    render(<BuyerEngagementsPage />);
+
+    await screen.findByTestId("engagements-data-grid");
+
+    expect(screen.getByRole("button", { name: "Industry" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Industry" }));
+
+    expect(screen.getByRole("button", { name: "All Industries (12)" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Healthcare (6)" }));
+
+    await waitFor(() => {
+      const latestGridProps = getLatestGridProps();
+      expect(latestGridProps?.rows).toHaveLength(6);
+      expect(latestGridProps?.sortedCount).toBe(6);
+      expect(latestGridProps?.rows.every((row) => row.industry === "Healthcare")).toBe(true);
+    });
+  });
+
+  it("updates industry options from the stage-filtered set, resets stale industry filter, and resets pagination", async () => {
+    const engagements = Array.from({ length: 12 }, (_, i) =>
+      createEngagement(i + 1, i % 2 === 0 ? "nda_pending" : "pursued", i % 2 === 0 ? "Tech" : "Healthcare")
+    );
+
+    mockEngagementsResponse(engagements);
+
+    render(<BuyerEngagementsPage />);
+
+    await screen.findByTestId("engagements-data-grid");
+
+    act(() => {
+      getLatestGridProps()?.onPageChange(1);
+    });
+
+    await waitFor(() => {
+      expect(getLatestGridProps()?.paginationModel.page).toBe(1);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Industry" }));
+
+    expect(screen.getByRole("button", { name: "All Industries (12)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tech (6)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Healthcare (6)" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Healthcare (6)" }));
+
+    await waitFor(() => {
+      const latestGridProps = getLatestGridProps();
+      expect(latestGridProps?.sortedCount).toBe(6);
+      expect(latestGridProps?.paginationModel.page).toBe(0);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "NDA pending (6)" }));
+
+    await waitFor(() => {
+      const latestGridProps = getLatestGridProps();
+      expect(latestGridProps?.sortedCount).toBe(6);
+      expect(latestGridProps?.rows).toHaveLength(6);
+      expect(latestGridProps?.rows.every((row) => row.stage === "nda_pending")).toBe(true);
+      expect(latestGridProps?.rows.every((row) => row.industry === "Tech")).toBe(true);
+    });
+
+    expect(screen.getByRole("button", { name: "All Industries (6)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tech (6)" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Healthcare (6)" })).not.toBeInTheDocument();
+  });
+
+  it("treats a literal 'all' industry value as a normal selectable option", async () => {
+    mockEngagementsResponse([
+      createEngagement(1, "nda_pending", "all"),
+      createEngagement(2, "nda_pending", "Tech"),
+    ]);
+
+    render(<BuyerEngagementsPage />);
+
+    await screen.findByTestId("engagements-data-grid");
+
+    fireEvent.click(screen.getByRole("button", { name: "Industry" }));
+
+    expect(screen.getByRole("button", { name: "All Industries (2)" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "all (1)" }));
+
+    await waitFor(() => {
+      const latestGridProps = getLatestGridProps();
+      expect(latestGridProps?.sortedCount).toBe(1);
+      expect(latestGridProps?.rows).toHaveLength(1);
+      expect(latestGridProps?.rows[0]?.industry).toBe("all");
     });
   });
 
