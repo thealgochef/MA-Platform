@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataGridTable } from "@/components/ui/DataGridTable";
+import { getPreferredDealLabel } from "@/lib/deal-labels";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -43,9 +44,14 @@ interface Analytics {
 interface ActivityItem {
   id: string;
   action: string;
-  deal_id: string;
+  deal_id: string | null;
+  deal_label?: string | null;
   created_at: string;
   details: Record<string, unknown> | null;
+}
+
+function getActivityDealLabel(item: ActivityItem) {
+  return getPreferredDealLabel(item.deal_label);
 }
 
 export default function BuyerDashboard() {
@@ -424,7 +430,10 @@ export default function BuyerDashboard() {
             <div className="space-y-2">
               {activity.slice(0, 10).map((item) => (
                 <div key={item.id} className="flex justify-between text-sm border-b border-border-gray pb-2 last:border-0">
-                  <span className="text-text-secondary capitalize">{item.action.replace(/_/g, " ")}</span>
+                  <span className="text-text-secondary">
+                    <span>{formatEngagementStageLabel(item.action)}</span>{" "}
+                    - {getActivityDealLabel(item)}
+                  </span>
                   <span className="text-xs text-text-secondary">{new Date(item.created_at).toLocaleDateString()}</span>
                 </div>
               ))}

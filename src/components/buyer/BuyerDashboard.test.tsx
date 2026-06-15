@@ -152,6 +152,76 @@ describe("BuyerDashboard", () => {
     expect(screen.queryByRole("link", { name: "LOIs Submitted" })).not.toBeInTheDocument();
   });
 
+  it("renders recent activity entries with deal labels and falls back to non-identifying confidential label", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+
+        if (url === "/api/projects") {
+          return {
+            ok: true,
+            json: async () => ({ projects: [] }),
+          };
+        }
+
+        if (url === "/api/buyer/analytics") {
+          return {
+            ok: true,
+            json: async () => ({
+              analytics: {
+                pursuing: 1,
+                passed: 0,
+                ndaSigned: 1,
+                ioisSubmitted: 0,
+                loisSubmitted: 0,
+                dealsByStage: {},
+                avgRevenue: null,
+                avgEbitda: null,
+                avgMatchedRevenue: null,
+                avgMatchedEbitda: null,
+                dealsByIndustry: {},
+              },
+              activity: [
+                {
+                  id: "act-1",
+                  action: "nda_signed",
+                  deal_id: "deal-1234567890",
+                  deal_label: "Alpha Tools",
+                  created_at: "2026-01-10T00:00:00.000Z",
+                  details: null,
+                },
+                {
+                  id: "act-2",
+                  action: "pursued",
+                  deal_id: "abc12345-def0-9876",
+                  deal_label: "   ",
+                  created_at: "2026-01-09T00:00:00.000Z",
+                  details: null,
+                },
+              ],
+            }),
+          };
+        }
+
+        return {
+          ok: false,
+          json: async () => ({}),
+        };
+      })
+    );
+
+    render(<BuyerDashboard />);
+
+    expect(await screen.findByText("Recent Activity")).toBeInTheDocument();
+
+    const recentActivityCard = screen.getByText("Recent Activity").closest("div");
+    expect(recentActivityCard).not.toBeNull();
+    expect(recentActivityCard).toHaveTextContent(/NDA signed\s+-\s+Alpha Tools/);
+    expect(recentActivityCard).toHaveTextContent(/Pursued\s+-\s+Confidential Deal/);
+    expect(recentActivityCard).not.toHaveTextContent("abc12345");
+  });
+
   it("clears loading state when a dashboard fetch rejects", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
