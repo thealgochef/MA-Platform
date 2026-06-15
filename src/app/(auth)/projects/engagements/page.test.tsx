@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEAL_STATUS_LABELS } from "@/lib/constants";
+import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
 
 type EngagementTableRow = {
   id: string;
@@ -222,6 +224,54 @@ describe("BuyerEngagementsPage", () => {
     expect(screen.getByRole("button", { name: "NDA pending (2)" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pursued (1)" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Declined/i })).not.toBeInTheDocument();
+  });
+
+  it("renders Engagement Stage and Deal Status chips with ProjectDealsView-matching label styles", async () => {
+    mockEngagementsResponse([createEngagement(1, "nda_pending")]);
+
+    render(<BuyerEngagementsPage />);
+
+    await screen.findByTestId("engagements-data-grid");
+
+    const latestGridProps = getLatestGridProps();
+    const stageColumn = latestGridProps?.detailColumns.find((column) => column.field === "stage");
+    const dealStatusColumn = latestGridProps?.detailColumns.find((column) => column.field === "deal_status");
+
+    expect(stageColumn?.renderCell).toBeTypeOf("function");
+    expect(dealStatusColumn?.renderCell).toBeTypeOf("function");
+
+    const stageChip = stageColumn?.renderCell?.({
+      row: {
+        id: "eng-1",
+        deal_id: "deal-1",
+        stage: "nda_pending",
+        last_updated: "2026-02-01T00:00:00.000Z",
+      },
+    }) as any;
+
+    const dealStatusChip = dealStatusColumn?.renderCell?.({
+      row: {
+        id: "eng-1",
+        deal_id: "deal-1",
+        stage: "nda_pending",
+        deal_status: "accepting_iois",
+        last_updated: "2026-02-01T00:00:00.000Z",
+      },
+    }) as any;
+
+    expect(stageChip.props.label).toBe(formatEngagementStageLabel("nda_pending"));
+    expect(stageChip.props.sx).toMatchObject({
+      backgroundColor: "var(--color-subtle)",
+      color: "var(--color-primary)",
+      fontWeight: 600,
+    });
+
+    expect(dealStatusChip.props.label).toBe(DEAL_STATUS_LABELS.accepting_iois);
+    expect(dealStatusChip.props.sx).toMatchObject({
+      backgroundColor: "#10B9811A",
+      color: "#10B981",
+      fontWeight: 600,
+    });
   });
 
   it("filters DataGrid rows by stage, updates sortedCount, restores all rows, and resets pagination page", async () => {

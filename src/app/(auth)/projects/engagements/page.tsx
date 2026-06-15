@@ -12,6 +12,7 @@ import {
   GridRowSelectionModel,
   GridSortModel,
 } from "@mui/x-data-grid";
+import { Chip } from "@mui/material";
 
 interface EngagementRow {
   id: string;
@@ -163,16 +164,26 @@ export default function BuyerEngagementsPage() {
         headerName: "Engagement Stage",
         flex: 1,
         minWidth: 170,
-        valueGetter: (_, row) => formatEngagementStageLabel(row.stage),
-        cellClassName: "row-hover-text",
+        renderCell: (params) => (
+          <Chip
+            label={formatEngagementStageLabel(params.row.stage)}
+            size="small"
+            sx={{ backgroundColor: "var(--color-subtle)", color: "var(--color-primary)", fontWeight: 600 }}
+          />
+        ),
       },
       {
         field: "deal_status",
         headerName: "Deal Status",
         flex: 1,
         minWidth: 150,
-        valueGetter: (_, row) => DEAL_STATUS_LABELS[row.deal_status] || row.deal_status,
-        cellClassName: "row-hover-text",
+        renderCell: (params) => (
+          <Chip
+            label={DEAL_STATUS_LABELS[params.row.deal_status] || params.row.deal_status}
+            size="small"
+            sx={{ backgroundColor: "#10B9811A", color: "#10B981", fontWeight: 600 }}
+          />
+        ),
       },
       {
         field: "industry",
