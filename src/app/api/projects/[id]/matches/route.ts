@@ -161,7 +161,8 @@ export async function GET(
 ) {
   const context = await requireRole("buyer");
   if (isAuthResponse(context)) return context;
-  const { supabase, user } = context;
+  const { supabase, user, profile } = context;
+  const isApprovedBuyer = profile.role === "buyer" && profile.status === "approved";
 
   // Fetch the project and verify ownership
   const { data: project, error: projectError } = await supabase
@@ -324,5 +325,8 @@ export async function GET(
   return NextResponse.json({
     deals: results,
     nextCursor,
+    viewer: {
+      isApprovedBuyer,
+    },
   });
 }

@@ -55,27 +55,60 @@ describe("GET /api/buyer/engagements", () => {
     expect(authMocks.requireRole).toHaveBeenCalledWith("buyer");
   });
 
-  it("returns engagements with expected shape and buyer-scoped project names", async () => {
+  it("returns expanded engagement payload with drawer fields and buyer-scoped project names", async () => {
     const supabase = createSupabaseForEngagements({
       engagements: [
         {
           id: "eng-1",
           stage: "nda_pending",
           nda_status: "sent",
+          nda_signed_at: "2026-01-04T00:00:00.000Z",
+          cim_released: false,
+          cim_released_at: null,
+          cim_viewed_at: null,
+          cim_downloaded_at: null,
+          pass_reason: null,
+          pass_reason_detail: null,
+          declined_at: null,
+          vetting_status: "approved",
+          vetting_rejection_reason: null,
           created_at: "2026-01-02T00:00:00.000Z",
           updated_at: "2026-01-03T00:00:00.000Z",
           project_id: "project-1",
           deals: {
             id: "deal-1",
             headline: "Alpha Tools",
+            description: "Industrial services provider",
             industry: "Industrial",
-            status: "accepting_iois",
-            revenue_year_3: 120,
-            ebitda_year_3: 20,
             state: "TX",
             region: null,
             geography_display: "state",
+            status: "accepting_iois",
+            revenue_year_1: 100,
+            ebitda_year_1: 10,
+            revenue_year_2: 110,
+            ebitda_year_2: 15,
+            revenue_year_3: 120,
+            ebitda_year_3: 20,
+            revenue_projection: 140,
+            ebitda_projection: 25,
+            fiscal_year_labels: {
+              year_1: "2023A",
+              year_2: "2024A",
+              year_3: "2025A",
+              projection: "2026E",
+            },
+            nda_type: "custom",
+            cim_sharing_preference: "manual",
+            nda_vetting_preference: "auto",
+            teaser_document_path: "deals/deal-1/teaser.pdf",
+            cim_document_path: "deals/deal-1/cim.pdf",
+            nda_document_path: "deals/deal-1/nda.pdf",
+            ioi_due_date: "2026-03-15",
+            loi_due_date: "2026-04-15",
             published_at: "2025-12-01T00:00:00.000Z",
+            closed_at: null,
+            created_at: "2025-11-15T00:00:00.000Z",
           },
         },
       ],
@@ -85,14 +118,18 @@ describe("GET /api/buyer/engagements", () => {
     authMocks.requireRole.mockResolvedValue({
       supabase,
       user: { id: "buyer-1" },
-      profile: { role: "buyer" },
+      profile: { role: "buyer", status: "approved" },
     });
 
     const response = await GET();
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    await expect(response.json()).resolves.toEqual({
+    const payload = await response.json();
+    expect(payload).toMatchObject({
+      viewer: {
+        isApprovedBuyer: true,
+      },
       engagements: [
         {
           id: "eng-1",
@@ -105,22 +142,308 @@ describe("GET /api/buyer/engagements", () => {
           deal: {
             id: "deal-1",
             headline: "Alpha Tools",
+            description: "Industrial services provider",
             industry: "Industrial",
+            state: "TX",
+            region: null,
+            geography_display: "state",
             status: "accepting_iois",
+            revenue_year_1: 100,
+            ebitda_year_1: 10,
+            revenue_year_2: 110,
+            ebitda_year_2: 15,
             revenue_year_3: 120,
             ebitda_year_3: 20,
-            geography: "TX",
-            geography_display: "state",
+            revenue_projection: 140,
+            ebitda_projection: 25,
+            fiscal_year_labels: {
+              year_1: "2023A",
+              year_2: "2024A",
+              year_3: "2025A",
+              projection: "2026E",
+            },
+            nda_type: "custom",
+            cim_sharing_preference: "manual",
+            nda_vetting_preference: "auto",
+            has_teaser_document: true,
+            has_cim_document: false,
+            has_nda_document: true,
+            ioi_due_date: "2026-03-15",
+            loi_due_date: "2026-04-15",
             published_at: "2025-12-01T00:00:00.000Z",
+            closed_at: null,
+            created_at: "2025-11-15T00:00:00.000Z",
+            date_received: "2025-11-15T00:00:00.000Z",
+            geography: "TX",
+          },
+          engagement: {
+            id: "eng-1",
+            stage: "nda_pending",
+            nda_status: "sent",
+            nda_signed_at: "2026-01-04T00:00:00.000Z",
+            cim_released: false,
+            cim_released_at: null,
+            cim_viewed_at: null,
+            cim_downloaded_at: null,
+            pass_reason: null,
+            pass_reason_detail: null,
+            declined_at: null,
+            vetting_status: "approved",
+            vetting_rejection_reason: null,
+            date_received: "2025-11-15T00:00:00.000Z",
           },
         },
       ],
     });
 
+    const firstDeal = (payload.engagements as Array<{ deal: Record<string, unknown> }>)[0]?.deal;
+    expect(firstDeal).not.toHaveProperty("teaser_document_path");
+    expect(firstDeal).not.toHaveProperty("cim_document_path");
+    expect(firstDeal).not.toHaveProperty("nda_document_path");
+
     expect(supabase.engagementsQuery.select).toHaveBeenCalled();
     expect(supabase.engagementsQuery.eq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
     expect(supabase.buyerProjectsQuery.eq).toHaveBeenCalledWith("buyer_user_id", "buyer-1");
     expect(supabase.buyerProjectsQuery.in).toHaveBeenCalledWith("id", ["project-1"]);
+  });
+
+  it("computes document availability booleans with match-route semantics", async () => {
+    const supabase = createSupabaseForEngagements({
+      engagements: [
+        {
+          id: "eng-custom-sent",
+          stage: "nda_pending",
+          nda_status: "sent",
+          nda_signed_at: null,
+          cim_released: false,
+          cim_released_at: null,
+          cim_viewed_at: null,
+          cim_downloaded_at: null,
+          pass_reason: null,
+          pass_reason_detail: null,
+          declined_at: null,
+          vetting_status: null,
+          vetting_rejection_reason: null,
+          created_at: "2026-01-01T00:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: {
+            id: "deal-sent",
+            headline: "Sent NDA Deal",
+            description: null,
+            industry: "Tech",
+            state: null,
+            region: "West",
+            geography_display: "region",
+            status: "accepting_iois",
+            revenue_year_1: null,
+            ebitda_year_1: null,
+            revenue_year_2: null,
+            ebitda_year_2: null,
+            revenue_year_3: null,
+            ebitda_year_3: null,
+            revenue_projection: null,
+            ebitda_projection: null,
+            fiscal_year_labels: null,
+            nda_type: "custom",
+            cim_sharing_preference: null,
+            nda_vetting_preference: null,
+            teaser_document_path: null,
+            cim_document_path: null,
+            nda_document_path: "deals/deal-sent/nda.pdf",
+            ioi_due_date: null,
+            loi_due_date: null,
+            published_at: null,
+            closed_at: null,
+            created_at: "2025-12-01T00:00:00.000Z",
+          },
+        },
+        {
+          id: "eng-custom-pending",
+          stage: "nda_pending",
+          nda_status: "pending",
+          nda_signed_at: null,
+          cim_released: false,
+          cim_released_at: null,
+          cim_viewed_at: null,
+          cim_downloaded_at: null,
+          pass_reason: null,
+          pass_reason_detail: null,
+          declined_at: null,
+          vetting_status: null,
+          vetting_rejection_reason: null,
+          created_at: "2026-01-01T00:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: {
+            id: "deal-pending",
+            headline: "Pending NDA Deal",
+            description: null,
+            industry: "Tech",
+            state: null,
+            region: "West",
+            geography_display: "region",
+            status: "accepting_iois",
+            revenue_year_1: null,
+            ebitda_year_1: null,
+            revenue_year_2: null,
+            ebitda_year_2: null,
+            revenue_year_3: null,
+            ebitda_year_3: null,
+            revenue_projection: null,
+            ebitda_projection: null,
+            fiscal_year_labels: null,
+            nda_type: "custom",
+            cim_sharing_preference: null,
+            nda_vetting_preference: null,
+            teaser_document_path: "deals/deal-pending/teaser.pdf",
+            cim_document_path: "deals/deal-pending/cim.pdf",
+            nda_document_path: "deals/deal-pending/nda.pdf",
+            ioi_due_date: null,
+            loi_due_date: null,
+            published_at: null,
+            closed_at: null,
+            created_at: "2025-12-01T00:00:00.000Z",
+          },
+        },
+        {
+          id: "eng-custom-signed",
+          stage: "pursued",
+          nda_status: "signed",
+          nda_signed_at: "2026-01-02T00:00:00.000Z",
+          cim_released: true,
+          cim_released_at: "2026-01-03T00:00:00.000Z",
+          cim_viewed_at: null,
+          cim_downloaded_at: null,
+          pass_reason: null,
+          pass_reason_detail: null,
+          declined_at: null,
+          vetting_status: null,
+          vetting_rejection_reason: null,
+          created_at: "2026-01-02T00:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: {
+            id: "deal-signed",
+            headline: "Signed NDA Deal",
+            description: null,
+            industry: "Tech",
+            state: null,
+            region: "West",
+            geography_display: "region",
+            status: "accepting_iois",
+            revenue_year_1: null,
+            ebitda_year_1: null,
+            revenue_year_2: null,
+            ebitda_year_2: null,
+            revenue_year_3: null,
+            ebitda_year_3: null,
+            revenue_projection: null,
+            ebitda_projection: null,
+            fiscal_year_labels: null,
+            nda_type: "custom",
+            cim_sharing_preference: null,
+            nda_vetting_preference: null,
+            teaser_document_path: null,
+            cim_document_path: "deals/deal-signed/cim.pdf",
+            nda_document_path: "deals/deal-signed/nda.pdf",
+            ioi_due_date: null,
+            loi_due_date: null,
+            published_at: null,
+            closed_at: null,
+            created_at: "2025-12-02T00:00:00.000Z",
+          },
+        },
+        {
+          id: "eng-platform-sent",
+          stage: "nda_pending",
+          nda_status: "sent",
+          nda_signed_at: null,
+          cim_released: false,
+          cim_released_at: null,
+          cim_viewed_at: null,
+          cim_downloaded_at: null,
+          pass_reason: null,
+          pass_reason_detail: null,
+          declined_at: null,
+          vetting_status: null,
+          vetting_rejection_reason: null,
+          created_at: "2026-01-03T00:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: {
+            id: "deal-platform-sent",
+            headline: "Platform NDA Deal",
+            description: null,
+            industry: "Tech",
+            state: null,
+            region: "South",
+            geography_display: "region",
+            status: "accepting_iois",
+            revenue_year_1: null,
+            ebitda_year_1: null,
+            revenue_year_2: null,
+            ebitda_year_2: null,
+            revenue_year_3: null,
+            ebitda_year_3: null,
+            revenue_projection: null,
+            ebitda_projection: null,
+            fiscal_year_labels: null,
+            nda_type: "platform",
+            cim_sharing_preference: null,
+            nda_vetting_preference: null,
+            teaser_document_path: null,
+            cim_document_path: null,
+            nda_document_path: "deals/deal-platform-sent/nda.pdf",
+            ioi_due_date: null,
+            loi_due_date: null,
+            published_at: null,
+            closed_at: null,
+            created_at: "2025-12-03T00:00:00.000Z",
+          },
+        },
+      ],
+      buyerProjects: [],
+    });
+
+    authMocks.requireRole.mockResolvedValue({
+      supabase,
+      user: { id: "buyer-1" },
+      profile: { role: "buyer", status: "approved" },
+    });
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.viewer).toEqual({ isApprovedBuyer: true });
+    const byId = new Map(
+      payload.engagements.map((entry: { id: string; deal: { has_teaser_document: boolean; has_cim_document: boolean; has_nda_document: boolean } }) => [entry.id, entry])
+    );
+
+    expect(byId.get("eng-custom-sent")?.deal).toMatchObject({
+      has_teaser_document: false,
+      has_cim_document: false,
+      has_nda_document: true,
+    });
+
+    expect(byId.get("eng-custom-pending")?.deal).toMatchObject({
+      has_teaser_document: true,
+      has_cim_document: false,
+      has_nda_document: false,
+    });
+
+    expect(byId.get("eng-custom-signed")?.deal).toMatchObject({
+      has_teaser_document: false,
+      has_cim_document: true,
+      has_nda_document: true,
+    });
+
+    expect(byId.get("eng-platform-sent")?.deal).toMatchObject({
+      has_teaser_document: false,
+      has_cim_document: false,
+      has_nda_document: false,
+    });
   });
 
   it("sorts by updated_at desc and falls back to created_at when updated_at is null", async () => {
@@ -173,7 +496,7 @@ describe("GET /api/buyer/engagements", () => {
     authMocks.requireRole.mockResolvedValue({
       supabase,
       user: { id: "buyer-1" },
-      profile: { role: "buyer" },
+      profile: { role: "buyer", status: "approved" },
     });
 
     const response = await GET();
@@ -181,6 +504,7 @@ describe("GET /api/buyer/engagements", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     const payload = await response.json();
+    expect(payload.viewer).toEqual({ isApprovedBuyer: true });
     expect(payload.engagements.map((engagement: { id: string }) => engagement.id)).toEqual([
       "eng-new-by-created",
       "eng-old",
@@ -217,7 +541,7 @@ describe("GET /api/buyer/engagements", () => {
     authMocks.requireRole.mockResolvedValue({
       supabase,
       user: { id: "buyer-1" },
-      profile: { role: "buyer" },
+      profile: { role: "buyer", status: "approved" },
     });
 
     const response = await GET();
@@ -225,6 +549,9 @@ describe("GET /api/buyer/engagements", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     await expect(response.json()).resolves.toEqual({
+      viewer: {
+        isApprovedBuyer: true,
+      },
       engagements: [
         expect.objectContaining({
           id: "eng-1",
@@ -254,7 +581,7 @@ describe("GET /api/buyer/engagements", () => {
     authMocks.requireRole.mockResolvedValue({
       supabase,
       user: { id: "buyer-1" },
-      profile: { role: "buyer" },
+      profile: { role: "buyer", status: "approved" },
     });
 
     const response = await GET();
@@ -311,7 +638,7 @@ describe("GET /api/buyer/engagements", () => {
     authMocks.requireRole.mockResolvedValue({
       supabase,
       user: { id: "buyer-1" },
-      profile: { role: "buyer" },
+      profile: { role: "buyer", status: "approved" },
     });
 
     const response = await GET();
@@ -319,5 +646,28 @@ describe("GET /api/buyer/engagements", () => {
     expect(response.status).toBe(500);
     expect(response.headers.get("cache-control")).toBe("no-store");
     await expect(response.json()).resolves.toEqual({ error: "Failed to fetch engagements" });
+  });
+
+  it("sets viewer approval to false when profile status is missing (fail-closed)", async () => {
+    const supabase = createSupabaseForEngagements({
+      engagements: [],
+      buyerProjects: [],
+    });
+
+    authMocks.requireRole.mockResolvedValue({
+      supabase,
+      user: { id: "buyer-1" },
+      profile: { role: "buyer" },
+    });
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      viewer: {
+        isApprovedBuyer: false,
+      },
+      engagements: [],
+    });
   });
 });

@@ -5,11 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
+import { getBuyerDealActions } from "@/lib/buyer-deal-actions";
 import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
 import { useAutoDismissFlag } from "@/lib/useAutoDismissFlag";
 import { ProjectDealsTable } from "@/components/ui/ProjectDealsTable";
 import { ProjectDealDrawer, type ProjectDealDrawerDeal } from "@/components/buyer/ProjectDealDrawer";
-import { canBuyerAccessIoiWorkflow, canBuyerAccessLoiWorkflow } from "@/lib/buyer-workflow-gating";
 import { Box, Chip, Tab } from "@mui/material";
 import { PrimaryTabs } from "@/components/ui/PrimaryTabs";
 import {
@@ -23,11 +23,12 @@ type ProjectDealsViewMode = "matches" | "active" | "archive";
 
 type Deal = ProjectDealDrawerDeal;
 
-interface DealActionConfig {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  variant?: "contained" | "outlined";
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isValidViewer(value: unknown): value is { isApprovedBuyer: boolean } {
+  return isRecord(value) && typeof value.isApprovedBuyer === "boolean";
 }
 
 interface Project {
@@ -51,15 +52,17 @@ export function isProjectDealsViewMode(value: unknown): value is ProjectDealsVie
 }
 
 function getRouteForViewMode(projectId: string, viewMode: ProjectDealsViewMode): string {
+  const encodedProjectId = encodeURIComponent(projectId);
+
   if (viewMode === "matches") {
-    return `/projects/${projectId}`;
+    return `/projects/${encodedProjectId}`;
   }
 
   if (viewMode === "active") {
-    return `/projects/${projectId}/active`;
+    return `/projects/${encodedProjectId}/active`;
   }
 
-  return `/projects/${projectId}/archive`;
+  return `/projects/${encodedProjectId}/archive`;
 }
 
 export function getProjectDealsRouteForTabChange(projectId: string, value: unknown): string | null {
@@ -165,95 +168,6 @@ function getEmptyStateMessage(viewMode: ProjectDealsViewMode): string {
   return "No matching deals found. Try adjusting your project criteria.";
 }
 
-function getDealActions(
-  deal: Deal,
-  options: {
-    onNavigate: (href: string) => void;
-    onPursue: (dealId: string) => void;
-    onDecline: (dealId: string) => void;
-    actionLoadingDealId: string | null;
-  }
-): DealActionConfig[] {
-  const stage = deal.engagement?.stage;
-  const isNdaPending = stage === "nda_pending";
-  const isEngaged = Boolean(deal.engagement) && stage !== "declined";
-  const isDeclined = stage === "declined";
-  const isLoading = options.actionLoadingDealId === deal.id;
-  const canAccessIoiWorkflow = canBuyerAccessIoiWorkflow({
-    isApprovedBuyer: true,
-    dealStatus: deal.status,
-    engagement: deal.engagement,
-  });
-  const canAccessLoiWorkflow = canBuyerAccessLoiWorkflow({
-    isApprovedBuyer: true,
-    dealStatus: deal.status,
-    engagement: deal.engagement,
-  });
-
-  const primaryAction = (() => {
-    if (stage === "nda_pending") {
-      return {
-      label: "Sign NDA",
-      onClick: () => options.onNavigate(`/deals/${deal.id}/nda`),
-      };
-    }
-
-    if (stage === "nda_signed" && canAccessIoiWorkflow) {
-      return {
-      label: "Submit IOI",
-      onClick: () => options.onNavigate(`/deals/${deal.id}/ioi`),
-      };
-    }
-
-    if (stage === "ioi_submitted" && canAccessIoiWorkflow) {
-      return {
-      label: "View IOI",
-      onClick: () => options.onNavigate(`/deals/${deal.id}/ioi`),
-      };
-    }
-
-    if ((stage === "ioi_submitted" || stage === "loi_submitted") && canAccessLoiWorkflow) {
-      return {
-      label: stage === "loi_submitted" ? "View LOI" : "Submit LOI",
-      onClick: () => options.onNavigate(`/deals/${deal.id}/loi`),
-      };
-    }
-
-    if (!isEngaged || isDeclined) {
-      return {
-        label: "Pursue",
-        onClick: () => options.onPursue(deal.id),
-        disabled: isLoading,
-      };
-    }
-
-    return null;
-  })();
-
-  const shouldRenderSinglePrimaryAction = Boolean(primaryAction) && (isNdaPending || isDeclined || isEngaged);
-  if (shouldRenderSinglePrimaryAction && primaryAction) {
-    return [primaryAction];
-  }
-
-  if (!isNdaPending && !isEngaged && !isDeclined) {
-    return [
-      {
-        label: "Pursue",
-        onClick: () => options.onPursue(deal.id),
-        disabled: isLoading,
-      },
-      {
-        label: "Decline",
-        onClick: () => options.onDecline(deal.id),
-        disabled: isLoading,
-        variant: "outlined",
-      },
-    ];
-  }
-
-  return [];
-}
-
 export default function ProjectDealsView({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -262,6 +176,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
   const shouldShowSavedBanner = viewMode === "matches" && searchParams.get("saved") === "1";
   const [project, setProject] = useState<Project | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [isApprovedBuyer, setIsApprovedBuyer] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -281,10 +196,25 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
 
   const fetchDeals = useCallback(
     async (cursor?: string) => {
-      const url = `/api/projects/${projectId}/matches${cursor ? `?cursor=${cursor}` : ""}`;
+      const encodedProjectId = encodeURIComponent(projectId);
+      const queryString =
+        cursor != null
+          ? new URLSearchParams({
+              cursor,
+            }).toString()
+          : "";
+      const url = `/api/projects/${encodedProjectId}/matches${queryString ? `?${queryString}` : ""}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
+        const viewer = isValidViewer(data?.viewer) ? data.viewer : null;
+
+        if (!viewer) {
+          console.warn("[ProjectDealsView] Missing or malformed viewer payload; defaulting to unapproved buyer.");
+        }
+
+        setIsApprovedBuyer(viewer?.isApprovedBuyer ?? false);
+
         if (cursor) {
           setDeals((prev) => [...prev, ...data.deals]);
         } else {
@@ -298,7 +228,8 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     const loadData = async () => {
-      const projRes = await fetch(`/api/projects/${projectId}`);
+      const encodedProjectId = encodeURIComponent(projectId);
+      const projRes = await fetch(`/api/projects/${encodedProjectId}`);
       if (projRes.ok) {
         const data = await projRes.json();
         setProject(data.project);
@@ -319,28 +250,42 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
 
   const handlePursue = useCallback(async (dealId: string) => {
     setActionLoading(dealId);
-    const res = await fetch(`/api/deals/${dealId}/pursue`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId }),
-    });
-    if (res.ok) {
-      const { engagement } = await res.json();
-      setDeals((prev) => prev.map((deal) => (deal.id === dealId ? { ...deal, engagement } : deal)));
+    const encodedDealId = encodeURIComponent(dealId);
+
+    try {
+      const res = await fetch(`/api/deals/${encodedDealId}/pursue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      if (res.ok) {
+        const { engagement } = await res.json();
+        setDeals((prev) => prev.map((deal) => (deal.id === dealId ? { ...deal, engagement } : deal)));
+      }
+    } catch (error) {
+      console.error("[ProjectDealsView] Failed to pursue deal.", error);
+    } finally {
+      setActionLoading(null);
     }
-    setActionLoading(null);
   }, [projectId]);
 
   const handleDecline = useCallback(async (dealId: string) => {
     setActionLoading(dealId);
-    const res = await fetch(`/api/deals/${dealId}/decline`, {
-      method: "POST",
-    });
-    if (res.ok) {
-      const { engagement } = await res.json();
-      setDeals((prev) => prev.map((deal) => (deal.id === dealId ? { ...deal, engagement } : deal)));
+    const encodedDealId = encodeURIComponent(dealId);
+
+    try {
+      const res = await fetch(`/api/deals/${encodedDealId}/decline`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const { engagement } = await res.json();
+        setDeals((prev) => prev.map((deal) => (deal.id === dealId ? { ...deal, engagement } : deal)));
+      }
+    } catch (error) {
+      console.error("[ProjectDealsView] Failed to decline deal.", error);
+    } finally {
+      setActionLoading(null);
     }
-    setActionLoading(null);
   }, []);
 
   const getGeography = (deal: Deal) => {
@@ -360,13 +305,14 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
       return [];
     }
 
-    return getDealActions(selectedDeal, {
+    return getBuyerDealActions(selectedDeal, {
       onNavigate: (href) => router.push(href),
       onPursue: (dealId) => void handlePursue(dealId),
       onDecline: (dealId) => void handleDecline(dealId),
       actionLoadingDealId: actionLoading,
+      isApprovedBuyer,
     });
-  }, [actionLoading, handleDecline, handlePursue, router, selectedDeal]);
+  }, [actionLoading, handleDecline, handlePursue, isApprovedBuyer, router, selectedDeal]);
 
   const openDealDrawer = useCallback((deal: Deal, trigger?: HTMLElement | null) => {
     drawerTriggerRef.current =
@@ -587,7 +533,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
 
             <div className="flex gap-2">
               <Link
-                href={`/projects/${projectId}/edit`}
+                href={`/projects/${encodeURIComponent(projectId)}/edit`}
                 className="px-3 py-1 bg-surface-alt border border-border-gray text-text rounded-md text-sm hover:bg-bg-alt"
               >
                 Edit
@@ -658,7 +604,7 @@ export default function ProjectDealsView({ projectId }: { projectId: string }) {
       {selectedDeal && (
         <ProjectDealDrawer
           deal={selectedDeal}
-          workspaceHref={`/deals/${selectedDeal.id}`}
+          workspaceHref={`/deals/${encodeURIComponent(selectedDeal.id)}`}
           onClose={closeDealDrawer}
           restoreFocusRef={drawerTriggerRef}
           actionButtons={selectedDealActions}

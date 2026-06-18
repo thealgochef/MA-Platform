@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataGridTable } from "@/components/ui/DataGridTable";
+import { ProjectDealDrawer, type ProjectDealDrawerDeal } from "@/components/buyer/ProjectDealDrawer";
+import { getBuyerDealActions } from "@/lib/buyer-deal-actions";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
 import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
@@ -25,13 +27,50 @@ interface EngagementRow {
   deal: {
     id: string;
     headline: string;
+    description: string | null;
     industry: string;
-    status: string;
-    geography: string | null;
+    state: string | null;
+    region: string | null;
     geography_display: string | null;
+    status: string;
+    revenue_year_1: number | null;
+    ebitda_year_1: number | null;
+    revenue_year_2: number | null;
+    ebitda_year_2: number | null;
+    geography: string | null;
     revenue_year_3: number | null;
     ebitda_year_3: number | null;
+    revenue_projection: number | null;
+    ebitda_projection: number | null;
+    fiscal_year_labels: Record<string, string> | null;
+    nda_type: string | null;
+    cim_sharing_preference: string | null;
+    nda_vetting_preference: string | null;
+    has_teaser_document: boolean;
+    has_cim_document: boolean;
+    has_nda_document: boolean;
+    ioi_due_date: string | null;
+    loi_due_date: string | null;
     published_at: string | null;
+    closed_at: string | null;
+    created_at: string;
+    date_received: string;
+  };
+  engagement: {
+    id: string;
+    stage: string;
+    nda_status: string;
+    nda_signed_at: string | null;
+    cim_released: boolean | null;
+    cim_released_at: string | null;
+    cim_viewed_at: string | null;
+    cim_downloaded_at: string | null;
+    pass_reason: string | null;
+    pass_reason_detail: string | null;
+    declined_at: string | null;
+    vetting_status: string | null;
+    vetting_rejection_reason: string | null;
+    date_received: string | null;
   };
 }
 
@@ -52,6 +91,114 @@ interface EngagementTableRow {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return value === null || typeof value === "string";
+}
+
+function isNullableNumber(value: unknown): value is number | null {
+  return value === null || typeof value === "number";
+}
+
+function isNullableBoolean(value: unknown): value is boolean | null {
+  return value === null || typeof value === "boolean";
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return Object.values(value).every((entry) => typeof entry === "string");
+}
+
+function isValidEngagementDeal(value: unknown): value is EngagementRow["deal"] {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === "string" &&
+    typeof value.headline === "string" &&
+    isNullableString(value.description) &&
+    typeof value.industry === "string" &&
+    isNullableString(value.state) &&
+    isNullableString(value.region) &&
+    isNullableString(value.geography_display) &&
+    typeof value.status === "string" &&
+    isNullableNumber(value.revenue_year_1) &&
+    isNullableNumber(value.ebitda_year_1) &&
+    isNullableNumber(value.revenue_year_2) &&
+    isNullableNumber(value.ebitda_year_2) &&
+    isNullableString(value.geography) &&
+    isNullableNumber(value.revenue_year_3) &&
+    isNullableNumber(value.ebitda_year_3) &&
+    isNullableNumber(value.revenue_projection) &&
+    isNullableNumber(value.ebitda_projection) &&
+    (value.fiscal_year_labels === null || isStringRecord(value.fiscal_year_labels)) &&
+    isNullableString(value.nda_type) &&
+    isNullableString(value.cim_sharing_preference) &&
+    isNullableString(value.nda_vetting_preference) &&
+    typeof value.has_teaser_document === "boolean" &&
+    typeof value.has_cim_document === "boolean" &&
+    typeof value.has_nda_document === "boolean" &&
+    isNullableString(value.ioi_due_date) &&
+    isNullableString(value.loi_due_date) &&
+    isNullableString(value.published_at) &&
+    isNullableString(value.closed_at) &&
+    typeof value.created_at === "string" &&
+    typeof value.date_received === "string"
+  );
+}
+
+function isValidEngagementDetails(value: unknown): value is EngagementRow["engagement"] {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === "string" &&
+    typeof value.stage === "string" &&
+    typeof value.nda_status === "string" &&
+    isNullableString(value.nda_signed_at) &&
+    isNullableBoolean(value.cim_released) &&
+    isNullableString(value.cim_released_at) &&
+    isNullableString(value.cim_viewed_at) &&
+    isNullableString(value.cim_downloaded_at) &&
+    isNullableString(value.pass_reason) &&
+    isNullableString(value.pass_reason_detail) &&
+    isNullableString(value.declined_at) &&
+    isNullableString(value.vetting_status) &&
+    isNullableString(value.vetting_rejection_reason) &&
+    isNullableString(value.date_received)
+  );
+}
+
+function isValidEngagementRow(value: unknown): value is EngagementRow {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === "string" &&
+    typeof value.stage === "string" &&
+    typeof value.nda_status === "string" &&
+    typeof value.created_at === "string" &&
+    isNullableString(value.updated_at) &&
+    isNullableString(value.project_id) &&
+    isNullableString(value.project_name) &&
+    isValidEngagementDetails(value.engagement) &&
+    isValidEngagementDeal(value.deal)
+  );
+}
+
+function isValidViewer(value: unknown): value is { isApprovedBuyer: boolean } {
+  return isRecord(value) && typeof value.isApprovedBuyer === "boolean";
+}
+
 const ALL_INDUSTRIES_FILTER = "__ALL_INDUSTRIES__" as const;
 
 type IndustryFilter = typeof ALL_INDUSTRIES_FILTER | string;
@@ -67,14 +214,72 @@ function parseValidDate(value: string): Date | null {
   return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
 }
 
+function mapEngagementToDrawerDeal(engagement: EngagementRow): ProjectDealDrawerDeal {
+  return {
+    id: engagement.deal.id,
+    headline: engagement.deal.headline,
+    description: engagement.deal.description,
+    industry: engagement.deal.industry,
+    state: engagement.deal.state,
+    region: engagement.deal.region,
+    geography_display: engagement.deal.geography_display,
+    status: engagement.deal.status,
+    revenue_year_1: engagement.deal.revenue_year_1,
+    ebitda_year_1: engagement.deal.ebitda_year_1,
+    revenue_year_2: engagement.deal.revenue_year_2,
+    ebitda_year_2: engagement.deal.ebitda_year_2,
+    revenue_year_3: engagement.deal.revenue_year_3,
+    ebitda_year_3: engagement.deal.ebitda_year_3,
+    revenue_projection: engagement.deal.revenue_projection,
+    ebitda_projection: engagement.deal.ebitda_projection,
+    fiscal_year_labels: engagement.deal.fiscal_year_labels,
+    nda_type: engagement.deal.nda_type,
+    cim_sharing_preference: engagement.deal.cim_sharing_preference,
+    nda_vetting_preference: engagement.deal.nda_vetting_preference,
+    has_teaser_document: engagement.deal.has_teaser_document,
+    has_cim_document: engagement.deal.has_cim_document,
+    has_nda_document: engagement.deal.has_nda_document,
+    ioi_due_date: engagement.deal.ioi_due_date,
+    loi_due_date: engagement.deal.loi_due_date,
+    published_at: engagement.deal.published_at,
+    closed_at: engagement.deal.closed_at,
+    engagement: {
+      id: engagement.engagement.id,
+      stage: engagement.engagement.stage,
+      nda_status: engagement.engagement.nda_status,
+      nda_signed_at: engagement.engagement.nda_signed_at,
+      cim_released: engagement.engagement.cim_released,
+      cim_released_at: engagement.engagement.cim_released_at,
+      cim_viewed_at: engagement.engagement.cim_viewed_at,
+      cim_downloaded_at: engagement.engagement.cim_downloaded_at,
+      pass_reason: engagement.engagement.pass_reason,
+      pass_reason_detail: engagement.engagement.pass_reason_detail,
+      declined_at: engagement.engagement.declined_at,
+      vetting_status: engagement.engagement.vetting_status,
+      vetting_rejection_reason: engagement.engagement.vetting_rejection_reason,
+      date_received: engagement.engagement.date_received ?? engagement.deal.date_received,
+    },
+  };
+}
+
+function getDealGeography(deal: EngagementRow["deal"]): string | null {
+  if (deal.geography) {
+    return deal.geography;
+  }
+
+  return deal.geography_display === "state" ? deal.state : deal.region;
+}
+
 export default function BuyerEngagementsPage() {
   const router = useRouter();
   const [engagements, setEngagements] = useState<EngagementRow[]>([]);
+  const [isApprovedBuyer, setIsApprovedBuyer] = useState(false);
   const [stageFilter, setStageFilter] = useState("all");
   const [industryFilter, setIndustryFilter] = useState<IndustryFilter>(ALL_INDUSTRIES_FILTER);
   const [showIndustryFilters, setShowIndustryFilters] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoadingDealId, setActionLoadingDealId] = useState<string | null>(null);
   const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>({
     type: "include",
     ids: new Set(),
@@ -84,6 +289,8 @@ export default function BuyerEngagementsPage() {
     page: 0,
     pageSize: 10,
   });
+  const [selectedEngagementId, setSelectedEngagementId] = useState<string | null>(null);
+  const drawerTriggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -96,7 +303,22 @@ export default function BuyerEngagementsPage() {
 
         if (res.ok) {
           const data = await res.json();
-          setEngagements(Array.isArray(data?.engagements) ? data.engagements : []);
+          const rawEngagements = Array.isArray(data?.engagements) ? data.engagements : [];
+          const validEngagements = rawEngagements.filter(isValidEngagementRow);
+          const viewer = isValidViewer(data?.viewer) ? data.viewer : null;
+
+          if (validEngagements.length !== rawEngagements.length) {
+            console.warn(
+              `[BuyerEngagementsPage] Ignored ${rawEngagements.length - validEngagements.length} malformed engagement record(s).`
+            );
+          }
+
+          if (!viewer) {
+            console.warn("[BuyerEngagementsPage] Missing or malformed viewer payload; defaulting to unapproved buyer.");
+          }
+
+          setEngagements(validEngagements);
+          setIsApprovedBuyer(viewer?.isApprovedBuyer ?? false);
         } else {
           setError("Failed to load engaged deals.");
         }
@@ -132,7 +354,7 @@ export default function BuyerEngagementsPage() {
       stage: engagement.stage,
       deal_status: engagement.deal.status,
       industry: engagement.deal.industry,
-      geography: engagement.deal.geography,
+      geography: getDealGeography(engagement.deal),
       revenue_year_3: engagement.deal.revenue_year_3,
       ebitda_year_3: engagement.deal.ebitda_year_3,
       last_updated: engagement.updated_at ?? engagement.created_at,
@@ -359,6 +581,135 @@ export default function BuyerEngagementsPage() {
     return sortedRows.slice(start, start + paginationModel.pageSize);
   }, [paginationModel.page, paginationModel.pageSize, sortedRows]);
 
+  const selectedEngagement = useMemo(
+    () => engagements.find((engagement) => engagement.id === selectedEngagementId) ?? null,
+    [engagements, selectedEngagementId]
+  );
+
+  const selectedDealForDrawer = useMemo(
+    () => (selectedEngagement ? mapEngagementToDrawerDeal(selectedEngagement) : null),
+    [selectedEngagement]
+  );
+
+  const updateEngagementState = useCallback(
+    (dealId: string, updatedEngagement: EngagementRow["engagement"]) => {
+      setEngagements((prev) =>
+        prev.map((engagement) => {
+          if (engagement.deal.id !== dealId) {
+            return engagement;
+          }
+
+          return {
+            ...engagement,
+            stage: updatedEngagement.stage,
+            nda_status: updatedEngagement.nda_status,
+            updated_at: new Date().toISOString(),
+            engagement: updatedEngagement,
+          };
+        })
+      );
+    },
+    []
+  );
+
+  const handlePursue = useCallback(
+    async (dealId: string) => {
+      setActionLoadingDealId(dealId);
+
+      try {
+        const matchingEngagement = engagements.find((engagement) => engagement.deal.id === dealId);
+        const projectId = matchingEngagement?.project_id;
+        const encodedDealId = encodeURIComponent(dealId);
+        const requestOptions: RequestInit = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          ...(projectId ? { body: JSON.stringify({ projectId }) } : {}),
+        };
+
+        const res = await fetch(`/api/deals/${encodedDealId}/pursue`, requestOptions);
+        if (!res.ok) {
+          setError("Failed to update deal engagement. Please try again.");
+          return;
+        }
+
+        const data: unknown = await res.json();
+        const engagementPayload =
+          isRecord(data) && "engagement" in data ? data.engagement : null;
+
+        if (!isValidEngagementDetails(engagementPayload)) {
+          console.warn("[BuyerEngagementsPage] Received malformed engagement payload from pursue endpoint.");
+          return;
+        }
+
+        updateEngagementState(dealId, engagementPayload);
+      } catch (requestError) {
+        console.error("[BuyerEngagementsPage] Failed to pursue deal.", requestError);
+        setError("Failed to update deal engagement. Please try again.");
+      } finally {
+        setActionLoadingDealId(null);
+      }
+    },
+    [engagements, updateEngagementState]
+  );
+
+  const handleDecline = useCallback(
+    async (dealId: string) => {
+      setActionLoadingDealId(dealId);
+
+      try {
+        const encodedDealId = encodeURIComponent(dealId);
+        const res = await fetch(`/api/deals/${encodedDealId}/decline`, {
+          method: "POST",
+        });
+
+        if (!res.ok) {
+          setError("Failed to update deal engagement. Please try again.");
+          return;
+        }
+
+        const data: unknown = await res.json();
+        const engagementPayload =
+          isRecord(data) && "engagement" in data ? data.engagement : null;
+
+        if (!isValidEngagementDetails(engagementPayload)) {
+          console.warn("[BuyerEngagementsPage] Received malformed engagement payload from decline endpoint.");
+          return;
+        }
+
+        updateEngagementState(dealId, engagementPayload);
+      } catch (requestError) {
+        console.error("[BuyerEngagementsPage] Failed to decline deal.", requestError);
+        setError("Failed to update deal engagement. Please try again.");
+      } finally {
+        setActionLoadingDealId(null);
+      }
+    },
+    [updateEngagementState]
+  );
+
+  const selectedDealActions = useMemo(() => {
+    if (!selectedDealForDrawer) {
+      return [];
+    }
+
+    return getBuyerDealActions(selectedDealForDrawer, {
+      onNavigate: (href) => router.push(href),
+      onPursue: (dealId) => void handlePursue(dealId),
+      onDecline: (dealId) => void handleDecline(dealId),
+      actionLoadingDealId,
+      isApprovedBuyer,
+    });
+  }, [actionLoadingDealId, handleDecline, handlePursue, isApprovedBuyer, router, selectedDealForDrawer]);
+
+  const handleOpenDealDrawer = useCallback((row: EngagementTableRow) => {
+    drawerTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSelectedEngagementId(row.id);
+  }, []);
+
+  const handleCloseDealDrawer = useCallback(() => {
+    setSelectedEngagementId(null);
+  }, []);
+
   if (loading) {
     return (
       <main className="min-h-screen bg-bg-alt p-8">
@@ -460,7 +811,7 @@ export default function BuyerEngagementsPage() {
             onRowSelectionModelChange={setRowSelectionModel}
             sortModel={sortModel}
             onSortModelChange={handleSortModelChange}
-            onRowClick={(row) => router.push(`/deals/${encodeURIComponent(row.deal_id)}`)}
+            onRowClick={handleOpenDealDrawer}
             sortedCount={sortedRows.length}
             paginationModel={paginationModel}
             onPageChange={(page) => setPaginationModel((prev) => ({ ...prev, page }))}
@@ -468,6 +819,16 @@ export default function BuyerEngagementsPage() {
           />
         )}
       </div>
+
+      {selectedDealForDrawer && (
+        <ProjectDealDrawer
+          deal={selectedDealForDrawer}
+          workspaceHref={`/deals/${encodeURIComponent(selectedDealForDrawer.id)}`}
+          onClose={handleCloseDealDrawer}
+          restoreFocusRef={drawerTriggerRef}
+          actionButtons={selectedDealActions}
+        />
+      )}
     </main>
   );
 }
