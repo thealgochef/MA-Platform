@@ -403,6 +403,12 @@ export function ProjectDealDrawer({ deal, workspaceHref, onClose, restoreFocusRe
   };
 
   useEffect(() => {
+    fetch(`/api/deals/${encodeURIComponent(deal.id)}`).catch((err) => {
+      console.error("Failed to fetch deal details for view tracking", err);
+    });
+  }, [deal.id]);
+
+  useEffect(() => {
     const focusInitialDrawerElement = window.setTimeout(() => {
       closeButtonRef.current?.focus();
       if (document.activeElement !== closeButtonRef.current) {
