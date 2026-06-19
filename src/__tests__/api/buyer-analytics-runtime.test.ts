@@ -330,4 +330,262 @@ describe("GET /api/buyer/analytics", () => {
     expect(payload.analytics.dealsByIndustry[" Healthcare "]).toBeUndefined();
     expect(payload.analytics.dealsByIndustry["Healthcare  "]).toBeUndefined();
   });
+
+  it("normalizes serialized and legacy quoted pseudo-array industry strings while bucketing malformed wrappers as Unknown", async () => {
+    const supabase = createAnalyticsSupabase({
+      engagements: [
+        {
+          id: "eng-1",
+          stage: "pursued",
+          nda_status: "pending_review",
+          created_at: "2026-02-01T00:00:00.000Z",
+          updated_at: "2026-02-01T00:00:00.000Z",
+          deal_id: "deal-1",
+          deals: {
+            headline: "Deal One",
+            industry: '["Healthcare"]',
+            revenue_year_3: 100,
+            ebitda_year_3: 20,
+          },
+        },
+        {
+          id: "eng-2",
+          stage: "reviewing",
+          nda_status: "pending_review",
+          created_at: "2026-02-02T00:00:00.000Z",
+          updated_at: "2026-02-02T00:00:00.000Z",
+          deal_id: "deal-2",
+          deals: {
+            headline: "Deal Two",
+            industry: "[foo]",
+            revenue_year_3: 120,
+            ebitda_year_3: 24,
+          },
+        },
+        {
+          id: "eng-2b",
+          stage: "reviewing",
+          nda_status: "pending_review",
+          created_at: "2026-02-02T12:00:00.000Z",
+          updated_at: "2026-02-02T12:00:00.000Z",
+          deal_id: "deal-2b",
+          deals: {
+            headline: "Deal Two B",
+            industry: "['Industrial']",
+            revenue_year_3: 125,
+            ebitda_year_3: 25,
+          },
+        },
+        {
+          id: "eng-3",
+          stage: "nda_signed",
+          nda_status: "signed",
+          created_at: "2026-02-03T00:00:00.000Z",
+          updated_at: "2026-02-03T00:00:00.000Z",
+          deal_id: "deal-3",
+          deals: {
+            headline: "Deal Three",
+            industry: "{Business Services}",
+            revenue_year_3: 150,
+            ebitda_year_3: 30,
+          },
+        },
+        {
+          id: "eng-4",
+          stage: "passed",
+          nda_status: "not_sent",
+          created_at: "2026-02-04T00:00:00.000Z",
+          updated_at: "2026-02-04T00:00:00.000Z",
+          deal_id: "deal-4",
+          deals: {
+            headline: "Deal Four",
+            industry: "   ",
+            revenue_year_3: 90,
+            ebitda_year_3: 10,
+          },
+        },
+        {
+          id: "eng-5",
+          stage: "passed",
+          nda_status: "not_sent",
+          created_at: "2026-02-05T00:00:00.000Z",
+          updated_at: "2026-02-05T00:00:00.000Z",
+          deal_id: "deal-5",
+          deals: {
+            headline: "Deal Five",
+            industry: null,
+            revenue_year_3: 80,
+            ebitda_year_3: 8,
+          },
+        },
+        {
+          id: "eng-6",
+          stage: "passed",
+          nda_status: "not_sent",
+          created_at: "2026-02-06T00:00:00.000Z",
+          updated_at: "2026-02-06T00:00:00.000Z",
+          deal_id: "deal-6",
+          deals: {
+            headline: "Deal Six",
+            industry: 42,
+            revenue_year_3: 75,
+            ebitda_year_3: 7,
+          },
+        },
+        {
+          id: "eng-7",
+          stage: "passed",
+          nda_status: "not_sent",
+          created_at: "2026-02-07T00:00:00.000Z",
+          updated_at: "2026-02-07T00:00:00.000Z",
+          deal_id: "deal-7",
+          deals: {
+            headline: "Deal Seven",
+            industry: "[]",
+            revenue_year_3: 70,
+            ebitda_year_3: 6,
+          },
+        },
+        {
+          id: "eng-8",
+          stage: "passed",
+          nda_status: "not_sent",
+          created_at: "2026-02-08T00:00:00.000Z",
+          updated_at: "2026-02-08T00:00:00.000Z",
+          deal_id: "deal-8",
+          deals: {
+            headline: "Deal Eight",
+            industry: "[42]",
+            revenue_year_3: 65,
+            ebitda_year_3: 5,
+          },
+        },
+        {
+          id: "eng-9",
+          stage: "passed",
+          nda_status: "not_sent",
+          created_at: "2026-02-09T00:00:00.000Z",
+          updated_at: "2026-02-09T00:00:00.000Z",
+          deal_id: "deal-9",
+          deals: {
+            headline: "Deal Nine",
+            industry: "{}",
+            revenue_year_3: 60,
+            ebitda_year_3: 4,
+          },
+        },
+      ],
+      ioisCount: 0,
+      loisCount: 0,
+    });
+
+    authMocks.requireRole.mockResolvedValue({
+      supabase,
+      user: { id: "buyer-1" },
+      profile: { role: "buyer" },
+    });
+
+    const response = await GET();
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+
+    expect(payload.analytics.dealsByIndustry).toEqual({
+      Healthcare: 1,
+      Industrial: 1,
+      "Business Services": 1,
+      Unknown: 7,
+    });
+  });
+
+  it("safely buckets dangerous stage and industry keys without crashing", async () => {
+    const supabase = createAnalyticsSupabase({
+      engagements: [
+        {
+          id: "eng-1",
+          stage: "__proto__",
+          nda_status: "pending_review",
+          created_at: "2026-03-01T00:00:00.000Z",
+          updated_at: "2026-03-01T00:00:00.000Z",
+          deal_id: "deal-1",
+          deals: {
+            headline: "Deal One",
+            industry: "__proto__",
+            revenue_year_3: 100,
+            ebitda_year_3: 20,
+          },
+        },
+        {
+          id: "eng-2",
+          stage: "constructor",
+          nda_status: "pending_review",
+          created_at: "2026-03-02T00:00:00.000Z",
+          updated_at: "2026-03-02T00:00:00.000Z",
+          deal_id: "deal-2",
+          deals: {
+            headline: "Deal Two",
+            industry: "['constructor']",
+            revenue_year_3: 120,
+            ebitda_year_3: 24,
+          },
+        },
+        {
+          id: "eng-3",
+          stage: "prototype",
+          nda_status: "not_sent",
+          created_at: "2026-03-03T00:00:00.000Z",
+          updated_at: "2026-03-03T00:00:00.000Z",
+          deal_id: "deal-3",
+          deals: {
+            headline: "Deal Three",
+            industry: "[\"prototype\"]",
+            revenue_year_3: 150,
+            ebitda_year_3: 30,
+          },
+        },
+        {
+          id: "eng-4",
+          stage: "reviewing",
+          nda_status: "signed",
+          created_at: "2026-03-04T00:00:00.000Z",
+          updated_at: "2026-03-04T00:00:00.000Z",
+          deal_id: "deal-4",
+          deals: {
+            headline: "Deal Four",
+            industry: "Healthcare",
+            revenue_year_3: 180,
+            ebitda_year_3: 36,
+          },
+        },
+      ],
+      ioisCount: 1,
+      loisCount: 0,
+    });
+
+    authMocks.requireRole.mockResolvedValue({
+      supabase,
+      user: { id: "buyer-1" },
+      profile: { role: "buyer" },
+    });
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+
+    expect(payload.analytics.dealsByStage).toEqual({
+      unknown: 3,
+      reviewing: 1,
+    });
+    expect(Object.prototype.hasOwnProperty.call(payload.analytics.dealsByStage, "__proto__")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(payload.analytics.dealsByStage, "constructor")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(payload.analytics.dealsByStage, "prototype")).toBe(false);
+
+    expect(payload.analytics.dealsByIndustry).toEqual({
+      Unknown: 3,
+      Healthcare: 1,
+    });
+    expect(Object.prototype.hasOwnProperty.call(payload.analytics.dealsByIndustry, "__proto__")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(payload.analytics.dealsByIndustry, "constructor")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(payload.analytics.dealsByIndustry, "prototype")).toBe(false);
+  });
 });

@@ -22,6 +22,17 @@ type EngagementRow = {
   deals: AnalyticsDeal | null;
 };
 
+const DANGEROUS_BUCKET_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
+function sanitizeBucketKey(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+
+  const trimmedValue = value.trim();
+  if (trimmedValue.length === 0) return fallback;
+
+  return DANGEROUS_BUCKET_KEYS.has(trimmedValue) ? fallback : trimmedValue;
+}
+
 function normalizeNumericValue(value: unknown): number | null {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : null;
@@ -39,10 +50,62 @@ function normalizeNumericValue(value: unknown): number | null {
 }
 
 function normalizeIndustryBucket(value: unknown): string {
+  const normalizeSerializedIndustry = (rawValue: string): string | null => {
+    const trimmedValue = rawValue.trim();
+    if (trimmedValue.length === 0) return null;
+
+    if (trimmedValue.startsWith("[") && trimmedValue.endsWith("]")) {
+      try {
+        const parsedValue = JSON.parse(trimmedValue);
+        if (Array.isArray(parsedValue)) {
+          const firstIndustry = parsedValue.find(
+            (item): item is string => typeof item === "string" && item.trim().length > 0
+          );
+
+          if (firstIndustry) return firstIndustry.trim();
+        }
+      } catch {
+        const bracketContents = trimmedValue.slice(1, -1).trim();
+        const firstRawItem = bracketContents.split(",")[0]?.trim();
+
+        if (!firstRawItem) return null;
+
+        const firstTokenIsQuoted =
+          (firstRawItem.startsWith("'") && firstRawItem.endsWith("'")) ||
+          (firstRawItem.startsWith('"') && firstRawItem.endsWith('"'));
+
+        if (!firstTokenIsQuoted) return null;
+
+        const firstItem = firstRawItem.slice(1, -1).trim();
+        return firstItem.length > 0 ? firstItem : null;
+      }
+
+      return null;
+    }
+
+    if (trimmedValue.startsWith("{") && trimmedValue.endsWith("}")) {
+      const braceContents = trimmedValue.slice(1, -1).trim();
+      const firstRawItem = braceContents.split(",")[0]?.trim();
+      const firstItem = firstRawItem?.replace(/^['"]|['"]$/g, "").trim();
+      if (firstItem) return firstItem;
+
+      return null;
+    }
+
+    return trimmedValue;
+  };
+
+  if (Array.isArray(value)) {
+    const firstIndustry = value.find((item): item is string => typeof item === "string" && item.trim().length > 0);
+    return firstIndustry?.trim() ?? "Unknown";
+  }
+
   if (typeof value !== "string") return "Unknown";
 
-  const trimmedIndustry = value.trim();
-  return trimmedIndustry.length > 0 ? trimmedIndustry : "Unknown";
+  const normalizedIndustry = normalizeSerializedIndustry(value);
+  if (!normalizedIndustry) return "Unknown";
+
+  return normalizedIndustry;
 }
 
 export async function GET() {
@@ -120,16 +183,17 @@ export async function GET() {
   const ndaSigned = allEngagements.filter(e => e.nda_status === "signed").length;
 
   // Deals by stage
-  const dealsByStage: Record<string, number> = {};
+  const dealsByStage: Record<string, number> = Object.create(null);
   for (const e of allEngagements) {
-    dealsByStage[e.stage] = (dealsByStage[e.stage] || 0) + 1;
+    const stage = sanitizeBucketKey(e.stage, "unknown");
+    dealsByStage[stage] = (dealsByStage[stage] || 0) + 1;
   }
 
   // Deals by industry
-  const dealsByIndustry: Record<string, number> = {};
+  const dealsByIndustry: Record<string, number> = Object.create(null);
   for (const e of allEngagements) {
       const deal = e.deals as unknown as Record<string, unknown>;
-      const industry = normalizeIndustryBucket(deal?.industry);
+      const industry = sanitizeBucketKey(normalizeIndustryBucket(deal?.industry), "Unknown");
       dealsByIndustry[industry] = (dealsByIndustry[industry] || 0) + 1;
   }
 
