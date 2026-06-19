@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 
 const authMocks = vi.hoisted(() => ({
@@ -42,6 +42,10 @@ function createSupabaseForEngagements({
 describe("GET /api/buyer/engagements", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("passes through auth response", async () => {
@@ -127,6 +131,10 @@ describe("GET /api/buyer/engagements", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     const payload = await response.json();
     expect(payload).toMatchObject({
+      meta: {
+        partial_results: false,
+        skipped_malformed_engagements: 0,
+      },
       viewer: {
         isApprovedBuyer: true,
       },
@@ -417,8 +425,16 @@ describe("GET /api/buyer/engagements", () => {
     expect(response.status).toBe(200);
     const payload = await response.json();
     expect(payload.viewer).toEqual({ isApprovedBuyer: true });
-    const byId = new Map(
-      payload.engagements.map((entry: { id: string; deal: { has_teaser_document: boolean; has_cim_document: boolean; has_nda_document: boolean } }) => [entry.id, entry])
+    const byId = new Map<
+      string,
+      { deal: { has_teaser_document: boolean; has_cim_document: boolean; has_nda_document: boolean } }
+    >(
+      payload.engagements.map(
+        (entry: {
+          id: string;
+          deal: { has_teaser_document: boolean; has_cim_document: boolean; has_nda_document: boolean };
+        }) => [entry.id, entry]
+      )
     );
 
     expect(byId.get("eng-custom-sent")?.deal).toMatchObject({
@@ -446,6 +462,370 @@ describe("GET /api/buyer/engagements", () => {
     });
   });
 
+  it("accepts nested deals when Supabase returns a single-item array", async () => {
+    const supabase = createSupabaseForEngagements({
+      engagements: [
+        {
+          id: "eng-array",
+          stage: "nda_pending",
+          nda_status: "sent",
+          created_at: "2026-01-02T00:00:00.000Z",
+          updated_at: "2026-01-03T00:00:00.000Z",
+          project_id: null,
+          deals: [
+            {
+              id: "deal-first",
+              headline: "First Deal",
+              description: null,
+              industry: "Tech",
+              state: "CA",
+              region: null,
+              geography_display: "state",
+              status: "accepting_iois",
+              revenue_year_1: null,
+              ebitda_year_1: null,
+              revenue_year_2: null,
+              ebitda_year_2: null,
+              revenue_year_3: null,
+              ebitda_year_3: null,
+              revenue_projection: null,
+              ebitda_projection: null,
+              fiscal_year_labels: null,
+              nda_type: "custom",
+              cim_sharing_preference: null,
+              nda_vetting_preference: null,
+              teaser_document_path: null,
+              cim_document_path: null,
+              nda_document_path: "deals/deal-first/nda.pdf",
+              ioi_due_date: null,
+              loi_due_date: null,
+              published_at: null,
+              closed_at: null,
+              created_at: "2025-12-01T00:00:00.000Z",
+            },
+          ],
+        },
+      ],
+      buyerProjects: [],
+    });
+
+    authMocks.requireRole.mockResolvedValue({
+      supabase,
+      user: { id: "buyer-1" },
+      profile: { role: "buyer", status: "approved" },
+    });
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.engagements).toHaveLength(1);
+    expect(payload.engagements[0]).toMatchObject({
+      id: "eng-array",
+      deal: {
+        id: "deal-first",
+        headline: "First Deal",
+        geography: "CA",
+        date_received: "2025-12-01T00:00:00.000Z",
+      },
+      engagement: {
+        date_received: "2025-12-01T00:00:00.000Z",
+      },
+    });
+  });
+
+  it("drops engagements when nested deals are null, malformed, empty arrays, or multi-item arrays", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const supabase = createSupabaseForEngagements({
+      engagements: [
+        {
+          id: "eng-null-deal",
+          stage: "nda_pending",
+          nda_status: "sent",
+          created_at: "2026-01-01T00:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: null,
+        },
+        {
+          id: "eng-string-deal",
+          stage: "nda_pending",
+          nda_status: "sent",
+          created_at: "2026-01-01T01:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: "deal-id",
+        },
+        {
+          id: "eng-number-deal",
+          stage: "nda_pending",
+          nda_status: "sent",
+          created_at: "2026-01-01T02:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: 42,
+        },
+        {
+          id: "eng-empty-object",
+          stage: "nda_pending",
+          nda_status: "sent",
+          created_at: "2026-01-01T03:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: {},
+        },
+        {
+          id: "eng-empty-array",
+          stage: "nda_pending",
+          nda_status: "sent",
+          created_at: "2026-01-02T00:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: [],
+        },
+        {
+          id: "eng-multi-array",
+          stage: "nda_pending",
+          nda_status: "sent",
+          created_at: "2026-01-02T12:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: [
+            {
+              id: "deal-multi-1",
+              headline: "Multi One",
+              description: null,
+              industry: "Tech",
+              state: null,
+              region: "West",
+              geography_display: "region",
+              status: "accepting_iois",
+              revenue_year_1: null,
+              ebitda_year_1: null,
+              revenue_year_2: null,
+              ebitda_year_2: null,
+              revenue_year_3: null,
+              ebitda_year_3: null,
+              revenue_projection: null,
+              ebitda_projection: null,
+              fiscal_year_labels: null,
+              nda_type: "custom",
+              cim_sharing_preference: null,
+              nda_vetting_preference: null,
+              teaser_document_path: null,
+              cim_document_path: null,
+              nda_document_path: "deals/deal-multi-1/nda.pdf",
+              ioi_due_date: null,
+              loi_due_date: null,
+              published_at: null,
+              closed_at: null,
+              created_at: "2025-12-02T00:00:00.000Z",
+            },
+            {
+              id: "deal-multi-2",
+              headline: "Multi Two",
+              description: null,
+              industry: "Tech",
+              state: null,
+              region: "West",
+              geography_display: "region",
+              status: "accepting_iois",
+              revenue_year_1: null,
+              ebitda_year_1: null,
+              revenue_year_2: null,
+              ebitda_year_2: null,
+              revenue_year_3: null,
+              ebitda_year_3: null,
+              revenue_projection: null,
+              ebitda_projection: null,
+              fiscal_year_labels: null,
+              nda_type: "custom",
+              cim_sharing_preference: null,
+              nda_vetting_preference: null,
+              teaser_document_path: null,
+              cim_document_path: null,
+              nda_document_path: "deals/deal-multi-2/nda.pdf",
+              ioi_due_date: null,
+              loi_due_date: null,
+              published_at: null,
+              closed_at: null,
+              created_at: "2025-12-02T00:00:00.000Z",
+            },
+          ],
+        },
+        {
+          id: "eng-valid",
+          stage: "nda_pending",
+          nda_status: "sent",
+          created_at: "2026-01-03T00:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: {
+            id: "deal-valid",
+            headline: "Valid Deal",
+            description: null,
+            industry: "Tech",
+            state: null,
+            region: "West",
+            geography_display: "region",
+            status: "accepting_iois",
+            revenue_year_1: null,
+            ebitda_year_1: null,
+            revenue_year_2: null,
+            ebitda_year_2: null,
+            revenue_year_3: null,
+            ebitda_year_3: null,
+            revenue_projection: null,
+            ebitda_projection: null,
+            fiscal_year_labels: null,
+            nda_type: "custom",
+            cim_sharing_preference: null,
+            nda_vetting_preference: null,
+            teaser_document_path: null,
+            cim_document_path: null,
+            nda_document_path: "deals/deal-valid/nda.pdf",
+            ioi_due_date: null,
+            loi_due_date: null,
+            published_at: null,
+            closed_at: null,
+            created_at: "2025-12-03T00:00:00.000Z",
+          },
+        },
+      ],
+      buyerProjects: [],
+    });
+
+    authMocks.requireRole.mockResolvedValue({
+      supabase,
+      user: { id: "buyer-1" },
+      profile: { role: "buyer", status: "approved" },
+    });
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.engagements).toHaveLength(1);
+    expect(payload.meta).toEqual({
+      partial_results: true,
+      skipped_malformed_engagements: 6,
+    });
+    expect(payload.engagements[0]).toMatchObject({
+      id: "eng-valid",
+      deal: { id: "deal-valid" },
+    });
+    expect(payload.engagements.map((engagement: { id: string }) => engagement.id)).toEqual(["eng-valid"]);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Skipped malformed buyer engagement rows during normalization",
+      {
+        userId: "b***1",
+        totalRows: 7,
+        returnedRows: 1,
+        skippedMalformedEngagements: 6,
+        skippedByReason: {
+          missing_related_deal: 3,
+          invalid_related_deal_shape: 3,
+        },
+      }
+    );
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const [, warningContext] = warnSpy.mock.calls[0] ?? [];
+    expect(JSON.stringify(warningContext)).not.toContain("eng-null-deal");
+    expect(JSON.stringify(warningContext)).not.toContain("deal-multi-1");
+    expect(JSON.stringify(warningContext)).not.toContain("buyer-1");
+  });
+
+  it("logs info instead of warn when malformed row count is below warning threshold", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const supabase = createSupabaseForEngagements({
+      engagements: [
+        {
+          id: "eng-malformed",
+          stage: "nda_pending",
+          nda_status: "sent",
+          created_at: "2026-01-01T00:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: null,
+        },
+        {
+          id: "eng-valid",
+          stage: "nda_pending",
+          nda_status: "sent",
+          created_at: "2026-01-03T00:00:00.000Z",
+          updated_at: null,
+          project_id: null,
+          deals: {
+            id: "deal-valid",
+            headline: "Valid Deal",
+            description: null,
+            industry: "Tech",
+            state: null,
+            region: "West",
+            geography_display: "region",
+            status: "accepting_iois",
+            revenue_year_1: null,
+            ebitda_year_1: null,
+            revenue_year_2: null,
+            ebitda_year_2: null,
+            revenue_year_3: null,
+            ebitda_year_3: null,
+            revenue_projection: null,
+            ebitda_projection: null,
+            fiscal_year_labels: null,
+            nda_type: "custom",
+            cim_sharing_preference: null,
+            nda_vetting_preference: null,
+            teaser_document_path: null,
+            cim_document_path: null,
+            nda_document_path: "deals/deal-valid/nda.pdf",
+            ioi_due_date: null,
+            loi_due_date: null,
+            published_at: null,
+            closed_at: null,
+            created_at: "2025-12-03T00:00:00.000Z",
+          },
+        },
+      ],
+      buyerProjects: [],
+    });
+
+    authMocks.requireRole.mockResolvedValue({
+      supabase,
+      user: { id: "buyer-1" },
+      profile: { role: "buyer", status: "approved" },
+    });
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      meta: {
+        partial_results: true,
+        skipped_malformed_engagements: 1,
+      },
+    });
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(infoSpy).toHaveBeenCalledWith(
+      "Detected malformed buyer engagement rows during normalization (below warn threshold)",
+      {
+        userId: "b***1",
+        totalRows: 2,
+        returnedRows: 1,
+        skippedMalformedEngagements: 1,
+        skippedByReason: {
+          missing_related_deal: 1,
+          invalid_related_deal_shape: 0,
+        },
+        warningThreshold: 3,
+      }
+    );
+    expect(infoSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("sorts by updated_at desc and falls back to created_at when updated_at is null", async () => {
     const supabase = createSupabaseForEngagements({
       engagements: [
@@ -459,14 +839,32 @@ describe("GET /api/buyer/engagements", () => {
           deals: {
             id: "deal-old",
             headline: "Old Deal",
+            description: null,
             industry: "Tech",
-            status: "accepting_iois",
-            revenue_year_3: null,
-            ebitda_year_3: null,
             state: null,
             region: "Midwest",
             geography_display: "region",
+            status: "accepting_iois",
+            revenue_year_1: null,
+            ebitda_year_1: null,
+            revenue_year_2: null,
+            ebitda_year_2: null,
+            revenue_year_3: null,
+            ebitda_year_3: null,
+            revenue_projection: null,
+            ebitda_projection: null,
+            fiscal_year_labels: null,
+            nda_type: null,
+            cim_sharing_preference: null,
+            nda_vetting_preference: null,
+            teaser_document_path: null,
+            cim_document_path: null,
+            nda_document_path: null,
+            ioi_due_date: null,
+            loi_due_date: null,
             published_at: null,
+            closed_at: null,
+            created_at: "2025-12-01T00:00:00.000Z",
           },
         },
         {
@@ -479,14 +877,32 @@ describe("GET /api/buyer/engagements", () => {
           deals: {
             id: "deal-new",
             headline: "New Deal",
+            description: null,
             industry: "Healthcare",
-            status: "accepting_lois",
-            revenue_year_3: null,
-            ebitda_year_3: null,
             state: null,
             region: "Northeast",
             geography_display: "region",
+            status: "accepting_lois",
+            revenue_year_1: null,
+            ebitda_year_1: null,
+            revenue_year_2: null,
+            ebitda_year_2: null,
+            revenue_year_3: null,
+            ebitda_year_3: null,
+            revenue_projection: null,
+            ebitda_projection: null,
+            fiscal_year_labels: null,
+            nda_type: null,
+            cim_sharing_preference: null,
+            nda_vetting_preference: null,
+            teaser_document_path: null,
+            cim_document_path: null,
+            nda_document_path: null,
+            ioi_due_date: null,
+            loi_due_date: null,
             published_at: null,
+            closed_at: null,
+            created_at: "2025-12-05T00:00:00.000Z",
           },
         },
       ],
@@ -524,14 +940,32 @@ describe("GET /api/buyer/engagements", () => {
           deals: {
             id: "deal-1",
             headline: "Alpha Tools",
+            description: null,
             industry: "Industrial",
-            status: "accepting_iois",
-            revenue_year_3: 120,
-            ebitda_year_3: 20,
             state: "TX",
             region: null,
             geography_display: "state",
+            status: "accepting_iois",
+            revenue_year_1: null,
+            ebitda_year_1: null,
+            revenue_year_2: null,
+            ebitda_year_2: null,
+            revenue_year_3: 120,
+            ebitda_year_3: 20,
+            revenue_projection: null,
+            ebitda_projection: null,
+            fiscal_year_labels: null,
+            nda_type: null,
+            cim_sharing_preference: null,
+            nda_vetting_preference: null,
+            teaser_document_path: null,
+            cim_document_path: null,
+            nda_document_path: null,
+            ioi_due_date: null,
+            loi_due_date: null,
             published_at: "2025-12-01T00:00:00.000Z",
+            closed_at: null,
+            created_at: "2025-11-15T00:00:00.000Z",
           },
         },
       ],
@@ -548,7 +982,11 @@ describe("GET /api/buyer/engagements", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    await expect(response.json()).resolves.toEqual({
+    await expect(response.json()).resolves.toMatchObject({
+      meta: {
+        partial_results: false,
+        skipped_malformed_engagements: 0,
+      },
       viewer: {
         isApprovedBuyer: true,
       },
@@ -563,6 +1001,7 @@ describe("GET /api/buyer/engagements", () => {
   });
 
   it("returns 500 with generic message when engagement query fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const engagementsQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({
@@ -589,9 +1028,14 @@ describe("GET /api/buyer/engagements", () => {
     expect(response.status).toBe(500);
     expect(response.headers.get("cache-control")).toBe("no-store");
     await expect(response.json()).resolves.toEqual({ error: "Failed to fetch engagements" });
+    expect(errorSpy).toHaveBeenCalledWith("Failed to fetch buyer engagements", {
+      userId: "b***1",
+      error: { message: "db unavailable" },
+    });
   });
 
   it("returns 500 with generic message when buyer project lookup fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const engagementsQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({
@@ -606,14 +1050,32 @@ describe("GET /api/buyer/engagements", () => {
             deals: {
               id: "deal-1",
               headline: "Alpha",
+              description: null,
               industry: "Tech",
-              status: "accepting_iois",
-              revenue_year_3: null,
-              ebitda_year_3: null,
               state: null,
               region: "West",
               geography_display: "region",
+              status: "accepting_iois",
+              revenue_year_1: null,
+              ebitda_year_1: null,
+              revenue_year_2: null,
+              ebitda_year_2: null,
+              revenue_year_3: null,
+              ebitda_year_3: null,
+              revenue_projection: null,
+              ebitda_projection: null,
+              fiscal_year_labels: null,
+              nda_type: null,
+              cim_sharing_preference: null,
+              nda_vetting_preference: null,
+              teaser_document_path: null,
+              cim_document_path: null,
+              nda_document_path: null,
+              ioi_due_date: null,
+              loi_due_date: null,
               published_at: null,
+              closed_at: null,
+              created_at: "2025-12-01T00:00:00.000Z",
             },
           },
         ],
@@ -646,6 +1108,10 @@ describe("GET /api/buyer/engagements", () => {
     expect(response.status).toBe(500);
     expect(response.headers.get("cache-control")).toBe("no-store");
     await expect(response.json()).resolves.toEqual({ error: "Failed to fetch engagements" });
+    expect(errorSpy).toHaveBeenCalledWith("Failed to fetch buyer projects for engagements", {
+      userId: "b***1",
+      error: { message: "lookup failed" },
+    });
   });
 
   it("sets viewer approval to false when profile status is missing (fail-closed)", async () => {
@@ -664,6 +1130,10 @@ describe("GET /api/buyer/engagements", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
+      meta: {
+        partial_results: false,
+        skipped_malformed_engagements: 0,
+      },
       viewer: {
         isApprovedBuyer: false,
       },

@@ -1,8 +1,14 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
+
+type RenderedChipElement = ReactElement<{
+  label: string;
+  sx: Record<string, unknown>;
+}>;
 
 type EngagementTableRow = {
   id: string;
@@ -668,7 +674,7 @@ describe("BuyerEngagementsPage", () => {
         stage: "nda_pending",
         last_updated: "2026-02-01T00:00:00.000Z",
       },
-    }) as any;
+    }) as RenderedChipElement;
 
     const dealStatusChip = dealStatusColumn?.renderCell?.({
       row: {
@@ -678,7 +684,7 @@ describe("BuyerEngagementsPage", () => {
         deal_status: "accepting_iois",
         last_updated: "2026-02-01T00:00:00.000Z",
       },
-    }) as any;
+    }) as RenderedChipElement;
 
     expect(stageChip.props.label).toBe(formatEngagementStageLabel("nda_pending"));
     expect(stageChip.props.sx).toMatchObject({

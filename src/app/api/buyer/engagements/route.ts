@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { isAuthResponse, requireRole } from "@/server/auth";
 
+export const dynamic = "force-dynamic";
+
 type DealSummaryRow = {
   id: string;
   headline: string;
@@ -52,6 +54,12 @@ type EngagementRow = {
   deals: DealSummaryRow;
 };
 
+type EngagementRowWithNestedDeals = Omit<EngagementRow, "deals"> & {
+  deals: unknown;
+};
+
+type SkippedEngagementReason = "missing_related_deal" | "invalid_related_deal_shape";
+
 type BuyerProjectRow = {
   id: string;
   name: string;
@@ -62,6 +70,82 @@ const NO_STORE_HEADERS = {
 };
 
 const CUSTOM_NDA_ACCESSIBLE_STATUSES = new Set(["sent", "signed"]);
+const MALFORMED_ENGAGEMENT_WARN_THRESHOLD = 3;
+
+const REQUIRED_DEAL_STRING_FIELDS = ["id", "headline", "industry", "status", "created_at"] as const;
+const NULLABLE_DEAL_STRING_FIELDS = [
+  "description",
+  "state",
+  "region",
+  "geography_display",
+  "nda_type",
+  "cim_sharing_preference",
+  "nda_vetting_preference",
+  "teaser_document_path",
+  "cim_document_path",
+  "nda_document_path",
+  "ioi_due_date",
+  "loi_due_date",
+  "published_at",
+  "closed_at",
+] as const;
+const NULLABLE_DEAL_NUMBER_FIELDS = [
+  "revenue_year_1",
+  "ebitda_year_1",
+  "revenue_year_2",
+  "revenue_year_3",
+  "ebitda_year_2",
+  "ebitda_year_3",
+  "revenue_projection",
+  "ebitda_projection",
+] as const;
+
+function hasOwnProperty<T extends string>(value: Record<string, unknown>, key: T): value is Record<T, unknown> {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return value === null || typeof value === "string";
+}
+
+function isNullableNumber(value: unknown): value is number | null {
+  return value === null || (typeof value === "number" && Number.isFinite(value));
+}
+
+function isNullableFiscalYearLabels(value: unknown): value is Record<string, string> | null {
+  if (value === null) return true;
+  return isPlainObject(value) && Object.values(value).every((label) => typeof label === "string");
+}
+
+function isDealSummaryRowShape(value: unknown): value is DealSummaryRow {
+  if (!isPlainObject(value)) return false;
+
+  for (const field of REQUIRED_DEAL_STRING_FIELDS) {
+    if (!hasOwnProperty(value, field) || typeof value[field] !== "string" || value[field].length === 0) {
+      return false;
+    }
+  }
+
+  for (const field of NULLABLE_DEAL_STRING_FIELDS) {
+    if (!hasOwnProperty(value, field) || !isNullableString(value[field])) {
+      return false;
+    }
+  }
+
+  for (const field of NULLABLE_DEAL_NUMBER_FIELDS) {
+    if (!hasOwnProperty(value, field) || !isNullableNumber(value[field])) {
+      return false;
+    }
+  }
+
+  return hasOwnProperty(value, "fiscal_year_labels") && isNullableFiscalYearLabels(value.fiscal_year_labels);
+}
 
 function getActivityTimestamp(engagement: Pick<EngagementRow, "updated_at" | "created_at">): number {
   const raw = engagement.updated_at ?? engagement.created_at;
@@ -104,6 +188,76 @@ function buildBuyerEngagementResponseDeal(deal: DealSummaryRow, engagement: Enga
     created_at: deal.created_at,
     date_received: deal.created_at,
     geography: deal.geography_display === "state" ? deal.state : deal.region,
+  };
+}
+
+function redactIdentifier(identifier: string): string {
+  if (identifier.length <= 2) return "**";
+  if (identifier.length <= 8) return `${identifier.slice(0, 1)}***${identifier.slice(-1)}`;
+  return `${identifier.slice(0, 4)}…${identifier.slice(-4)}`;
+}
+
+function logMalformedEngagementNormalizationWarning({
+  userId,
+  totalRows,
+  returnedRows,
+  skippedMalformedEngagements,
+  skippedByReason,
+}: {
+  userId: string;
+  totalRows: number;
+  returnedRows: number;
+  skippedMalformedEngagements: number;
+  skippedByReason: Record<SkippedEngagementReason, number>;
+}): void {
+  const context = {
+    userId,
+    totalRows,
+    returnedRows,
+    skippedMalformedEngagements,
+    skippedByReason,
+  };
+
+  if (skippedMalformedEngagements >= MALFORMED_ENGAGEMENT_WARN_THRESHOLD) {
+    console.warn("Skipped malformed buyer engagement rows during normalization", context);
+    return;
+  }
+
+  console.info("Detected malformed buyer engagement rows during normalization (below warn threshold)", {
+    ...context,
+    warningThreshold: MALFORMED_ENGAGEMENT_WARN_THRESHOLD,
+  });
+}
+
+function normalizeEngagementDeal(
+  engagement: EngagementRowWithNestedDeals
+): { engagement: EngagementRow | null; skippedReason: SkippedEngagementReason | null } {
+  const dealCandidate = Array.isArray(engagement.deals)
+    ? engagement.deals.length === 1
+      ? engagement.deals[0]
+      : null
+    : engagement.deals;
+
+  if (!dealCandidate) {
+    return {
+      engagement: null,
+      skippedReason: "missing_related_deal",
+    };
+  }
+
+  if (!isDealSummaryRowShape(dealCandidate)) {
+    return {
+      engagement: null,
+      skippedReason: "invalid_related_deal_shape",
+    };
+  }
+
+  return {
+    engagement: {
+      ...engagement,
+      deals: dealCandidate,
+    },
+    skippedReason: null,
   };
 }
 
@@ -169,7 +323,7 @@ export async function GET() {
 
     if (engagementsError) {
       console.error("Failed to fetch buyer engagements", {
-        userId: user.id,
+        userId: redactIdentifier(user.id),
         error: engagementsError,
       });
       return NextResponse.json(
@@ -178,7 +332,36 @@ export async function GET() {
       );
     }
 
-    const engagements = (engagementRows || []) as EngagementRow[];
+    const rawEngagements = (engagementRows || []) as EngagementRowWithNestedDeals[];
+    const skippedByReason: Record<SkippedEngagementReason, number> = {
+      missing_related_deal: 0,
+      invalid_related_deal_shape: 0,
+    };
+    const engagements: EngagementRow[] = [];
+
+    for (const engagement of rawEngagements) {
+      const normalized = normalizeEngagementDeal(engagement);
+      if (normalized.engagement) {
+        engagements.push(normalized.engagement);
+        continue;
+      }
+
+      if (normalized.skippedReason) {
+        skippedByReason[normalized.skippedReason] += 1;
+      }
+    }
+
+    const skippedMalformedEngagements = skippedByReason.missing_related_deal + skippedByReason.invalid_related_deal_shape;
+    if (skippedMalformedEngagements > 0) {
+      logMalformedEngagementNormalizationWarning({
+        userId: redactIdentifier(user.id),
+        totalRows: rawEngagements.length,
+        returnedRows: engagements.length,
+        skippedMalformedEngagements,
+        skippedByReason,
+      });
+    }
+
     const projectIds = Array.from(
       new Set(engagements.map((engagement) => engagement.project_id).filter((id): id is string => Boolean(id)))
     );
@@ -194,7 +377,7 @@ export async function GET() {
 
       if (buyerProjectsError) {
         console.error("Failed to fetch buyer projects for engagements", {
-          userId: user.id,
+          userId: redactIdentifier(user.id),
           error: buyerProjectsError,
         });
         return NextResponse.json(
@@ -247,6 +430,10 @@ export async function GET() {
     return NextResponse.json(
       {
         engagements: responseEngagements,
+        meta: {
+          partial_results: skippedMalformedEngagements > 0,
+          skipped_malformed_engagements: skippedMalformedEngagements,
+        },
         viewer: {
           isApprovedBuyer,
         },

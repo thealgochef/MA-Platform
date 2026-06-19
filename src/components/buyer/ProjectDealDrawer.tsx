@@ -16,7 +16,7 @@ export interface ProjectDealDrawerDeal {
   industry: string;
   state: string | null;
   region: string | null;
-  geography_display: string;
+  geography_display: string | null;
   status: string;
   revenue_year_1?: number | null;
   ebitda_year_1?: number | null;
@@ -33,6 +33,7 @@ export interface ProjectDealDrawerDeal {
   has_teaser_document?: boolean;
   has_cim_document?: boolean;
   has_nda_document?: boolean;
+  date_received?: string | null;
   ioi_due_date: string | null;
   loi_due_date: string | null;
   published_at?: string | null;

@@ -1216,9 +1216,15 @@ describe("Buyer signup enum required and invalid-type messages", () => {
     documentPaths: [],
   };
 
+  function omitRequiredField<T extends object, K extends keyof T>(input: T, key: K): Omit<T, K> {
+    const partialInput: Partial<T> = { ...input };
+    delete partialInput[key];
+    return partialInput as Omit<T, K>;
+  }
+
   it("returns 'Buyer type is required' when firmType is missing", () => {
     // Arrange
-    const { firmType: _firmType, ...inputWithoutFirmType } = validBuyerSignupInput;
+    const inputWithoutFirmType = omitRequiredField(validBuyerSignupInput, "firmType");
 
     // Act
     const result = buyerSignupSchema.safeParse(inputWithoutFirmType);
@@ -1230,7 +1236,7 @@ describe("Buyer signup enum required and invalid-type messages", () => {
 
   it("returns 'Accreditation is required' when accreditation is missing", () => {
     // Arrange
-    const { accreditation: _accreditation, ...inputWithoutAccreditation } = validBuyerSignupInput;
+    const inputWithoutAccreditation = omitRequiredField(validBuyerSignupInput, "accreditation");
 
     // Act
     const result = buyerSignupSchema.safeParse(inputWithoutAccreditation);
