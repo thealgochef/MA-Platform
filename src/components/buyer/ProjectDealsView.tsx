@@ -73,6 +73,30 @@ export function getProjectDealsRouteForTabChange(projectId: string, value: unkno
   return getRouteForViewMode(projectId, value);
 }
 
+export function isProjectDealsViewMode(value: unknown): value is ProjectDealsViewMode {
+  return value === "matches" || value === "active" || value === "archive";
+}
+
+function getRouteForViewMode(projectId: string, viewMode: ProjectDealsViewMode): string {
+  if (viewMode === "matches") {
+    return `/projects/${projectId}`;
+  }
+
+  if (viewMode === "active") {
+    return `/projects/${projectId}/active`;
+  }
+
+  return `/projects/${projectId}/archive`;
+}
+
+export function getProjectDealsRouteForTabChange(projectId: string, value: unknown): string | null {
+  if (!isProjectDealsViewMode(value)) {
+    return null;
+  }
+
+  return getRouteForViewMode(projectId, value);
+}
+
 function getViewModeFromPath(pathname: string | null): ProjectDealsViewMode {
   if (pathname?.endsWith("/active")) {
     return "active";
@@ -166,6 +190,95 @@ function getEmptyStateMessage(viewMode: ProjectDealsViewMode): string {
   }
 
   return "No matching deals found. Try adjusting your project criteria.";
+}
+
+function getDealActions(
+  deal: Deal,
+  options: {
+    onNavigate: (href: string) => void;
+    onPursue: (dealId: string) => void;
+    onDecline: (dealId: string) => void;
+    actionLoadingDealId: string | null;
+  }
+): DealActionConfig[] {
+  const stage = deal.engagement?.stage;
+  const isNdaPending = stage === "nda_pending";
+  const isEngaged = Boolean(deal.engagement) && stage !== "declined";
+  const isDeclined = stage === "declined";
+  const isLoading = options.actionLoadingDealId === deal.id;
+  const canAccessIoiWorkflow = canBuyerAccessIoiWorkflow({
+    isApprovedBuyer: true,
+    dealStatus: deal.status,
+    engagement: deal.engagement,
+  });
+  const canAccessLoiWorkflow = canBuyerAccessLoiWorkflow({
+    isApprovedBuyer: true,
+    dealStatus: deal.status,
+    engagement: deal.engagement,
+  });
+
+  const primaryAction = (() => {
+    if (stage === "nda_pending") {
+      return {
+      label: "Sign NDA",
+      onClick: () => options.onNavigate(`/deals/${deal.id}/nda`),
+      };
+    }
+
+    if (stage === "nda_signed" && canAccessIoiWorkflow) {
+      return {
+      label: "Submit IOI",
+      onClick: () => options.onNavigate(`/deals/${deal.id}/ioi`),
+      };
+    }
+
+    if (stage === "ioi_submitted" && canAccessIoiWorkflow) {
+      return {
+      label: "View IOI",
+      onClick: () => options.onNavigate(`/deals/${deal.id}/ioi`),
+      };
+    }
+
+    if ((stage === "ioi_submitted" || stage === "loi_submitted") && canAccessLoiWorkflow) {
+      return {
+      label: stage === "loi_submitted" ? "View LOI" : "Submit LOI",
+      onClick: () => options.onNavigate(`/deals/${deal.id}/loi`),
+      };
+    }
+
+    if (!isEngaged || isDeclined) {
+      return {
+        label: "Pursue",
+        onClick: () => options.onPursue(deal.id),
+        disabled: isLoading,
+      };
+    }
+
+    return null;
+  })();
+
+  const shouldRenderSinglePrimaryAction = Boolean(primaryAction) && (isNdaPending || isDeclined || isEngaged);
+  if (shouldRenderSinglePrimaryAction && primaryAction) {
+    return [primaryAction];
+  }
+
+  if (!isNdaPending && !isEngaged && !isDeclined) {
+    return [
+      {
+        label: "Pursue",
+        onClick: () => options.onPursue(deal.id),
+        disabled: isLoading,
+      },
+      {
+        label: "Decline",
+        onClick: () => options.onDecline(deal.id),
+        disabled: isLoading,
+        variant: "outlined",
+      },
+    ];
+  }
+
+  return [];
 }
 
 export default function ProjectDealsView({ projectId }: { projectId: string }) {

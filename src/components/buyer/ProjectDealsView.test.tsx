@@ -505,6 +505,13 @@ describe("ProjectDealsView", () => {
       },
     ];
 
+    expect(stickyHeader).toBeInTheDocument();
+    expect(stickyHeader).toHaveClass("border-b", "border-border-color");
+    expect(stickyHeader).not.toContainElement(activePanel);
+    expect(stickyHeader?.nextElementSibling).toContainElement(activePanel);
+  });
+
+  it("renders pinned drawer footer actions with unengaged parity", async () => {
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
