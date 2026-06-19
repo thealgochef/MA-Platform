@@ -214,6 +214,20 @@ describe("Phase 1: Database Schema Migrations", () => {
       const allContent = files.map(f => fs.readFileSync(path.join(MIGRATIONS_DIR, f), "utf-8")).join("\n");
       expect(allContent).toContain("match_deals_to_project");
     });
+
+    it("should gate match_deals_to_project on buyer_projects.is_active in both incremental and combined SQL", () => {
+      const incremental = fs.readFileSync(
+        path.join(MIGRATIONS_DIR, "00007_storage_and_functions.sql"),
+        "utf-8"
+      );
+      const combined = fs.readFileSync(path.join(MIGRATIONS_DIR, "combined.sql"), "utf-8");
+
+      for (const sql of [incremental, combined]) {
+        expect(sql).toContain("v_is_active boolean");
+        expect(sql).toMatch(/bp\.is_active/);
+        expect(sql).toMatch(/IF\s+v_is_active\s+IS\s+DISTINCT\s+FROM\s+true\s+THEN[\s\S]*RETURN;/);
+      }
+    });
   });
 
   describe("RLS policies", () => {

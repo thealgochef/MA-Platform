@@ -111,6 +111,24 @@ describe("Phase 4: Buyer Projects & Deal Discovery", () => {
       expect(content).toContain("deal_engagements");
     });
 
+    it("project matches route should return existing engagements for inactive projects without criteria scanning", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "projects", "[id]", "matches", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("project.is_active !== true");
+      expect(content).toContain(".from(\"deal_engagements\")");
+      expect(content).toContain(".eq(\"buyer_user_id\", user.id)");
+      expect(content).toContain(".eq(\"project_id\", params.id)");
+      expect(content).toContain(".order(\"deal_id\", { ascending: true })");
+      expect(content).toContain(".from(\"deals\")");
+      expect(content).toContain(".in(\"id\", pageDealIds)");
+      expect(content).not.toContain("deals: []");
+      expect(content).toContain("const nextCursor = allEngagements.length > PAGE_SIZE");
+      expect(content).toContain("isApprovedBuyer");
+    });
+
     it("project matches route should return minimized expanded drawer deal and engagement fields", () => {
       const content = fs.readFileSync(
         path.join(SRC, "app", "api", "projects", "[id]", "matches", "route.ts"),
