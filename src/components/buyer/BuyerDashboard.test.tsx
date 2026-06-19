@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type DashboardProjectRow = { id: string; name: string };
@@ -18,13 +19,54 @@ type MockDashboardDataGridProps = {
   onRowsPerPageChange: (pageSize: number) => void;
 };
 
+type ProjectStatusChipProps = {
+  isActive: boolean | null | undefined;
+  clickable?: boolean;
+  onClick?: (event: unknown) => void;
+};
+
 const mockState = vi.hoisted(() => ({
   push: vi.fn(),
   capturedDataGridProps: [] as MockDashboardDataGridProps[],
+  capturedStatusChipProps: [] as ProjectStatusChipProps[],
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockState.push }),
+}));
+
+vi.mock("@mui/material", () => ({
+  Menu: ({ open, children }: { open?: boolean; children: ReactNode }) => (
+    open ? <div data-testid="status-menu">{children}</div> : null
+  ),
+  MenuItem: ({ children, onClick, disabled }: { children: ReactNode; onClick?: () => void; disabled?: boolean }) => (
+    <button type="button" onClick={onClick} disabled={disabled}>
+      {children}
+    </button>
+  ),
+}));
+
+vi.mock("@/components/ui/ProjectStatusChip", () => ({
+  getProjectStatusLabel: (isActive: boolean | null | undefined) => {
+    if (isActive === true) {
+      return "Active";
+    }
+
+    if (isActive === false) {
+      return "Inactive";
+    }
+
+    return "—";
+  },
+  ProjectStatusChip: ({ isActive, clickable = false, onClick }: ProjectStatusChipProps) => {
+    mockState.capturedStatusChipProps.push({ isActive, clickable, onClick });
+    const label = isActive === true ? "Active" : isActive === false ? "Inactive" : "—";
+    return (
+      <button type="button" data-testid="buyer-status-chip" onClick={onClick}>
+        {label}
+      </button>
+    );
+  },
 }));
 
 vi.mock("@/components/ui/DataGridTable", () => ({
@@ -47,6 +89,9 @@ vi.mock("@/components/ui/DataGridTable", () => ({
         </button>
         <button type="button" onClick={() => props.onSortModelChange([{ field: "name", sort: "asc" }])}>
           Sort dashboard rows by name ascending
+        </button>
+        <button type="button" onClick={() => props.onSortModelChange([{ field: "status", sort: "asc" }])}>
+          Sort dashboard rows by status ascending
         </button>
         <button type="button" onClick={() => props.onPageChange(1)}>
           Dashboard go to page 2
@@ -71,10 +116,21 @@ function getLatestGridProps() {
   return mockState.capturedDataGridProps.at(-1);
 }
 
+function getStatusColumn() {
+  const latestGridProps = getLatestGridProps();
+  return latestGridProps?.detailColumns.find((column) => column.field === "status") as
+    | {
+        valueGetter?: (_value: unknown, row: Record<string, unknown>) => unknown;
+        renderCell?: (params: { row: Record<string, unknown> }) => unknown;
+      }
+    | undefined;
+}
+
 describe("BuyerDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockState.capturedDataGridProps = [];
+    mockState.capturedStatusChipProps = [];
 
     vi.stubGlobal(
       "fetch",
@@ -470,6 +526,7 @@ describe("BuyerDashboard", () => {
     ]);
     expect(latestGridProps?.detailColumns.map((column) => column.field)).toEqual([
       "name",
+      "status",
       "industry",
       "location",
       "revenue",
@@ -484,6 +541,11 @@ describe("BuyerDashboard", () => {
     expect(latestGridProps?.onRowsPerPageChange).toBeTypeOf("function");
     expect(latestGridProps?.onRowSelectionModelChange).toBeTypeOf("function");
     expect(latestGridProps?.onRowClick).toBeTypeOf("function");
+
+    const columnFields = latestGridProps?.detailColumns.map((column) => column.field) ?? [];
+    const projectNameColumnIndex = columnFields.indexOf("name");
+    expect(projectNameColumnIndex).toBeGreaterThanOrEqual(0);
+    expect(columnFields[projectNameColumnIndex + 1]).toBe("status");
 
     fireEvent.click(screen.getByRole("button", { name: "Sort dashboard rows by name ascending" }));
     await waitFor(() => {
@@ -619,6 +681,453 @@ describe("BuyerDashboard", () => {
       expect(getLatestGridProps()?.paginationModel).toEqual({ page: 1, pageSize: 1 });
       expect(getLatestGridProps()?.rows.map((row) => row.id)).toEqual(["project-o"]);
     });
+  });
+
+  it("maps status values to reusable chips and sorts by status label ascending without requiring status mutation", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+
+        if (url === "/api/projects") {
+          return {
+            ok: true,
+            json: async () => ({
+              projects: [
+                {
+                  id: "project-inactive",
+                  name: "Project Inactive",
+                  is_active: false,
+                  industry: "Industrial",
+                  revenue_min: null,
+                  revenue_max: null,
+                  ebitda_min: null,
+                  ebitda_max: null,
+                  location: "TX",
+                  keywords: [],
+                  created_at: "2026-01-03T00:00:00.000Z",
+                },
+                {
+                  id: "project-active",
+                  name: "Project Active",
+                  is_active: true,
+                  industry: "Healthcare",
+                  revenue_min: null,
+                  revenue_max: null,
+                  ebitda_min: null,
+                  ebitda_max: null,
+                  location: "CA",
+                  keywords: [],
+                  created_at: "2026-01-02T00:00:00.000Z",
+                },
+                {
+                  id: "project-fallback",
+                  name: "Project Fallback",
+                  is_active: null,
+                  industry: "Technology",
+                  revenue_min: null,
+                  revenue_max: null,
+                  ebitda_min: null,
+                  ebitda_max: null,
+                  location: "WA",
+                  keywords: [],
+                  created_at: "2026-01-01T00:00:00.000Z",
+                },
+              ],
+            }),
+          };
+        }
+
+        if (url === "/api/buyer/analytics") {
+          return {
+            ok: true,
+            json: async () => ({
+              analytics: {
+                pursuing: 1,
+                passed: 0,
+                ndaSigned: 0,
+                ioisSubmitted: 0,
+                loisSubmitted: 0,
+                dealsByStage: {},
+                avgRevenue: null,
+                avgEbitda: null,
+                avgMatchedRevenue: null,
+                avgMatchedEbitda: null,
+                dealsByIndustry: {},
+              },
+              activity: [],
+            }),
+          };
+        }
+
+        return {
+          ok: false,
+          json: async () => ({}),
+        };
+      })
+    );
+
+    render(<BuyerDashboard />);
+
+    expect(await screen.findByTestId("buyer-projects-data-grid")).toBeInTheDocument();
+
+    const statusColumn = getStatusColumn();
+
+    expect(statusColumn?.valueGetter).toBeTypeOf("function");
+    expect(statusColumn?.renderCell).toBeTypeOf("function");
+    expect(statusColumn?.valueGetter?.(undefined, { is_active: true })).toBe("Active");
+    expect(statusColumn?.valueGetter?.(undefined, { is_active: false })).toBe("Inactive");
+    expect(statusColumn?.valueGetter?.(undefined, { is_active: null })).toBe("—");
+
+    render(
+      <>
+        {statusColumn?.renderCell?.({ row: { id: "project-active", is_active: true } })}
+        {statusColumn?.renderCell?.({ row: { id: "project-inactive", is_active: false } })}
+        {statusColumn?.renderCell?.({ row: { id: "project-fallback", is_active: null } })}
+      </>
+    );
+
+    const statusChipNodes = screen.getAllByTestId("buyer-status-chip");
+    expect(statusChipNodes).toHaveLength(3);
+    expect(statusChipNodes[0]).toHaveTextContent("Active");
+    expect(statusChipNodes[1]).toHaveTextContent("Inactive");
+    expect(statusChipNodes[2]).toHaveTextContent("—");
+    expect(mockState.capturedStatusChipProps.slice(-3)).toEqual([
+      { isActive: true, clickable: true, onClick: expect.any(Function) },
+      { isActive: false, clickable: true, onClick: expect.any(Function) },
+      { isActive: null, clickable: true, onClick: expect.any(Function) },
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort dashboard rows by status ascending" }));
+
+    await waitFor(() => {
+      expect(getLatestGridProps()?.sortModel).toEqual([{ field: "status", sort: "asc" }]);
+      expect(getLatestGridProps()?.rows.map((row) => row.id)).toEqual([
+        "project-fallback",
+        "project-active",
+        "project-inactive",
+      ]);
+    });
+  });
+
+  it("navigates to the project edit page when Edit Project is selected from the status menu", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+
+        if (url === "/api/projects") {
+          return {
+            ok: true,
+            json: async () => ({
+              projects: [
+                {
+                  id: "project-edit",
+                  name: "Project Edit",
+                  is_active: true,
+                  industry: "Industrial",
+                  revenue_min: null,
+                  revenue_max: null,
+                  ebitda_min: null,
+                  ebitda_max: null,
+                  location: "TX",
+                  keywords: [],
+                  created_at: "2026-01-01T00:00:00.000Z",
+                },
+              ],
+            }),
+          };
+        }
+
+        if (url === "/api/buyer/analytics") {
+          return {
+            ok: true,
+            json: async () => ({
+              analytics: {
+                pursuing: 1,
+                passed: 0,
+                ndaSigned: 0,
+                ioisSubmitted: 0,
+                loisSubmitted: 0,
+                dealsByStage: {},
+                avgRevenue: null,
+                avgEbitda: null,
+                avgMatchedRevenue: null,
+                avgMatchedEbitda: null,
+                dealsByIndustry: {},
+              },
+              activity: [],
+            }),
+          };
+        }
+
+        return {
+          ok: false,
+          json: async () => ({}),
+        };
+      })
+    );
+
+    render(<BuyerDashboard />);
+
+    expect(await screen.findByTestId("buyer-projects-data-grid")).toBeInTheDocument();
+
+    const statusColumn = getStatusColumn();
+    render(<>{statusColumn?.renderCell?.({ row: { id: "project-edit", is_active: true } })}</>);
+
+    fireEvent.click(screen.getByTestId("buyer-status-chip"));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Project" }));
+
+    expect(mockState.push).toHaveBeenCalledWith("/projects/project-edit/edit");
+  });
+
+  it("shows Resume Project for inactive status and resumes with an active PATCH payload", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+
+        if (url === "/api/projects") {
+          return {
+            ok: true,
+            json: async () => ({
+              projects: [
+                {
+                  id: "project-inactive",
+                  name: "Project Inactive",
+                  is_active: false,
+                  industry: "Industrial",
+                  revenue_min: null,
+                  revenue_max: null,
+                  ebitda_min: null,
+                  ebitda_max: null,
+                  location: "TX",
+                  keywords: [],
+                  created_at: "2026-01-01T00:00:00.000Z",
+                },
+              ],
+            }),
+          };
+        }
+
+        if (url === "/api/buyer/analytics") {
+          return {
+            ok: true,
+            json: async () => ({
+              analytics: {
+                pursuing: 1,
+                passed: 0,
+                ndaSigned: 0,
+                ioisSubmitted: 0,
+                loisSubmitted: 0,
+                dealsByStage: {},
+                avgRevenue: null,
+                avgEbitda: null,
+                avgMatchedRevenue: null,
+                avgMatchedEbitda: null,
+                dealsByIndustry: {},
+              },
+              activity: [],
+            }),
+          };
+        }
+
+        if (url === "/api/projects/project-inactive/status") {
+          return {
+            ok: true,
+            json: async () => ({ project: { id: "project-inactive", is_active: true } }),
+          };
+        }
+
+        return {
+          ok: false,
+          json: async () => ({}),
+        };
+      })
+    );
+
+    render(<BuyerDashboard />);
+
+    expect(await screen.findByTestId("buyer-projects-data-grid")).toBeInTheDocument();
+
+    const statusColumn = getStatusColumn();
+    render(<>{statusColumn?.renderCell?.({ row: { id: "project-inactive", is_active: false } })}</>);
+
+    fireEvent.click(screen.getByTestId("buyer-status-chip"));
+
+    expect(screen.getByRole("button", { name: "Resume Project" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pause Project" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume Project" }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/projects/project-inactive/status",
+        expect.objectContaining({
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: true }),
+        })
+      );
+    });
+  });
+
+  it("shows a failure error when project status PATCH returns non-OK", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+
+        if (url === "/api/projects") {
+          return {
+            ok: true,
+            json: async () => ({
+              projects: [
+                {
+                  id: "project-active",
+                  name: "Project Active",
+                  is_active: true,
+                  industry: "Industrial",
+                  revenue_min: null,
+                  revenue_max: null,
+                  ebitda_min: null,
+                  ebitda_max: null,
+                  location: "TX",
+                  keywords: [],
+                  created_at: "2026-01-01T00:00:00.000Z",
+                },
+              ],
+            }),
+          };
+        }
+
+        if (url === "/api/buyer/analytics") {
+          return {
+            ok: true,
+            json: async () => ({
+              analytics: {
+                pursuing: 1,
+                passed: 0,
+                ndaSigned: 0,
+                ioisSubmitted: 0,
+                loisSubmitted: 0,
+                dealsByStage: {},
+                avgRevenue: null,
+                avgEbitda: null,
+                avgMatchedRevenue: null,
+                avgMatchedEbitda: null,
+                dealsByIndustry: {},
+              },
+              activity: [],
+            }),
+          };
+        }
+
+        if (url === "/api/projects/project-active/status") {
+          return {
+            ok: false,
+            json: async () => ({}),
+          };
+        }
+
+        return {
+          ok: false,
+          json: async () => ({}),
+        };
+      })
+    );
+
+    render(<BuyerDashboard />);
+
+    expect(await screen.findByTestId("buyer-projects-data-grid")).toBeInTheDocument();
+
+    const statusColumn = getStatusColumn();
+    render(<>{statusColumn?.renderCell?.({ row: { id: "project-active", is_active: true } })}</>);
+
+    fireEvent.click(screen.getByTestId("buyer-status-chip"));
+    fireEvent.click(screen.getByRole("button", { name: "Pause Project" }));
+
+    expect(await screen.findByText("Failed to update project status.")).toBeInTheDocument();
+  });
+
+  it("shows a network error when project status PATCH rejects", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+
+        if (url === "/api/projects") {
+          return {
+            ok: true,
+            json: async () => ({
+              projects: [
+                {
+                  id: "project-active",
+                  name: "Project Active",
+                  is_active: true,
+                  industry: "Industrial",
+                  revenue_min: null,
+                  revenue_max: null,
+                  ebitda_min: null,
+                  ebitda_max: null,
+                  location: "TX",
+                  keywords: [],
+                  created_at: "2026-01-01T00:00:00.000Z",
+                },
+              ],
+            }),
+          };
+        }
+
+        if (url === "/api/buyer/analytics") {
+          return {
+            ok: true,
+            json: async () => ({
+              analytics: {
+                pursuing: 1,
+                passed: 0,
+                ndaSigned: 0,
+                ioisSubmitted: 0,
+                loisSubmitted: 0,
+                dealsByStage: {},
+                avgRevenue: null,
+                avgEbitda: null,
+                avgMatchedRevenue: null,
+                avgMatchedEbitda: null,
+                dealsByIndustry: {},
+              },
+              activity: [],
+            }),
+          };
+        }
+
+        if (url === "/api/projects/project-active/status") {
+          throw new Error("network down");
+        }
+
+        return {
+          ok: false,
+          json: async () => ({}),
+        };
+      })
+    );
+
+    render(<BuyerDashboard />);
+
+    expect(await screen.findByTestId("buyer-projects-data-grid")).toBeInTheDocument();
+
+    const statusColumn = getStatusColumn();
+    render(<>{statusColumn?.renderCell?.({ row: { id: "project-active", is_active: true } })}</>);
+
+    fireEvent.click(screen.getByTestId("buyer-status-chip"));
+    fireEvent.click(screen.getByRole("button", { name: "Pause Project" }));
+
+    expect(await screen.findByText("Network error. Please try again.")).toBeInTheDocument();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
   });
 
   it("defines revenue, EBITDA, and created column formatters with graceful fallbacks", async () => {

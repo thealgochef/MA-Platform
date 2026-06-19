@@ -477,6 +477,10 @@ export const projectCreateSchema = z.object({
   keywords: z.array(z.string()).optional(),
 });
 
+export const projectActiveStatusUpdateSchema = z.object({
+  isActive: z.boolean(),
+}).strict();
+
 export type ProjectCreateData = z.infer<typeof projectCreateSchema>;
 export { mapProjectDataToDb } from "@/server/projects/mappers";
 

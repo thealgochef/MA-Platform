@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataGridTable } from "@/components/ui/DataGridTable";
+import { ProjectStatusChip, getProjectStatusLabel } from "@/components/ui/ProjectStatusChip";
 import { getPreferredDealLabel } from "@/lib/deal-labels";
 import { formatEngagementStageLabel } from "@/lib/engagement-stage-labels";
 import { formatCurrency } from "@/lib/utils";
@@ -13,10 +14,12 @@ import {
   GridRowSelectionModel,
   GridSortModel,
 } from "@mui/x-data-grid";
+import { Menu, MenuItem } from "@mui/material";
 
 interface Project {
   id: string;
   name: string;
+  is_active: boolean | null;
   industry: string | null;
   revenue_min: number | null;
   revenue_max: number | null;
@@ -60,6 +63,10 @@ export default function BuyerDashboard() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [statusMenuAnchorEl, setStatusMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [statusMenuProject, setStatusMenuProject] = useState<Project | null>(null);
+  const [statusUpdateProjectId, setStatusUpdateProjectId] = useState<string | null>(null);
   const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>({
     type: "include",
     ids: new Set(),
@@ -69,6 +76,76 @@ export default function BuyerDashboard() {
     page: 0,
     pageSize: 10,
   });
+
+  const closeStatusMenu = useCallback(() => {
+    setStatusMenuAnchorEl(null);
+    setStatusMenuProject(null);
+  }, []);
+
+  const handleStatusChipClick = useCallback((event: MouseEvent<HTMLElement>, project: Project) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setStatusMenuAnchorEl(event.currentTarget);
+    setStatusMenuProject(project);
+  }, []);
+
+  const handleEditProject = useCallback((event: MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!statusMenuProject) {
+      closeStatusMenu();
+      return;
+    }
+
+    closeStatusMenu();
+    router.push(`/projects/${statusMenuProject.id}/edit`);
+  }, [closeStatusMenu, router, statusMenuProject]);
+
+  const handleToggleProjectStatus = useCallback(async (event: MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!statusMenuProject) {
+      closeStatusMenu();
+      return;
+    }
+
+    const nextIsActive = !statusMenuProject.is_active;
+    setStatusUpdateProjectId(statusMenuProject.id);
+
+    try {
+      const response = await fetch(`/api/projects/${statusMenuProject.id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isActive: nextIsActive }),
+      });
+
+      if (!response.ok) {
+        setError("Failed to update project status.");
+        return;
+      }
+
+      const payload = await response.json().catch(() => null);
+      const resolvedIsActive = typeof payload?.project?.is_active === "boolean"
+        ? payload.project.is_active
+        : nextIsActive;
+
+      setProjects((prev) => prev.map((project) => (
+        project.id === statusMenuProject.id
+          ? { ...project, is_active: resolvedIsActive }
+          : project
+      )));
+    } catch (toggleError) {
+      console.error("Failed to toggle project status", toggleError);
+      setError("Network error. Please try again.");
+    } finally {
+      setStatusUpdateProjectId(null);
+      closeStatusMenu();
+    }
+  }, [closeStatusMenu, statusMenuProject]);
 
   const columns = useMemo<GridColDef<Project>[]>(() => {
     const dateDisplayFormatter = new Intl.DateTimeFormat("en-US", {
@@ -93,6 +170,21 @@ export default function BuyerDashboard() {
         flex: 1.3,
         minWidth: 200,
         cellClassName: "font-bold text-primary",
+      },
+      {
+        field: "status",
+        headerName: "Status",
+        flex: 0.8,
+        minWidth: 120,
+        cellClassName: "row-hover-text",
+        valueGetter: (_, row) => getProjectStatusLabel(row.is_active),
+        renderCell: (params) => (
+          <ProjectStatusChip
+            isActive={params.row.is_active}
+            clickable={true}
+            onClick={(event) => handleStatusChipClick(event, params.row)}
+          />
+        ),
       },
       {
         field: "industry",
@@ -163,7 +255,7 @@ export default function BuyerDashboard() {
         },
       },
     ];
-  }, []);
+  }, [handleStatusChipClick]);
 
   const sortedProjects = useMemo(() => {
     const activeSort = sortModel[0];
@@ -185,6 +277,8 @@ export default function BuyerDashboard() {
       switch (activeSort.field) {
         case "name":
           return project.name;
+        case "status":
+          return getProjectStatusLabel(project.is_active);
         case "industry":
           return project.industry || "";
         case "location":
@@ -228,6 +322,33 @@ export default function BuyerDashboard() {
     const start = paginationModel.page * paginationModel.pageSize;
     return sortedProjects.slice(start, start + paginationModel.pageSize);
   }, [paginationModel.page, paginationModel.pageSize, sortedProjects]);
+
+  const statusMenuItemSx = {
+    borderRadius: 1,
+    px: 1.5,
+    py: 1,
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    color: "var(--color-text)",
+    "&:hover": {
+      backgroundColor: "var(--color-subtle)",
+      color: "var(--color-primary)",
+    },
+    "&.Mui-focusVisible": {
+      backgroundColor: "var(--color-subtle)",
+      color: "var(--color-primary)",
+      outline: "2px solid var(--color-border)",
+      outlineOffset: "-2px",
+    },
+    "&.Mui-selected, &.Mui-selected:hover": {
+      backgroundColor: "var(--color-subtle)",
+      color: "var(--color-primary)",
+    },
+    "&.Mui-disabled": {
+      color: "var(--color-text)",
+      opacity: 0.45,
+    },
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -315,6 +436,12 @@ export default function BuyerDashboard() {
             New Project
           </a>
         </div>
+
+        {error && (
+          <div className="bg-error/10 border border-error rounded-md p-4 mb-6">
+            <p className="text-sm text-error">{error}</p>
+          </div>
+        )}
 
         {/* Analytics Section */}
         {analytics && (
@@ -455,19 +582,55 @@ export default function BuyerDashboard() {
             </a>
           </div>
         ) : (
-          <DataGridTable
-            rows={pagedProjects}
-            detailColumns={columns}
-            rowSelectionModel={rowSelectionModel}
-            onRowSelectionModelChange={setRowSelectionModel}
-            sortModel={sortModel}
-            onSortModelChange={setSortModel}
-            onRowClick={(row) => router.push(`/projects/${row.id}`)}
-            sortedCount={sortedProjects.length}
-            paginationModel={paginationModel}
-            onPageChange={(page) => setPaginationModel((prev) => ({ ...prev, page }))}
-            onRowsPerPageChange={(pageSize) => setPaginationModel({ page: 0, pageSize })}
-          />
+          <>
+            <DataGridTable
+              rows={pagedProjects}
+              detailColumns={columns}
+              rowSelectionModel={rowSelectionModel}
+              onRowSelectionModelChange={setRowSelectionModel}
+              sortModel={sortModel}
+              onSortModelChange={setSortModel}
+              onRowClick={(row) => router.push(`/projects/${row.id}`)}
+              sortedCount={sortedProjects.length}
+              paginationModel={paginationModel}
+              onPageChange={(page) => setPaginationModel((prev) => ({ ...prev, page }))}
+              onRowsPerPageChange={(pageSize) => setPaginationModel({ page: 0, pageSize })}
+            />
+            <Menu
+              anchorEl={statusMenuAnchorEl}
+              open={Boolean(statusMenuAnchorEl)}
+              onClose={closeStatusMenu}
+              slotProps={{
+                paper: {
+                  elevation: 0,
+                  sx: {
+                    mt: 0.75,
+                    borderRadius: 1.5,
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-surface-alt)",
+                    boxShadow: "0px 10px 24px rgba(45, 106, 79, 0.12)",
+                    minWidth: 180,
+                  },
+                },
+                list: {
+                  sx: {
+                    p: 0.5,
+                    display: "grid",
+                    gap: 0.25,
+                  },
+                },
+              }}
+            >
+              <MenuItem onClick={handleEditProject} sx={statusMenuItemSx}>Edit Project</MenuItem>
+              <MenuItem
+                onClick={handleToggleProjectStatus}
+                disabled={Boolean(statusMenuProject && statusUpdateProjectId === statusMenuProject.id)}
+                sx={statusMenuItemSx}
+              >
+                {statusMenuProject?.is_active ? "Pause Project" : "Resume Project"}
+              </MenuItem>
+            </Menu>
+          </>
         )}
       </div>
     </main>

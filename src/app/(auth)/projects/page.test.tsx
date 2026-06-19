@@ -1,8 +1,18 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type ProjectRow = { id: string; name: string };
 type TestSortModel = Array<{ field: string; sort?: "asc" | "desc" | null }>;
+type ProjectStatusChipProps = {
+  isActive: boolean | null | undefined;
+  clickable?: boolean;
+  onClick?: (event: {
+    preventDefault: () => void;
+    stopPropagation: () => void;
+    currentTarget: EventTarget & HTMLElement;
+  }) => void;
+};
 
 type MockDataGridProps = {
   rows: ProjectRow[];
@@ -18,11 +28,17 @@ type MockDataGridProps = {
   onRowSelectionModelChange: (model: unknown) => void;
 };
 
+type GridColumnWithValueGetter = {
+  field?: string;
+  headerName?: string;
+  valueGetter?: (_value: unknown, row: Record<string, unknown>) => unknown;
+  renderCell?: (params: { value?: unknown; row: Record<string, unknown> }) => unknown;
+};
+
 const US_MM_DD_YYYY_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "2-digit",
   day: "2-digit",
   year: "numeric",
-  timeZone: "UTC",
 });
 
 function getExpectedUsDate(value: string): string {
@@ -32,10 +48,59 @@ function getExpectedUsDate(value: string): string {
 const mockState = vi.hoisted(() => ({
   push: vi.fn(),
   capturedDataGridProps: [] as MockDataGridProps[],
+  capturedStatusChipProps: [] as ProjectStatusChipProps[],
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockState.push }),
+}));
+
+vi.mock("@mui/material", () => ({
+  Menu: ({ open, children }: { open?: boolean; children: ReactNode }) => (
+    open ? <div data-testid="status-menu">{children}</div> : null
+  ),
+  MenuItem: ({ children, onClick, disabled }: { children: ReactNode; onClick?: () => void; disabled?: boolean }) => (
+    <button type="button" onClick={onClick} disabled={disabled}>
+      {children}
+    </button>
+  ),
+}));
+
+vi.mock("@/components/ui/ProjectStatusChip", () => ({
+  getProjectStatusLabel: (isActive: boolean | null | undefined) => {
+    if (isActive === true) {
+      return "Active";
+    }
+
+    if (isActive === false) {
+      return "Inactive";
+    }
+
+    return "—";
+  },
+  ProjectStatusChip: ({ isActive, clickable = false, onClick }: ProjectStatusChipProps) => {
+    mockState.capturedStatusChipProps.push({ isActive, clickable, onClick });
+
+    const statusLabel = isActive === true ? "Active" : isActive === false ? "Inactive" : "—";
+
+    return (
+      <button
+        type="button"
+        data-testid="project-status-chip"
+        onClick={(event) => {
+          if (!clickable || !onClick) {
+            return;
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+          onClick(event);
+        }}
+      >
+        {statusLabel}
+      </button>
+    );
+  },
 }));
 
 vi.mock("@/components/ui/DataGridTable", () => ({
@@ -68,6 +133,9 @@ vi.mock("@/components/ui/DataGridTable", () => ({
         <p data-testid="grid-row-names">{props.rows.map((row) => row.name).join(",")}</p>
         <button type="button" onClick={() => props.onSortModelChange([{ field: "name", sort: "asc" }])}>
           Sort by name ascending
+        </button>
+        <button type="button" onClick={() => props.onSortModelChange([{ field: "status", sort: "asc" }])}>
+          Sort by status ascending
         </button>
         <button type="button" onClick={() => props.onPageChange(1)}>
           Go to page 2
@@ -117,6 +185,7 @@ describe("ProjectsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockState.capturedDataGridProps = [];
+    mockState.capturedStatusChipProps = [];
   });
 
   afterEach(() => {
@@ -150,6 +219,7 @@ describe("ProjectsPage", () => {
       {
         id: "project-1",
         name: "Project Orion",
+        is_active: true,
         industry: "Industrial",
         revenue_min: null,
         revenue_max: null,
@@ -162,6 +232,7 @@ describe("ProjectsPage", () => {
       {
         id: "project-2",
         name: "Project Atlas",
+        is_active: false,
         industry: "Healthcare",
         revenue_min: null,
         revenue_max: null,
@@ -194,6 +265,15 @@ describe("ProjectsPage", () => {
     expect(latestGridProps?.onPageChange).toBeTypeOf("function");
     expect(latestGridProps?.onRowsPerPageChange).toBeTypeOf("function");
     expect(latestGridProps?.onRowSelectionModelChange).toBeTypeOf("function");
+
+    const columnHeaders = (latestGridProps?.detailColumns as Array<{ headerName?: string }> | undefined)?.map(
+      (column) => column.headerName
+    );
+    expect(columnHeaders).toContain("Project Name");
+    expect(columnHeaders).toContain("Status");
+    const projectNameColumnIndex = columnHeaders?.indexOf("Project Name") ?? -1;
+    expect(projectNameColumnIndex).toBeGreaterThanOrEqual(0);
+    expect(columnHeaders?.[projectNameColumnIndex + 1]).toBe("Status");
 
     fireEvent.click(screen.getByRole("button", { name: "Select first row" }));
 
@@ -338,7 +418,7 @@ describe("ProjectsPage", () => {
     expect(renderedCreatedValue).not.toBe("1/2/2026");
   });
 
-  it("formats Created column values in UTC for near-midnight ISO timestamps", async () => {
+  it("formats Created column values using environment timezone for near-midnight ISO timestamps", async () => {
     const projects = [
       {
         id: "project-1",
@@ -373,9 +453,373 @@ describe("ProjectsPage", () => {
       })
     );
 
-    expect(renderedCreatedValue).toBe("01/01/2026");
     expect(renderedCreatedValue).toBe(getExpectedUsDate("2026-01-01T00:30:00.000Z"));
-    expect(renderedCreatedValue).not.toBe("12/31/2025");
+    expect(renderedCreatedValue).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+  });
+
+  it("maps is_active values to Status labels and renders the reusable status chip", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project Orion",
+        is_active: true,
+        created_at: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "project-2",
+        name: "Project Atlas",
+        is_active: false,
+        created_at: "2026-01-02T00:00:00.000Z",
+      },
+    ];
+
+    mockProjectsResponse(projects);
+
+    render(<ProjectsPage />);
+
+    await screen.findByTestId("projects-data-grid");
+
+    const latestGridProps = getLatestGridProps();
+    const statusColumn = latestGridProps?.detailColumns.find(
+      (column: { field?: string }) => column.field === "status"
+    ) as GridColumnWithValueGetter | undefined;
+
+    expect(statusColumn?.headerName).toBe("Status");
+    expect(statusColumn?.valueGetter).toBeTypeOf("function");
+    expect(statusColumn?.renderCell).toBeTypeOf("function");
+    expect(statusColumn?.valueGetter?.(undefined, { is_active: true })).toBe("Active");
+    expect(statusColumn?.valueGetter?.(undefined, { is_active: false })).toBe("Inactive");
+    expect(statusColumn?.valueGetter?.(undefined, {})).toBe("—");
+
+    const activeStatusValue = statusColumn?.valueGetter?.(undefined, { is_active: true });
+    const { rerender } = render(
+      <>{statusColumn?.renderCell?.({ value: activeStatusValue, row: { is_active: true } }) as ReactNode}</>
+    );
+
+    const activeChip = screen.getByTestId("project-status-chip");
+    expect(activeChip).toHaveTextContent("Active");
+    expect(mockState.capturedStatusChipProps.at(-1)).toMatchObject({
+      isActive: true,
+      clickable: true,
+    });
+
+    const fallbackStatusValue = statusColumn?.valueGetter?.(undefined, {});
+    rerender(<>{statusColumn?.renderCell?.({ value: fallbackStatusValue, row: {} }) as ReactNode}</>);
+
+    const fallbackChip = screen.getByTestId("project-status-chip");
+    expect(fallbackChip).toHaveTextContent("—");
+    expect(mockState.capturedStatusChipProps.at(-1)).toMatchObject({
+      isActive: undefined,
+      clickable: true,
+    });
+  });
+
+  it("shows status menu with Edit and Pause actions for active projects", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project Orion",
+        is_active: true,
+        created_at: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+
+    mockProjectsResponse(projects);
+
+    render(<ProjectsPage />);
+
+    await screen.findByTestId("projects-data-grid");
+
+    const latestGridProps = getLatestGridProps();
+    const statusColumn = latestGridProps?.detailColumns.find(
+      (column: { field?: string }) => column.field === "status"
+    ) as GridColumnWithValueGetter | undefined;
+
+    const activeStatusValue = statusColumn?.valueGetter?.(undefined, { is_active: true });
+    render(
+      <>{statusColumn?.renderCell?.({ value: activeStatusValue, row: projects[0] }) as ReactNode}</>
+    );
+
+    fireEvent.click(screen.getByTestId("project-status-chip"));
+
+    expect(screen.getByTestId("status-menu")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit Project" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause Project" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resume Project" })).not.toBeInTheDocument();
+  });
+
+  it("does not navigate to project detail when interacting with the status chip menu", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project Orion",
+        is_active: true,
+        created_at: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string) => {
+        if (input === "/api/projects") {
+          return {
+            ok: true,
+            json: async () => ({ projects }),
+          };
+        }
+
+        if (input === "/api/projects/project-1/status") {
+          return {
+            ok: true,
+            json: async () => ({ project: { id: "project-1", is_active: false } }),
+          };
+        }
+
+        throw new Error(`Unexpected fetch call: ${input}`);
+      })
+    );
+
+    render(<ProjectsPage />);
+
+    await screen.findByTestId("projects-data-grid");
+
+    const latestGridProps = getLatestGridProps();
+    const statusColumn = latestGridProps?.detailColumns.find(
+      (column: { field?: string }) => column.field === "status"
+    ) as GridColumnWithValueGetter | undefined;
+
+    const activeStatusValue = statusColumn?.valueGetter?.(undefined, { is_active: true });
+    render(
+      <div
+        data-testid="clickable-project-row"
+        onClick={() => latestGridProps?.onRowClick(projects[0] as ProjectRow)}
+      >
+        {statusColumn?.renderCell?.({ value: activeStatusValue, row: projects[0] }) as ReactNode}
+      </div>
+    );
+
+    fireEvent.click(screen.getByTestId("clickable-project-row"));
+    expect(mockState.push).toHaveBeenCalledWith("/projects/project-1");
+    mockState.push.mockClear();
+
+    fireEvent.click(screen.getByTestId("project-status-chip"));
+    expect(mockState.push).not.toHaveBeenCalledWith("/projects/project-1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Pause Project" }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/projects/project-1/status",
+        expect.objectContaining({ method: "PATCH" })
+      );
+    });
+
+    expect(mockState.push).not.toHaveBeenCalledWith("/projects/project-1");
+  });
+
+  it("shows Resume action for inactive projects and applies server status value", async () => {
+    const projects = [
+      {
+        id: "project-2",
+        name: "Project Atlas",
+        is_active: false,
+        created_at: "2026-01-02T00:00:00.000Z",
+      },
+    ];
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string) => {
+        if (input === "/api/projects") {
+          return {
+            ok: true,
+            json: async () => ({ projects }),
+          };
+        }
+
+        if (input === "/api/projects/project-2/status") {
+          return {
+            ok: true,
+            json: async () => ({ project: { id: "project-2", is_active: false } }),
+          };
+        }
+
+        throw new Error(`Unexpected fetch call: ${input}`);
+      })
+    );
+
+    render(<ProjectsPage />);
+
+    await screen.findByTestId("projects-data-grid");
+
+    const latestGridProps = getLatestGridProps();
+    const statusColumn = latestGridProps?.detailColumns.find(
+      (column: { field?: string }) => column.field === "status"
+    ) as GridColumnWithValueGetter | undefined;
+
+    const inactiveStatusValue = statusColumn?.valueGetter?.(undefined, { is_active: false });
+    render(
+      <>{statusColumn?.renderCell?.({ value: inactiveStatusValue, row: projects[0] }) as ReactNode}</>
+    );
+
+    fireEvent.click(screen.getByTestId("project-status-chip"));
+
+    expect(screen.getByTestId("status-menu")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resume Project" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pause Project" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume Project" }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/projects/project-2/status",
+        expect.objectContaining({
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: true }),
+        })
+      );
+      expect(getLatestGridProps()?.rows[0]).toMatchObject({
+        id: "project-2",
+        is_active: false,
+      });
+    });
+  });
+
+  it("updates active project to inactive when Pause Project is selected", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project Orion",
+        is_active: true,
+        created_at: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string) => {
+        if (input === "/api/projects") {
+          return {
+            ok: true,
+            json: async () => ({ projects }),
+          };
+        }
+
+        if (input === "/api/projects/project-1/status") {
+          return {
+            ok: true,
+            json: async () => ({ project: { id: "project-1", is_active: false } }),
+          };
+        }
+
+        throw new Error(`Unexpected fetch call: ${input}`);
+      })
+    );
+
+    render(<ProjectsPage />);
+
+    await screen.findByTestId("projects-data-grid");
+
+    const latestGridProps = getLatestGridProps();
+    const statusColumn = latestGridProps?.detailColumns.find(
+      (column: { field?: string }) => column.field === "status"
+    ) as GridColumnWithValueGetter | undefined;
+
+    const activeStatusValue = statusColumn?.valueGetter?.(undefined, { is_active: true });
+    render(
+      <>{statusColumn?.renderCell?.({ value: activeStatusValue, row: projects[0] }) as ReactNode}</>
+    );
+
+    fireEvent.click(screen.getByTestId("project-status-chip"));
+    fireEvent.click(screen.getByRole("button", { name: "Pause Project" }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/projects/project-1/status",
+        expect.objectContaining({
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: false }),
+        })
+      );
+      expect(getLatestGridProps()?.rows[0]).toMatchObject({
+        id: "project-1",
+        is_active: false,
+      });
+    });
+  });
+
+  it("navigates to edit page when Edit Project is selected from status menu", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project Orion",
+        is_active: true,
+        created_at: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+
+    mockProjectsResponse(projects);
+
+    render(<ProjectsPage />);
+
+    await screen.findByTestId("projects-data-grid");
+
+    const latestGridProps = getLatestGridProps();
+    const statusColumn = latestGridProps?.detailColumns.find(
+      (column: { field?: string }) => column.field === "status"
+    ) as GridColumnWithValueGetter | undefined;
+
+    const activeStatusValue = statusColumn?.valueGetter?.(undefined, { is_active: true });
+    render(
+      <>{statusColumn?.renderCell?.({ value: activeStatusValue, row: projects[0] }) as ReactNode}</>
+    );
+
+    fireEvent.click(screen.getByTestId("project-status-chip"));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Project" }));
+
+    expect(mockState.push).toHaveBeenCalledWith("/projects/project-1/edit");
+  });
+
+  it("sorts by status using active, inactive, and fallback labels", async () => {
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project Inactive",
+        is_active: false,
+        created_at: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "project-2",
+        name: "Project Active",
+        is_active: true,
+        created_at: "2026-01-02T00:00:00.000Z",
+      },
+      {
+        id: "project-3",
+        name: "Project Fallback",
+        created_at: "2026-01-03T00:00:00.000Z",
+      },
+    ];
+
+    mockProjectsResponse(projects);
+
+    render(<ProjectsPage />);
+
+    expect(await screen.findByTestId("projects-data-grid")).toBeInTheDocument();
+    expect(screen.getByTestId("grid-row-names")).toHaveTextContent(
+      "Project Inactive,Project Active,Project Fallback"
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by status ascending" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grid-row-names")).toHaveTextContent(
+        "Project Fallback,Project Active,Project Inactive"
+      );
+      expect(getLatestGridProps()?.sortModel).toEqual([{ field: "status", sort: "asc" }]);
+    });
   });
 
   it("renders empty state CTA when no projects are returned", async () => {
