@@ -71,6 +71,9 @@ export default function EditDealPage() {
       if (res.ok) {
         const { deal } = await res.json();
         const fyLabels = deal.fiscal_year_labels || {};
+        const selectedIndustry = Array.isArray(deal.industry)
+          ? (deal.industry[0] || "")
+          : (typeof deal.industry === "string" ? deal.industry : "");
         setFormData({
           projectName: deal.project_name || "",
           headline: deal.headline || "",
@@ -78,7 +81,7 @@ export default function EditDealPage() {
           geographyDisplay: deal.geography_display || "state",
           state: deal.state || "",
           region: deal.region || "",
-          industry: deal.industry || "",
+          industry: selectedIndustry,
           financials: {
             year1: { label: fyLabels.year_1 || "", revenue: deal.revenue_year_1, ebitda: deal.ebitda_year_1 },
             year2: { label: fyLabels.year_2 || "", revenue: deal.revenue_year_2, ebitda: deal.ebitda_year_2 },
@@ -134,10 +137,15 @@ export default function EditDealPage() {
     setSaving(true);
     setError(null);
     try {
+      const payload = {
+        ...formData,
+        industry: formData.industry ? [formData.industry] : [],
+      };
+
       const res = await fetch(`/api/deals/${dealId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = await res.json();
