@@ -215,12 +215,30 @@ describe("Phase 1: Database Schema Migrations", () => {
       expect(allContent).toContain("match_deals_to_project");
     });
 
-    it("should gate match_deals_to_project on buyer_projects.is_active in both incremental and combined SQL", () => {
-      const incremental = fs.readFileSync(
+    it("should preserve 00007 historical match_deals_to_project without active-project gating", () => {
+      const historical = fs.readFileSync(
         path.join(MIGRATIONS_DIR, "00007_storage_and_functions.sql"),
         "utf-8"
       );
+
+      expect(historical).toContain("CREATE OR REPLACE FUNCTION match_deals_to_project");
+      expect(historical).not.toContain("v_is_active boolean");
+      expect(historical).not.toMatch(/bp\.is_active/);
+      expect(historical).not.toMatch(/IF\s+v_is_active\s+IS\s+DISTINCT\s+FROM\s+true\s+THEN/);
+    });
+
+    it("should gate match_deals_to_project on buyer_projects.is_active in corrective migration and combined SQL", () => {
+      const incremental = fs.readFileSync(
+        path.join(MIGRATIONS_DIR, "00030_match_deals_to_project_ignore_inactive_projects.sql"),
+        "utf-8"
+      );
       const combined = fs.readFileSync(path.join(MIGRATIONS_DIR, "combined.sql"), "utf-8");
+
+      expect(incremental).toMatch(/CREATE OR REPLACE FUNCTION\s+(?:public\.)?match_deals_to_project\s*\(/);
+      expect(incremental).not.toMatch(/DROP\s+FUNCTION\s+match_deals_to_project\s*\(/);
+      expect(incremental).toContain("SET search_path = public, pg_temp;");
+      expect(incremental).toMatch(/FROM\s+public\.buyer_projects\s+bp/);
+      expect(incremental).toMatch(/FROM\s+public\.deals\s+d/);
 
       for (const sql of [incremental, combined]) {
         expect(sql).toContain("v_is_active boolean");

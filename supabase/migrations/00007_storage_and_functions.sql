@@ -119,7 +119,6 @@ DECLARE
   v_ebitda_margin numeric;
   v_location text;
   v_keywords text[];
-  v_is_active boolean;
 BEGIN
   -- Get project criteria
   SELECT
@@ -130,8 +129,7 @@ BEGIN
     bp.ebitda_max,
     bp.ebitda_margin,
     bp.location,
-    bp.keywords,
-    bp.is_active
+    bp.keywords
   INTO
     v_industry,
     v_revenue_min,
@@ -140,14 +138,9 @@ BEGIN
     v_ebitda_max,
     v_ebitda_margin,
     v_location,
-    v_keywords,
-    v_is_active
+    v_keywords
   FROM buyer_projects bp
   WHERE bp.id = p_project_id;
-
-  IF v_is_active IS DISTINCT FROM true THEN
-    RETURN;
-  END IF;
 
   RETURN QUERY
   SELECT d.id
