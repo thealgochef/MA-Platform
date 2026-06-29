@@ -202,12 +202,126 @@ async function renderPipelineWithFetchMock({
   await screen.findByRole("columnheader", { name: "Actions" });
 }
 
+async function renderDealManagementWithFetchMock({
+  deal,
+  engagements = [],
+  initialActiveTab,
+}: {
+  deal?: Partial<TestDeal>;
+  engagements?: TestEngagement[];
+  initialActiveTab?: "Overview" | "Pipeline" | "Offers" | "Documents" | "Messaging" | "Analytics" | "Timeline";
+}) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      if (url === "/api/deals/deal-123" && method === "GET") {
+        return jsonResponse({ deal: { ...BASE_DEAL, ...deal } });
+      }
+
+      if (url === "/api/deals/deal-123/buyers" && method === "GET") {
+        return jsonResponse({ engagements, iois: [], lois: [] });
+      }
+
+      if (url === "/api/deals/deal-123/documents" && method === "GET") {
+        return jsonResponse({ documents: [] });
+      }
+
+      if (url === "/api/deals/deal-123/timeline" && method === "GET") {
+        return jsonResponse({ activities: [] });
+      }
+
+      return jsonResponse({}, false);
+    })
+  );
+
+  const renderResult = initialActiveTab
+    ? render(<BrokerDealManagement initialActiveTab={initialActiveTab} />)
+    : render(<BrokerDealManagement />);
+
+  await screen.findByRole("heading", { name: "Project Helios" });
+
+  return renderResult;
+}
+
 function getRowForBuyer(buyerName: string) {
   const buyerCell = screen.getByText(buyerName);
   const row = buyerCell.closest("tr");
   expect(row).toBeTruthy();
   return row as HTMLTableRowElement;
 }
+
+describe("BrokerDealManagement tab initialization and synchronization", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("renders Pipeline content when initialized from ?tab=pipeline route mapping", async () => {
+    await renderDealManagementWithFetchMock({
+      initialActiveTab: "Pipeline",
+      engagements: [
+        makeEngagement({
+          id: "pipeline-initial",
+          users: {
+            id: "user-pipeline-initial",
+            full_name: "Pipeline Initial Buyer",
+            email: "pipeline-initial@example.com",
+            buyer_type: "pe",
+            firms: { id: "firm-pipeline-initial", name: "Pipeline Initial Firm", website: "https://example.com" },
+          },
+          nda_status: "sent",
+          vetting_status: "approved",
+          cim_released: true,
+        }),
+      ],
+    });
+
+    expect(screen.getByRole("columnheader", { name: "Actions" })).toBeInTheDocument();
+    expect(screen.queryByText("Financials")).not.toBeInTheDocument();
+  });
+
+  it("defaults to Overview when no tab is provided", async () => {
+    await renderDealManagementWithFetchMock({});
+
+    expect(screen.getByText("Financials")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Actions" })).not.toBeInTheDocument();
+  });
+
+  it("updates active tab when initialActiveTab prop changes", async () => {
+    const { rerender } = await renderDealManagementWithFetchMock({
+      engagements: [
+        makeEngagement({
+          id: "pipeline-sync",
+          users: {
+            id: "user-pipeline-sync",
+            full_name: "Pipeline Sync Buyer",
+            email: "pipeline-sync@example.com",
+            buyer_type: "pe",
+            firms: { id: "firm-pipeline-sync", name: "Pipeline Sync Firm", website: "https://example.com" },
+          },
+        }),
+      ],
+    });
+
+    expect(screen.getByText("Financials")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Offers" }));
+    expect(screen.getByText("No IOIs submitted yet.")).toBeInTheDocument();
+
+    rerender(<BrokerDealManagement initialActiveTab="Pipeline" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("columnheader", { name: "Actions" })).toBeInTheDocument();
+    });
+    expect(screen.queryByText("No IOIs submitted yet.")).not.toBeInTheDocument();
+  });
+});
 
 describe("BrokerDealManagement pipeline manual actions", () => {
   beforeEach(() => {

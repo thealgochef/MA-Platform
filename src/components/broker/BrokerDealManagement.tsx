@@ -92,17 +92,19 @@ interface Activity {
 
 interface BrokerDealManagementProps {
   initialShowSavedBanner?: boolean;
+  initialActiveTab?: Tab;
 }
 
 export default function BrokerDealManagement({
   initialShowSavedBanner = false,
+  initialActiveTab = "Overview",
 }: BrokerDealManagementProps) {
   const params = useParams();
   const router = useRouter();
   const dealId = params.id as string;
   const [deal, setDeal] = useState<Deal | null>(null);
   const [initialLoadError, setInitialLoadError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("Overview");
+  const [activeTab, setActiveTab] = useState<Tab>(initialActiveTab);
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [iois, setIois] = useState<Record<string, unknown>[]>([]);
   const [lois, setLois] = useState<Record<string, unknown>[]>([]);
@@ -120,6 +122,10 @@ export default function BrokerDealManagement({
   const dealRequestVersionRef = useRef(0);
   const pipelineRequestVersionRef = useRef(0);
   const timelineRequestVersionRef = useRef(0);
+
+  useEffect(() => {
+    setActiveTab(initialActiveTab);
+  }, [initialActiveTab]);
 
   const extractApiError = async (res: Response) => {
     try {

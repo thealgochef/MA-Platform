@@ -6,10 +6,11 @@ import BuyerDealWorkspace from "@/components/buyer/BuyerDealWorkspace";
 export default async function DealDetailPage({
   searchParams,
 }: {
-  searchParams?: { saved?: string };
+  searchParams?: { saved?: string; tab?: string };
 }) {
   const supabase = createClient();
   const showSavedBanner = searchParams?.saved === "1";
+  const initialActiveTab = searchParams?.tab === "pipeline" ? "Pipeline" : "Overview";
 
   const {
     data: { user },
@@ -30,7 +31,12 @@ export default async function DealDetailPage({
   }
 
   if (profile.role === "broker") {
-    return <BrokerDealManagement initialShowSavedBanner={showSavedBanner} />;
+    return (
+      <BrokerDealManagement
+        initialShowSavedBanner={showSavedBanner}
+        initialActiveTab={initialActiveTab}
+      />
+    );
   }
 
   return <BuyerDealWorkspace />;
