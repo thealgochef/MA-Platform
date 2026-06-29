@@ -465,9 +465,41 @@ export const closeActionSchema = z.object({
 });
 
 // Project schemas
+const projectIndustrySchema = z.preprocess(
+  (value) => {
+    if (value == null) {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      const trimmedValue = value.trim();
+      return trimmedValue === "" ? null : trimmedValue;
+    }
+
+    if (Array.isArray(value)) {
+      if (value.some((item) => typeof item !== "string")) {
+        return value;
+      }
+
+      return value
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+    }
+
+    return value;
+  },
+  z.union([industryValueSchema, z.array(industryValueSchema)]).nullable().optional()
+).transform((value) => {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value;
+});
+
 export const projectCreateSchema = z.object({
   projectName: z.string().trim().min(1, "Project name is required").max(255, "Project name must be 255 characters or less"),
-  industry: z.array(industryValueSchema).nullable().optional(), 
+  industry: projectIndustrySchema,
   revenueMin: z.number().nullable().optional(),
   revenueMax: z.number().nullable().optional(),
   ebitdaMin: z.number().nullable().optional(),

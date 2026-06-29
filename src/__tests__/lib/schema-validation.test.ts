@@ -1749,4 +1749,83 @@ describe("API request validation schemas", () => {
       ebitda_margin: 0,
     });
   });
+
+  it("accepts a single industry string for project criteria", () => {
+    const parsed = projectCreateSchema.parse({
+      projectName: "Healthcare Thesis",
+      industry: " Healthcare ",
+    });
+
+    expect(parsed.industry).toBe("Healthcare");
+    expect(mapProjectDataToDb(parsed)).toMatchObject({ industry: "Healthcare" });
+  });
+
+  it("accepts legacy array industry input for projects and normalizes to first selected value", () => {
+    const parsed = projectCreateSchema.parse({
+      projectName: "Industrial Thesis",
+      industry: ["", "  Industrial  ", "Healthcare"],
+    });
+
+    expect(parsed.industry).toBe("Industrial");
+    expect(mapProjectDataToDb(parsed)).toMatchObject({ industry: "Industrial" });
+  });
+
+  it("normalizes blank project industry input to null", () => {
+    const parsed = projectCreateSchema.parse({
+      projectName: "Broad Thesis",
+      industry: "   ",
+    });
+
+    expect(parsed.industry).toBeNull();
+    expect(mapProjectDataToDb(parsed)).toMatchObject({ industry: null });
+  });
+
+  it("normalizes legacy array project industry input with only blank values to null", () => {
+    const parsed = projectCreateSchema.parse({
+      projectName: "Generalist Thesis",
+      industry: ["", "   ", "\t"],
+    });
+
+    expect(parsed.industry).toBeNull();
+    expect(mapProjectDataToDb(parsed)).toMatchObject({ industry: null });
+  });
+
+  it("rejects project industry values that are not in INDUSTRIES", () => {
+    const invalidString = projectCreateSchema.safeParse({
+      projectName: "Invalid Industry String",
+      industry: "Made Up Industry",
+    });
+    const invalidArray = projectCreateSchema.safeParse({
+      projectName: "Invalid Industry Array",
+      industry: ["Healthcare", "Made Up Industry"],
+    });
+
+    expect(invalidString.success).toBe(false);
+    expect(invalidArray.success).toBe(false);
+    expect(invalidString.error?.flatten().fieldErrors.industry).toBeDefined();
+    expect(invalidArray.error?.flatten().fieldErrors.industry).toBeDefined();
+  });
+
+  it("rejects legacy array project industry input with non-string number values", () => {
+    const numberOnlyArray = projectCreateSchema.safeParse({
+      projectName: "Numeric Industry",
+      industry: [123],
+    });
+    const mixedArray = projectCreateSchema.safeParse({
+      projectName: "Mixed Industry",
+      industry: ["Healthcare", 123],
+    });
+
+    expect(numberOnlyArray.success).toBe(false);
+    expect(mixedArray.success).toBe(false);
+  });
+
+  it("rejects legacy array project industry input with null values", () => {
+    const result = projectCreateSchema.safeParse({
+      projectName: "Null Industry",
+      industry: [null],
+    });
+
+    expect(result.success).toBe(false);
+  });
 });
