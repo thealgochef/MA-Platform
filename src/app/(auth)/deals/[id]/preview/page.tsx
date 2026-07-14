@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
 
 interface Deal {
   id: string;
@@ -126,7 +126,7 @@ export default function DealPreviewPage() {
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
               <p className="text-xs text-text-secondary">Industry</p>
-              <p className="text-sm font-medium">{deal.industry}</p>
+              <p className="text-sm font-medium">{formatIndustryDisplay(deal.industry)}</p>
             </div>
             <div>
               <p className="text-xs text-text-secondary">Geography</p>
@@ -160,13 +160,13 @@ export default function DealPreviewPage() {
               <div className="bg-bg-alt rounded-md p-3">
                 <p className="text-xs text-text-secondary">Revenue (Last Year)</p>
                 <p className="text-lg font-bold text-primary">
-                  {deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) : "—"}
+                  {deal.revenue_year_3 != null ? formatCurrency(deal.revenue_year_3) + "M": "—"}
                 </p>
               </div>
               <div className="bg-bg-alt rounded-md p-3">
                 <p className="text-xs text-text-secondary">EBITDA (Last Year)</p>
                 <p className="text-lg font-bold text-primary">
-                  {deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) : "—"}
+                  {deal.ebitda_year_3 != null ? formatCurrency(deal.ebitda_year_3) + "M": "—"}
                 </p>
               </div>
             </div>

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { INDUSTRIES } from "@/lib/constants";
 import { type BrokerSignupInput, validateBrokerSignup } from "@/lib/validators";
 
+type Industry = (typeof INDUSTRIES)[number];
+
 export default function BrokerSignupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -23,13 +25,13 @@ export default function BrokerSignupPage() {
     licenseCredentials: "",
     firmDescription: "",
     dealTypes: "",
-    industryFocus: [] as string[],
+    industryFocus: [],
     otherMembers: "",
     membershipAgreementSigned: false,
     signature: "",
   });
 
-  const handleIndustryToggle = (industry: string) => {
+  const handleIndustryToggle = (industry: Industry) => {
     setFormData((prev) => ({
       ...prev,
       industryFocus: prev.industryFocus.includes(industry)
@@ -372,7 +374,7 @@ export default function BrokerSignupPage() {
                   className="mt-1"
                 />
                 <span className="text-sm">
-                  By submitting your application, you agree to our Terms of Service, Privacy Policy, and authorize Geneva Holdings to send you automated text messages. You can opt out at any time. *
+                  By submitting your application, you agree to our Terms of Service, Privacy Policy, and authorize us to send you automated text messages. You can opt out at any time. *
                 </span>
               </label>
               {getFieldError("membershipAgreementSigned") && (
@@ -401,8 +403,7 @@ export default function BrokerSignupPage() {
               type="submit"
               disabled={
                 loading ||
-                !formData.membershipAgreementSigned ||
-                formData.industryFocus.length === 0
+                !formData.membershipAgreementSigned
               }
               className="w-full py-3 bg-primary text-bg rounded-md font-medium hover:bg-btn-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >

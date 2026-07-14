@@ -2,6 +2,23 @@ import type { DealCreateData } from "@/lib/validators";
 
 type DealDbData = Record<string, unknown>;
 
+function normalizeIndustryForDb(industry: unknown): string | null {
+  if (Array.isArray(industry)) {
+    const firstSelectedIndustry = industry.find(
+      (value): value is string => typeof value === "string" && value.trim().length > 0
+    );
+
+    return firstSelectedIndustry?.trim() ?? null;
+  }
+
+  if (typeof industry === "string") {
+    const trimmedIndustry = industry.trim();
+    return trimmedIndustry.length > 0 ? trimmedIndustry : null;
+  }
+
+  return null;
+}
+
 export function mapDealCreateDataToDb(
   data: DealCreateData,
   { firmId, userId }: { firmId: string | null; userId: string }
@@ -16,7 +33,7 @@ export function mapDealCreateDataToDb(
     geography_display: data.geographyDisplay,
     state: data.state || null,
     region: data.region || null,
-    industry: data.industry,
+    industry: normalizeIndustryForDb(data.industry),
     nda_type: data.ndaType,
     nda_document_path: null,
     cim_document_path: null,
@@ -42,7 +59,7 @@ export function mapDealUpdateDataToDb(data: Partial<DealCreateData>): DealDbData
   if (data.geographyDisplay !== undefined) updateData.geography_display = data.geographyDisplay;
   if (data.state !== undefined) updateData.state = data.state;
   if (data.region !== undefined) updateData.region = data.region;
-  if (data.industry !== undefined) updateData.industry = data.industry;
+  if (data.industry !== undefined) updateData.industry = normalizeIndustryForDb(data.industry);
   if (data.ndaType !== undefined) updateData.nda_type = data.ndaType;
   if (data.ndaDocumentPath !== undefined) updateData.nda_document_path = data.ndaDocumentPath;
   if (data.cimDocumentPath !== undefined) updateData.cim_document_path = data.cimDocumentPath;

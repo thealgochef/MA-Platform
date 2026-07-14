@@ -1,10 +1,85 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "fs";
 import path from "path";
 
+const supabaseServerMocks = vi.hoisted(() => ({
+  createClient: vi.fn(),
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: supabaseServerMocks.createClient,
+}));
+
+import { GET } from "@/app/api/deals/route";
+
 const SRC = path.resolve(__dirname, "../../");
 
+function createBrokerDealsSupabaseMock(options: {
+  profileRole?: string;
+  profileStatus?: string;
+  profileFirmId?: string | null;
+  deals?: Array<Record<string, unknown>>;
+  engagementRows?: Array<Record<string, unknown>>;
+}) {
+  const {
+    profileRole = "broker",
+    profileStatus = "approved",
+    profileFirmId = "firm-1",
+    deals = [],
+    engagementRows = [],
+  } = options;
+
+  const usersQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({
+      data: {
+        role: profileRole,
+        status: profileStatus,
+        firm_id: profileFirmId,
+      },
+      error: null,
+    }),
+  };
+
+  const dealsQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockResolvedValue({ data: deals, error: null }),
+  };
+
+  let engagementInCallCount = 0;
+  const dealEngagementsQuery = {
+    select: vi.fn().mockReturnThis(),
+    in: vi.fn().mockImplementation(() => {
+      engagementInCallCount += 1;
+      if (engagementInCallCount < 2) {
+        return dealEngagementsQuery;
+      }
+      return Promise.resolve({ data: engagementRows, error: null });
+    }),
+  };
+
+  const supabase = {
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }),
+    },
+    from: vi.fn((table: string) => {
+      if (table === "users") return usersQuery;
+      if (table === "deals") return dealsQuery;
+      if (table === "deal_engagements") return dealEngagementsQuery;
+      throw new Error(`Unexpected table: ${table}`);
+    }),
+  };
+
+  return { supabase, usersQuery, dealsQuery, dealEngagementsQuery };
+}
+
 describe("Phase 3: Deal Creation & Management", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe("Deal Validators", () => {
     it("should export dealCreateSchema from validators", () => {
       const content = fs.readFileSync(path.join(SRC, "lib", "validators.ts"), "utf-8");
@@ -47,6 +122,136 @@ describe("Phase 3: Deal Creation & Management", () => {
   });
 
   describe("Deal API Routes", () => {
+    it("broker GET derives pending action metadata from NDA/CIM preference + stage matrix", async () => {
+      const mock = createBrokerDealsSupabaseMock({
+        deals: [
+          {
+            id: "deal-nda-manual",
+            project_name: "Proj A",
+            headline: "Headline A",
+            status: "active",
+            industry: "Healthcare",
+            view_count: 10,
+            published_at: "2026-01-01T00:00:00.000Z",
+            revenue_year_3: 120,
+            ebitda_year_3: 20,
+            nda_vetting_preference: "manual",
+            cim_sharing_preference: "auto",
+          },
+          {
+            id: "deal-cim-manual",
+            project_name: "Proj B",
+            headline: "Headline B",
+            status: "active",
+            industry: "Industrial",
+            view_count: 8,
+            published_at: "2026-01-01T00:00:00.000Z",
+            revenue_year_3: 90,
+            ebitda_year_3: 12,
+            nda_vetting_preference: "auto",
+            cim_sharing_preference: "manual",
+          },
+          {
+            id: "deal-both-auto",
+            project_name: "Proj C",
+            headline: "Headline C",
+            status: "active",
+            industry: "Software",
+            view_count: 5,
+            published_at: "2026-01-01T00:00:00.000Z",
+            revenue_year_3: 60,
+            ebitda_year_3: 9,
+            nda_vetting_preference: "auto",
+            cim_sharing_preference: "auto",
+          },
+          {
+            id: "deal-manual-no-stage",
+            project_name: "Proj D",
+            headline: "Headline D",
+            status: "active",
+            industry: "Business Services",
+            view_count: 6,
+            published_at: "2026-01-01T00:00:00.000Z",
+            revenue_year_3: 75,
+            ebitda_year_3: 11,
+            nda_vetting_preference: "manual",
+            cim_sharing_preference: "manual",
+          },
+          {
+            id: "deal-both-manual",
+            project_name: "Proj E",
+            headline: "Headline E",
+            status: "active",
+            industry: "Energy",
+            view_count: 7,
+            published_at: "2026-01-01T00:00:00.000Z",
+            revenue_year_3: 80,
+            ebitda_year_3: 14,
+            nda_vetting_preference: "manual",
+            cim_sharing_preference: "manual",
+          },
+        ],
+        engagementRows: [
+          { deal_id: "deal-nda-manual", stage: "nda_pending" },
+          { deal_id: "deal-cim-manual", stage: "nda_signed" },
+          { deal_id: "deal-both-auto", stage: "nda_pending" },
+          { deal_id: "deal-both-manual", stage: "nda_pending" },
+          { deal_id: "deal-both-manual", stage: "nda_signed" },
+        ],
+      });
+
+      supabaseServerMocks.createClient.mockReturnValue(mock.supabase);
+
+      const response = await GET();
+      expect(response.status).toBe(200);
+      const payload = await response.json();
+
+      expect(payload.deals).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "deal-nda-manual",
+            has_pending_actions: true,
+            pending_action_type: "release_nda",
+          }),
+          expect.objectContaining({
+            id: "deal-cim-manual",
+            has_pending_actions: true,
+            pending_action_type: "release_cim",
+          }),
+          expect.objectContaining({
+            id: "deal-both-auto",
+            has_pending_actions: false,
+            pending_action_type: null,
+          }),
+          expect.objectContaining({
+            id: "deal-manual-no-stage",
+            has_pending_actions: false,
+            pending_action_type: null,
+          }),
+          expect.objectContaining({
+            id: "deal-both-manual",
+            has_pending_actions: true,
+            pending_action_type: "release_nda",
+          }),
+        ])
+      );
+
+      expect(JSON.stringify(payload.deals)).not.toContain("deal_engagements");
+      expect(mock.supabase.from).toHaveBeenCalledWith("deal_engagements");
+      expect(mock.dealEngagementsQuery.select).toHaveBeenCalledWith("deal_id, stage");
+    });
+
+    it("GET returns 403 for approved users with unsupported roles", async () => {
+      const mock = createBrokerDealsSupabaseMock({
+        profileRole: "admin",
+      });
+      supabaseServerMocks.createClient.mockReturnValue(mock.supabase);
+
+      const response = await GET();
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({ error: "Forbidden" });
+    });
+
     it("should have deals list/create route", () => {
       expect(
         fs.existsSync(path.join(SRC, "app", "api", "deals", "route.ts"))
@@ -225,6 +430,19 @@ describe("Phase 3: Deal Creation & Management", () => {
       expect(detailContent).toContain(".select(BUYER_DEAL_DETAIL_SELECT)");
       expect(listContent.match(/BUYER_DEAL_LIST_SELECT[\s\S]*?`;/)?.[0]).not.toMatch(/cim_document_path|nda_document_path|teaser_document_path/);
       expect(detailContent.match(/BUYER_DEAL_DETAIL_SELECT[\s\S]*?`;/)?.[0]).not.toMatch(/cim_document_path|nda_document_path|teaser_document_path/);
+    });
+
+    it("broker deal list computes pending-actions server-side and does not expose raw engagement arrays", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "app", "api", "deals", "route.ts"),
+        "utf-8"
+      );
+
+      expect(content).toContain("has_pending_actions");
+      expect(content).toContain("pending_action_type");
+      expect(content).toContain('.from("deal_engagements")');
+      expect(content).toContain('.select("deal_id, stage")');
+      expect(content).not.toContain("deal_engagements (stage)");
     });
 
     it("deal status route should log activity", () => {
@@ -548,6 +766,29 @@ describe("Phase 3: Deal Creation & Management", () => {
         "utf-8"
       );
       expect(content).toContain("Messaging");
+    });
+
+    it("should include pipeline Actions column and manual action controls", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "components", "broker", "BrokerDealManagement.tsx"),
+        "utf-8"
+      );
+      expect(content).toContain("Actions");
+      expect(content).toContain("Approve");
+      expect(content).toContain("Reject");
+      expect(content).toContain("Release CIM");
+      expect(content).toContain("showVettingActions");
+      expect(content).toContain("showReleaseCimAction");
+    });
+
+    it("should constrain vetting rejection reasons using shared constants", () => {
+      const content = fs.readFileSync(
+        path.join(SRC, "components", "broker", "BrokerDealManagement.tsx"),
+        "utf-8"
+      );
+      expect(content).toContain("VETTING_REJECTION_REASONS");
+      expect(content).toContain("Select NDA rejection reason");
+      expect(content).toContain("action: \"reject\"");
     });
   });
 

@@ -33,10 +33,15 @@ type MockDataGridProps = {
 const mockState = vi.hoisted(() => ({
   push: vi.fn(),
   capturedDataGridProps: [] as MockDataGridProps[],
+  searchParamStatus: null as string | null,
+  searchParams: {
+    get: (key: string) => (key === "status" ? mockState.searchParamStatus : null),
+  },
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockState.push }),
+  useSearchParams: () => mockState.searchParams,
 }));
 
 vi.mock("@/components/ui/DataGridTable", () => ({
@@ -115,6 +120,7 @@ describe("DealsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockState.capturedDataGridProps = [];
+    mockState.searchParamStatus = null;
   });
 
   afterEach(() => {
@@ -324,6 +330,108 @@ describe("DealsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "All (3)" }));
 
     await waitFor(() => {
+      expect(screen.getByTestId("grid-row-count")).toHaveTextContent("Rows: 3");
+      expect(getLatestGridProps()?.sortedCount).toBe(3);
+    });
+  });
+
+  it("activates the Draft filter from URL status query and only renders draft deals", async () => {
+    const deals: DealRow[] = [
+      {
+        id: "deal-1",
+        project_name: "Project Orion",
+        headline: "Industrial carve-out",
+        status: "draft",
+        industry: "Industrial",
+        view_count: 10,
+        published_at: "2026-01-01T00:00:00.000Z",
+        revenue_year_3: null,
+        ebitda_year_3: null,
+      },
+      {
+        id: "deal-2",
+        project_name: "Project Atlas",
+        headline: "Healthcare roll-up",
+        status: "accepting_iois",
+        industry: "Healthcare",
+        view_count: 20,
+        published_at: "2026-01-02T00:00:00.000Z",
+        revenue_year_3: null,
+        ebitda_year_3: null,
+      },
+      {
+        id: "deal-3",
+        project_name: "Project Nova",
+        headline: "Tech platform",
+        status: "draft",
+        industry: "Tech",
+        view_count: 30,
+        published_at: "2026-01-03T00:00:00.000Z",
+        revenue_year_3: null,
+        ebitda_year_3: null,
+      },
+    ];
+
+    mockState.searchParamStatus = "draft";
+    mockDealsResponse(deals);
+
+    render(<DealsPage />);
+
+    await screen.findByTestId("deals-data-grid");
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Draft (2)" })).toHaveClass("bg-primary", "text-white");
+      expect(screen.getByTestId("grid-row-project-names")).toHaveTextContent("Project Orion,Project Nova");
+      expect(getLatestGridProps()?.sortedCount).toBe(2);
+    });
+  });
+
+  it("falls back to all deals when URL status query is invalid", async () => {
+    const deals: DealRow[] = [
+      {
+        id: "deal-1",
+        project_name: "Project Orion",
+        headline: "Industrial carve-out",
+        status: "draft",
+        industry: "Industrial",
+        view_count: 10,
+        published_at: "2026-01-01T00:00:00.000Z",
+        revenue_year_3: null,
+        ebitda_year_3: null,
+      },
+      {
+        id: "deal-2",
+        project_name: "Project Atlas",
+        headline: "Healthcare roll-up",
+        status: "accepting_iois",
+        industry: "Healthcare",
+        view_count: 20,
+        published_at: "2026-01-02T00:00:00.000Z",
+        revenue_year_3: null,
+        ebitda_year_3: null,
+      },
+      {
+        id: "deal-3",
+        project_name: "Project Nova",
+        headline: "Tech platform",
+        status: "paused",
+        industry: "Tech",
+        view_count: 30,
+        published_at: "2026-01-03T00:00:00.000Z",
+        revenue_year_3: null,
+        ebitda_year_3: null,
+      },
+    ];
+
+    mockState.searchParamStatus = "not-a-real-status";
+    mockDealsResponse(deals);
+
+    render(<DealsPage />);
+
+    await screen.findByTestId("deals-data-grid");
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "All (3)" })).toHaveClass("bg-primary", "text-white");
       expect(screen.getByTestId("grid-row-count")).toHaveTextContent("Rows: 3");
       expect(getLatestGridProps()?.sortedCount).toBe(3);
     });

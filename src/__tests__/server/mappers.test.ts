@@ -4,6 +4,50 @@ import { mapDealCreateDataToDb, mapDealUpdateDataToDb } from "@/server/deals/map
 import { mapProjectDataToDb } from "@/server/projects/mappers";
 
 describe("server mappers", () => {
+  it("stores a single trimmed industry string for create mapping when industry input is an array", () => {
+    const mapped = mapDealCreateDataToDb(
+      {
+        projectName: "Project Atlas",
+        headline: "Headline",
+        description: "Description",
+        geographyDisplay: "state",
+        state: "CA",
+        industry: ["  ", " Healthcare ", "Industrial"],
+        ndaType: "platform",
+        cimSharingPreference: "auto",
+        ndaVettingPreference: "manual",
+        financials: {
+          year1: { label: "FY22", revenue: 10, ebitda: 2 },
+          year2: { label: "FY23", revenue: 12, ebitda: 3 },
+          year3: { label: "FY24", revenue: 14, ebitda: 4 },
+          projection: { label: "FY25", revenue: 16, ebitda: 5 },
+        },
+      } as never,
+      { firmId: "firm-1", userId: "user-1" }
+    );
+
+    expect(mapped.industry).toBe("Healthcare");
+  });
+
+  it("stores the first valid trimmed industry for update mapping when industry input is an array", () => {
+    const mapped = mapDealUpdateDataToDb({
+      industry: ["", "  Industrial  ", "Healthcare"],
+    } as never);
+
+    expect(mapped).toMatchObject({ industry: "Industrial" });
+  });
+
+  it("preserves partial update behavior for industry (undefined omitted, explicit empty/invalid normalized to null)", () => {
+    const omittedIndustry = mapDealUpdateDataToDb({ headline: "Updated" });
+    expect(omittedIndustry).not.toHaveProperty("industry");
+
+    const blankIndustry = mapDealUpdateDataToDb({ industry: "   " } as never);
+    expect(blankIndustry).toMatchObject({ industry: null });
+
+    const invalidIndustryArray = mapDealUpdateDataToDb({ industry: ["", "   "] } as never);
+    expect(invalidIndustryArray).toMatchObject({ industry: null });
+  });
+
   it("maps deal financials while preserving zero and null values", () => {
     const mapped = mapDealCreateDataToDb(
       {

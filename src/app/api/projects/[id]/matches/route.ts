@@ -161,7 +161,8 @@ export async function GET(
 ) {
   const context = await requireRole("buyer");
   if (isAuthResponse(context)) return context;
-  const { supabase, user } = context;
+  const { supabase, user, profile } = context;
+  const isApprovedBuyer = profile.role === "buyer" && profile.status === "approved";
 
   // Fetch the project and verify ownership
   const { data: project, error: projectError } = await supabase
@@ -189,6 +190,84 @@ export async function GET(
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
+  // Parse cursor for keyset pagination
+  const url = new URL(request.url);
+  const parsedCursor = parseCursor(url.searchParams.get("cursor"));
+  if (parsedCursor.isInvalid) {
+    return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
+  }
+  const cursor = parsedCursor.value;
+
+  if (project.is_active !== true) {
+    let engagementQuery = supabase
+      .from("deal_engagements")
+      .select("id, deal_id, stage, nda_status, nda_signed_at, cim_released, cim_released_at, cim_viewed_at, cim_downloaded_at, pass_reason, pass_reason_detail, declined_at, vetting_status, vetting_rejection_reason")
+      .eq("buyer_user_id", user.id)
+      .eq("project_id", params.id)
+      .order("deal_id", { ascending: true })
+      .limit(PAGE_SIZE + 1);
+
+    if (cursor) {
+      engagementQuery = engagementQuery.gt("deal_id", cursor);
+    }
+
+    const { data: engagementRows, error: engagementError } = await engagementQuery;
+    if (engagementError) {
+      console.error("Failed to fetch inactive project engagements", {
+        projectId: params.id,
+        userId: user.id,
+        error: engagementError,
+      });
+      return NextResponse.json({ error: "Failed to fetch deal engagements" }, { status: 500 });
+    }
+
+    const allEngagements = (engagementRows || []) as EngagementRow[];
+    const pageEngagements = allEngagements.slice(0, PAGE_SIZE);
+    const pageDealIds = pageEngagements.map((engagement) => engagement.deal_id);
+
+    let deals: DealRow[] = [];
+    if (pageDealIds.length > 0) {
+      const { data: dealRows, error: dealsError } = await supabase
+        .from("deals")
+        .select(DEAL_SELECT_FIELDS)
+        .in("id", pageDealIds);
+
+      if (dealsError) {
+        console.error("Failed to fetch deals for inactive project engagements", {
+          projectId: params.id,
+          userId: user.id,
+          error: dealsError,
+        });
+        return NextResponse.json({ error: "Failed to fetch deals" }, { status: 500 });
+      }
+
+      deals = (dealRows || []) as DealRow[];
+    }
+
+    const dealsById = new Map(deals.map((deal) => [deal.id, deal]));
+    const results = pageEngagements
+      .map((engagement) => {
+        const deal = dealsById.get(engagement.deal_id);
+        if (!deal) {
+          return null;
+        }
+        return buildBuyerMatchResponseDeal(deal, engagement);
+      })
+      .filter((deal): deal is ReturnType<typeof buildBuyerMatchResponseDeal> => deal !== null);
+
+    const nextCursor = allEngagements.length > PAGE_SIZE
+      ? pageEngagements[pageEngagements.length - 1]?.deal_id ?? null
+      : null;
+
+    return NextResponse.json({
+      deals: results,
+      nextCursor,
+      viewer: {
+        isApprovedBuyer,
+      },
+    });
+  }
+
   const canonicalKeywords = buildCanonicalKeywords(project.keywords);
 
   // Build match criteria from project
@@ -202,14 +281,6 @@ export async function GET(
     location: project.location || undefined,
     keywords: canonicalKeywords,
   };
-
-  // Parse cursor for keyset pagination
-  const url = new URL(request.url);
-  const parsedCursor = parseCursor(url.searchParams.get("cursor"));
-  if (parsedCursor.isInvalid) {
-    return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
-  }
-  const cursor = parsedCursor.value;
 
   const keywordOrFilter = buildKeywordOrFilter(canonicalKeywords);
 
@@ -324,5 +395,8 @@ export async function GET(
   return NextResponse.json({
     deals: results,
     nextCursor,
+    viewer: {
+      isApprovedBuyer,
+    },
   });
 }

@@ -53,6 +53,13 @@ const mockPush = vi.fn();
 let mockPathname = "/projects/project-1";
 let mockSearchParams = new URLSearchParams();
 let mockDeals: MockDeal[] = [];
+let mockProject: {
+  id: string;
+  name: string;
+  industry: string;
+  location: string;
+  created_at: string | null;
+};
 
 const sampleDeals: MockDeal[] = [
   {
@@ -87,6 +94,17 @@ const sampleDeals: MockDeal[] = [
   },
 ];
 
+const US_MM_DD_YYYY_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "2-digit",
+  day: "2-digit",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function getExpectedUsDate(value: string): string {
+  return US_MM_DD_YYYY_FORMATTER.format(new Date(value));
+}
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
   usePathname: () => mockPathname,
@@ -118,7 +136,6 @@ vi.mock("@/components/ui/ProjectDealsTable", () => ({
     onSortModelChange?: (model: Array<{ field: string; sort: "asc" | "desc" }>) => void;
     onRowClick?: (row: MockDeal, trigger?: HTMLElement | null) => void;
   }) => {
-    const actionsColumn = detailColumns?.find((column) => column.field === "actions");
     const dateReceivedColumn = detailColumns?.find((column) => column.field === "date_received");
     const firstRow = rows[0];
 
@@ -145,9 +162,8 @@ vi.mock("@/components/ui/ProjectDealsTable", () => ({
               id: firstRow.id,
               field: "headline",
               hasFocus: true,
-                value: firstRow.headline,
+              value: firstRow.headline,
               })}
-            <div data-testid="table-actions">{actionsColumn?.renderCell?.({ row: firstRow })}</div>
             <div data-testid="date-received-cell">{dateReceivedColumn?.renderCell?.({ row: firstRow })}</div>
           </div>
         )}
@@ -162,6 +178,13 @@ describe("ProjectDealsView", () => {
     mockPathname = "/projects/project-1";
     mockSearchParams = new URLSearchParams();
     mockDeals = sampleDeals;
+    mockProject = {
+      id: "project-1",
+      name: "Project Orion",
+      industry: "Industrial",
+      location: "TX",
+      created_at: null,
+    };
 
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => {
       const url = String(input);
@@ -170,7 +193,7 @@ describe("ProjectDealsView", () => {
         return {
           ok: true,
           json: async () => ({
-            project: { id: "project-1", name: "Project Orion", industry: "Industrial", location: "TX" },
+            project: mockProject,
           }),
         };
       }
@@ -310,11 +333,11 @@ describe("ProjectDealsView", () => {
     expect(screen.getByRole("heading", { name: "Financials" })).toBeInTheDocument();
     expect(screen.getByText("FY2024")).toBeInTheDocument();
     expect(screen.getByText("FY2025E")).toBeInTheDocument();
-    expect(screen.getByText("$1,000,000")).toBeInTheDocument();
+    expect(screen.getByText("$1,000,000M")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "NDA and CIM Process" })).toBeInTheDocument();
     expect(screen.getByText("Custom NDA")).toBeInTheDocument();
-    expect(screen.getByText("Auto-send NDA when buyer pursues")).toBeInTheDocument();
-    expect(screen.getByText("Broker manually releases CIM")).toBeInTheDocument();
+    expect(screen.getByText("Automatic release")).toBeInTheDocument();
+    expect(screen.getByText("Manual release")).toBeInTheDocument();
     expect(screen.getAllByText("Available").length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: "Engagement" })).toBeInTheDocument();
     expect(screen.getByText("Viewed")).toBeInTheDocument();
@@ -322,17 +345,310 @@ describe("ProjectDealsView", () => {
   });
 
   it("does not expose raw storage paths or show gated documents before buyer access", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        engagement: {
+          id: "engagement-files-available",
+          stage: "pursued",
+          nda_status: "sent",
+          cim_released: false,
+        },
+      },
+    ];
+
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
-    const activePanel = screen.getByRole("tabpanel");
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
 
     expect(screen.queryByText("deal-1/teaser.pdf")).not.toBeInTheDocument();
     expect(screen.queryByText("deal-1/cim.pdf")).not.toBeInTheDocument();
     expect(screen.queryByText("deal-1/nda.pdf")).not.toBeInTheDocument();
-    expect(within(activePanel).getByText("Available")).toBeInTheDocument();
-    expect(within(activePanel).getAllByText("Not yet available")).toHaveLength(2);
+
+    const filesTable = within(filesPanel).getByRole("table");
+    expect(within(filesTable).getByRole("columnheader", { name: "File" })).toBeInTheDocument();
+    expect(within(filesTable).getByRole("columnheader", { name: "Availability" })).toBeInTheDocument();
+
+    const tableRows = within(filesTable).getAllByRole("row");
+    expect(tableRows).toHaveLength(2);
+    expect(within(filesTable).getByRole("cell", { name: "Teaser" })).toBeInTheDocument();
+    expect(within(filesTable).queryByRole("link", { name: "Teaser" })).not.toBeInTheDocument();
+    expect(within(filesTable).getByRole("link", { name: "Open Teaser" })).toBeInTheDocument();
+    expect(within(filesTable).getByRole("cell", { name: "Available" })).toBeInTheDocument();
+    expect(within(filesTable).queryByText("CIM Document")).not.toBeInTheDocument();
+    expect(within(filesTable).queryByText("Custom NDA Document")).not.toBeInTheDocument();
+    expect(within(filesTable).queryByText("Unavailable")).not.toBeInTheDocument();
+    expect(within(filesPanel).queryByText("No files available yet.")).not.toBeInTheDocument();
+  });
+
+  it("hides teaser row when buyer has no engagement", async () => {
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    expect(within(filesPanel).getByText("No files available yet.")).toBeInTheDocument();
+    expect(within(filesPanel).queryByText("Teaser")).not.toBeInTheDocument();
+  });
+
+  it.each(["declined", "passed"] as const)(
+    "hides teaser row when engagement stage is %s",
+    async (engagementStage) => {
+      mockPathname = "/projects/project-1/archive";
+      mockDeals = [
+        {
+          ...sampleDeals[0],
+          engagement: {
+            id: `engagement-teaser-blocked-${engagementStage}`,
+            stage: engagementStage,
+            nda_status: "not_signed",
+          },
+        },
+      ];
+
+      render(<ProjectDealsView projectId="project-1" />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+      const filesTab = screen.getByRole("tab", { name: "Files" });
+      fireEvent.click(filesTab);
+
+      await waitFor(() => {
+        expect(filesTab).toHaveAttribute("aria-selected", "true");
+      });
+
+      const filesPanel = screen.getByRole("tabpanel");
+      expect(within(filesPanel).queryByText("Teaser")).not.toBeInTheDocument();
+      expect(within(filesPanel).getByText("No files available yet.")).toBeInTheDocument();
+    }
+  );
+
+  it("does not render terminated engagements in archived view (no teaser row exposed)", async () => {
+    mockPathname = "/projects/project-1/archive";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        engagement: {
+          id: "engagement-teaser-blocked-terminated",
+          stage: "terminated",
+          nda_status: "not_signed",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByText("No archived deals yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open first row" })).not.toBeInTheDocument();
+  });
+
+  it("hides CIM row when CIM document exists but buyer release is false", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        has_cim_document: true,
+        engagement: {
+          id: "engagement-cim-not-released",
+          stage: "nda_signed",
+          nda_status: "signed",
+          cim_released: false,
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    const filesTable = within(filesPanel).getByRole("table");
+
+    expect(within(filesTable).queryByText("CIM Document")).not.toBeInTheDocument();
+  });
+
+  it("shows CIM row when CIM document exists and buyer release is true", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        has_cim_document: true,
+        engagement: {
+          id: "engagement-cim-released",
+          stage: "nda_signed",
+          nda_status: "signed",
+          cim_released: true,
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    const filesTable = within(filesPanel).getByRole("table");
+
+    expect(within(filesTable).getByRole("cell", { name: "CIM Document" })).toBeInTheDocument();
+    expect(within(filesTable).getByRole("link", { name: "Open CIM Document" })).toBeInTheDocument();
+  });
+
+  it("does not show Custom NDA row when NDA type is platform", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        nda_type: "platform",
+        has_nda_document: true,
+        engagement: {
+          id: "engagement-platform-nda",
+          stage: "nda_pending",
+          nda_status: "pending",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    const filesTable = within(filesPanel).getByRole("table");
+
+    expect(within(filesTable).queryByText("Custom NDA Document")).not.toBeInTheDocument();
+  });
+
+  it("shows Custom NDA row as a view link when custom NDA document exists", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        nda_type: "custom",
+        has_nda_document: true,
+        engagement: {
+          id: "engagement-custom-nda",
+          stage: "nda_pending",
+          nda_status: "sent",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    const filesTable = within(filesPanel).getByRole("table");
+
+    expect(within(filesTable).getByRole("cell", { name: "Custom NDA Document" })).toBeInTheDocument();
+    expect(within(filesTable).getByRole("link", { name: "Open Custom NDA Document" })).toBeInTheDocument();
+  });
+
+  it("hides Custom NDA row when custom NDA exists but NDA status is not sent or signed", async () => {
+    mockPathname = "/projects/project-1/active";
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        nda_type: "custom",
+        has_nda_document: true,
+        engagement: {
+          id: "engagement-custom-nda-pending-review",
+          stage: "nda_pending",
+          nda_status: "pending_review",
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    const filesTable = within(filesPanel).getByRole("table");
+
+    expect(within(filesTable).queryByText("Custom NDA Document")).not.toBeInTheDocument();
+  });
+
+  it("navigates using encoded deal id when activating a file row", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal/1?#",
+        engagement: {
+          id: "engagement-encoded-id",
+          stage: "pursued",
+          nda_status: "sent",
+          cim_released: false,
+        },
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    mockPush.mockClear();
+    fireEvent.click(screen.getByRole("link", { name: "Open Teaser" }));
+
+    expect(mockPush).toHaveBeenCalledWith("/api/deals/deal%2F1%3F%23/teaser?action=view");
   });
 
   it("renders safe fallback values for missing expanded drawer information", async () => {
@@ -370,16 +686,26 @@ describe("ProjectDealsView", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
-    const activePanel = screen.getByRole("tabpanel");
-
     expect(screen.getByRole("dialog", { name: /Sparse Services/ })).toBeInTheDocument();
     expect(screen.getByText("Not yet engaged")).toBeInTheDocument();
     expect(screen.getByText("No business description provided.")).toBeInTheDocument();
     expect(screen.getByText("Year 1")).toBeInTheDocument();
     expect(screen.getByText("Projection")).toBeInTheDocument();
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(8);
-    expect(within(activePanel).getByText("Not available")).toBeInTheDocument();
-    expect(within(activePanel).getByText("Not yet available")).toBeInTheDocument();
+
+    const filesTab = screen.getByRole("tab", { name: "Files" });
+    fireEvent.click(filesTab);
+
+    await waitFor(() => {
+      expect(filesTab).toHaveAttribute("aria-selected", "true");
+    });
+
+    const filesPanel = screen.getByRole("tabpanel");
+    expect(within(filesPanel).getByText("No files available yet.")).toBeInTheDocument();
+    expect(within(filesPanel).queryByRole("table")).not.toBeInTheDocument();
+    expect(within(filesPanel).queryByText("Teaser")).not.toBeInTheDocument();
+    expect(within(filesPanel).queryByText("CIM Document")).not.toBeInTheDocument();
+    expect(within(filesPanel).queryByText("Custom NDA Document")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Timeline" })).not.toBeInTheDocument();
   });
 
@@ -491,7 +817,7 @@ describe("ProjectDealsView", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
     const detailsTab = screen.getByRole("tab", { name: "Details" });
-    const eventsTab = screen.getByRole("tab", { name: "Events" });
+    const eventsTab = screen.getByRole("tab", { name: "Messages" });
     const filesTab = screen.getByRole("tab", { name: "Files" });
 
     expect(detailsTab).toBeInTheDocument();
@@ -531,7 +857,7 @@ describe("ProjectDealsView", () => {
     expect(eventsPanel).toHaveAttribute("hidden");
     expect(filesPanel).toHaveAttribute("hidden");
     expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
-    expect(within(detailsPanel as HTMLElement).queryByText("Current deal status")).not.toBeInTheDocument();
+    expect(within(detailsPanel as HTMLElement).queryByText("No active engagement yet.")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Files" })).not.toBeInTheDocument();
 
     fireEvent.click(eventsTab);
@@ -544,7 +870,7 @@ describe("ProjectDealsView", () => {
     expect(eventsPanel).not.toHaveAttribute("hidden");
     expect(filesPanel).toHaveAttribute("hidden");
     expect(within(eventsPanel as HTMLElement).getByRole("heading", { name: "Timeline" })).toBeInTheDocument();
-    expect(screen.getByText("Current deal status")).toBeInTheDocument();
+    expect(within(eventsPanel as HTMLElement).getByText("Engagement")).toBeInTheDocument();
     expect(screen.getByText(/No active engagement/i)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Overview" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Files" })).not.toBeInTheDocument();
@@ -585,7 +911,7 @@ describe("ProjectDealsView", () => {
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
-    const eventsTab = screen.getByRole("tab", { name: "Events" });
+    const eventsTab = screen.getByRole("tab", { name: "Messages" });
     fireEvent.click(eventsTab);
 
     const eventsPanelId = eventsTab.getAttribute("aria-controls");
@@ -620,7 +946,7 @@ describe("ProjectDealsView", () => {
     render(<ProjectDealsView projectId="project-1" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
-    const eventsTab = screen.getByRole("tab", { name: "Events" });
+    const eventsTab = screen.getByRole("tab", { name: "Messages" });
     fireEvent.click(eventsTab);
 
     const eventsPanelId = eventsTab.getAttribute("aria-controls");
@@ -759,7 +1085,7 @@ describe("ProjectDealsView", () => {
     });
   });
 
-  it("shows no-action drawer footer state when no table actions are available", async () => {
+  it("shows no-action drawer footer state when no drawer actions are available", async () => {
     mockPathname = "/projects/project-1/archive";
     mockDeals = [
       {
@@ -866,7 +1192,9 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    expect(await screen.findByRole("button", { name: "Sign NDA" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    expect(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "Sign NDA" })).toBeInTheDocument();
   });
 
   it("navigates to deal NDA page when Sign NDA is clicked", async () => {
@@ -886,7 +1214,8 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Sign NDA" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+    fireEvent.click(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "Sign NDA" }));
 
     expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-nda");
     expect(mockPush).toHaveBeenCalledWith("/deals/deal-nda/nda");
@@ -911,7 +1240,10 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    const submitIoiButton = await screen.findByRole("button", { name: "Submit IOI" });
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const drawerFooter = screen.getByTestId("deal-drawer-footer");
+    const submitIoiButton = within(drawerFooter).getByRole("button", { name: "Submit IOI" });
 
     expect(submitIoiButton).toBeInTheDocument();
     expect(submitIoiButton).toBeEnabled();
@@ -939,7 +1271,8 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Submit IOI" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+    fireEvent.click(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "Submit IOI" }));
 
     expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-ioi-ready");
     expect(mockPush).toHaveBeenCalledWith("/deals/deal-ioi-ready/ioi");
@@ -948,8 +1281,11 @@ describe("ProjectDealsView", () => {
   it("shows Pursue and Decline (and not Sign NDA) when engagement is null", async () => {
     render(<ProjectDealsView projectId="project-1" />);
 
-    expect(await screen.findByRole("button", { name: "Pursue" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Decline" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const drawerFooter = screen.getByTestId("deal-drawer-footer");
+    expect(within(drawerFooter).getByRole("button", { name: "Pursue" })).toBeInTheDocument();
+    expect(within(drawerFooter).getByRole("button", { name: "Decline" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
   });
 
@@ -970,7 +1306,9 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    expect(await screen.findByRole("button", { name: "Pursue" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    expect(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "Pursue" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
   });
 
@@ -995,7 +1333,7 @@ describe("ProjectDealsView", () => {
     expect(screen.queryByRole("button", { name: "Sign NDA" })).not.toBeInTheDocument();
   });
 
-  it("renders View IOI action in both table and drawer only when status is accepting_iois", async () => {
+  it("renders View IOI action in the drawer only when status is accepting_iois", async () => {
     mockPathname = "/projects/project-1/active";
     mockDeals = [
       {
@@ -1014,11 +1352,7 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    const tableActions = await screen.findByTestId("table-actions");
-    const tableViewIoiButton = within(tableActions).getByRole("button", { name: "View IOI" });
-
-    expect(tableViewIoiButton).toBeInTheDocument();
-    expect(tableViewIoiButton).toBeEnabled();
+    expect(screen.queryByTestId("table-actions")).not.toBeInTheDocument();
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
@@ -1033,7 +1367,7 @@ describe("ProjectDealsView", () => {
     expect(screen.queryByRole("button", { name: "Decline" })).not.toBeInTheDocument();
   });
 
-  it("does not render View IOI when status is not accepting_iois in table or drawer", async () => {
+  it("does not render View IOI in the drawer when status is not accepting_iois", async () => {
     mockPathname = "/projects/project-1/active";
     mockDeals = [
       {
@@ -1051,9 +1385,6 @@ describe("ProjectDealsView", () => {
     ];
 
     render(<ProjectDealsView projectId="project-1" />);
-
-    const tableActions = await screen.findByTestId("table-actions");
-    expect(within(tableActions).queryByRole("button", { name: "View IOI" })).not.toBeInTheDocument();
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
@@ -1080,7 +1411,8 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "View IOI" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+    fireEvent.click(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "View IOI" }));
 
     expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-ioi-submitted");
     expect(mockPush).toHaveBeenCalledWith("/deals/deal-ioi-submitted/ioi");
@@ -1104,7 +1436,9 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    const viewLoiButton = await screen.findByRole("button", { name: "View LOI" });
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+
+    const viewLoiButton = within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "View LOI" });
 
     expect(viewLoiButton).toBeInTheDocument();
     expect(viewLoiButton).toBeEnabled();
@@ -1133,13 +1467,14 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "View LOI" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
+    fireEvent.click(within(screen.getByTestId("deal-drawer-footer")).getByRole("button", { name: "View LOI" }));
 
     expect(mockPush).not.toHaveBeenCalledWith("/deals/deal-loi-submitted");
     expect(mockPush).toHaveBeenCalledWith("/deals/deal-loi-submitted/loi");
   });
 
-  it("renders Submit LOI action for ioi_submitted deals when status is accepting_lois in table and drawer", async () => {
+  it("renders Submit LOI action for ioi_submitted deals when status is accepting_lois in the drawer", async () => {
     mockPathname = "/projects/project-1/active";
     mockDeals = [
       {
@@ -1157,13 +1492,7 @@ describe("ProjectDealsView", () => {
     ];
 
     render(<ProjectDealsView projectId="project-1" />);
-
-    const tableActions = await screen.findByTestId("table-actions");
-    const tableSubmitLoiButton = within(tableActions).getByRole("button", { name: "Submit LOI" });
-
-    expect(tableSubmitLoiButton).toBeInTheDocument();
-    expect(tableSubmitLoiButton).toBeEnabled();
-    expect(within(tableActions).queryByRole("button", { name: "View IOI" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("table-actions")).not.toBeInTheDocument();
 
     fireEvent.click(await screen.findByRole("button", { name: "Open first row" }));
 
@@ -1213,7 +1542,7 @@ describe("ProjectDealsView", () => {
     expect(contentWrapper).not.toHaveClass("max-w-6xl", "mx-auto");
   });
 
-  it("renders date received in mm/dd/yyyy format when provided", async () => {
+  it("renders Date Received using strict MM/DD/YYYY formatting when provided", async () => {
     mockDeals = [
       {
         ...sampleDeals[0],
@@ -1223,7 +1552,96 @@ describe("ProjectDealsView", () => {
 
     render(<ProjectDealsView projectId="project-1" />);
 
-    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent("03/15/2025");
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent(
+      getExpectedUsDate("2025-03-15T00:00:00.000Z")
+    );
+
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent(/^\d{2}\/\d{2}\/\d{4}$/);
+  });
+
+  it("renders Date Received in UTC for near-midnight ISO timestamps to prevent timezone drift", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        date_received: "2025-03-15T00:30:00.000Z",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    const dateReceivedCell = await screen.findByTestId("date-received-cell");
+
+    expect(dateReceivedCell).toHaveTextContent("03/15/2025");
+    expect(dateReceivedCell).toHaveTextContent(getExpectedUsDate("2025-03-15T00:30:00.000Z"));
+    expect(dateReceivedCell).not.toHaveTextContent("03/14/2025");
+  });
+
+  it("clamps Date Received display to project created_at when deal date is earlier", async () => {
+    mockProject = {
+      ...mockProject,
+      created_at: "2025-03-10T00:00:00.000Z",
+    };
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        date_received: "2025-03-01T00:00:00.000Z",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    const dateReceivedCell = await screen.findByTestId("date-received-cell");
+
+    expect(dateReceivedCell).toHaveTextContent(getExpectedUsDate("2025-03-10T00:00:00.000Z"));
+    expect(dateReceivedCell).toHaveTextContent(/^\d{2}\/\d{2}\/\d{4}$/);
+    expect(dateReceivedCell).not.toHaveTextContent(getExpectedUsDate("2025-03-01T00:00:00.000Z"));
+  });
+
+  it("keeps Date Received unchanged when deal date is on or after project created_at", async () => {
+    mockProject = {
+      ...mockProject,
+      created_at: "2025-03-10T00:00:00.000Z",
+    };
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        date_received: "2025-03-15T00:00:00.000Z",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent(
+      getExpectedUsDate("2025-03-15T00:00:00.000Z")
+    );
+  });
+
+  it("falls back to original Date Received behavior when project created_at is missing or invalid", async () => {
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        date_received: "2025-03-01T00:00:00.000Z",
+      },
+    ];
+
+    const { unmount } = render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent(
+      getExpectedUsDate("2025-03-01T00:00:00.000Z")
+    );
+
+    unmount();
+
+    mockProject = {
+      ...mockProject,
+      created_at: "not-a-real-date",
+    };
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    expect(await screen.findByTestId("date-received-cell")).toHaveTextContent(
+      getExpectedUsDate("2025-03-01T00:00:00.000Z")
+    );
   });
 
   it("renders an em dash when date received is missing or invalid", async () => {
@@ -1377,6 +1795,47 @@ describe("ProjectDealsView", () => {
         "Valid Early Deal",
         "Null Date Deal",
         "Invalid Date Deal",
+      ]);
+    });
+  });
+
+  it("sorts by effective Date Received using project created_at clamping", async () => {
+    mockProject = {
+      ...mockProject,
+      created_at: "2025-03-10T00:00:00.000Z",
+    };
+    mockDeals = [
+      {
+        ...sampleDeals[0],
+        id: "deal-at-created-at",
+        headline: "At Project Created Date",
+        date_received: "2025-03-10T00:00:00.000Z",
+      },
+      {
+        ...sampleDeals[0],
+        id: "deal-clamped",
+        headline: "Raw Earlier But Clamped",
+        date_received: "2025-01-01T00:00:00.000Z",
+      },
+      {
+        ...sampleDeals[0],
+        id: "deal-later",
+        headline: "Later",
+        date_received: "2025-03-20T00:00:00.000Z",
+      },
+    ];
+
+    render(<ProjectDealsView projectId="project-1" />);
+
+    await screen.findByRole("button", { name: "Open first row" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sort by date received asc" }));
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId("row-order")).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+        "At Project Created Date",
+        "Raw Earlier But Clamped",
+        "Later",
       ]);
     });
   });

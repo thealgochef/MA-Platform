@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataGridTable } from "@/components/ui/DataGridTable";
 import { DEAL_STATUS_LABELS } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatIndustryDisplay } from "@/lib/utils";
+import type { PendingActionType } from "@/types";
 import {
   GridColDef,
   GridPaginationModel,
@@ -23,7 +24,21 @@ interface Deal {
   published_at: string | null;
   revenue_year_3: number | null;
   ebitda_year_3: number | null;
+  has_pending_actions?: boolean;
+  pending_action_type?: PendingActionType | null;
 }
+
+interface PendingActionDeal {
+  id: string;
+  project_name: string;
+  headline: string;
+  action: string;
+}
+
+const PENDING_ACTION_LABELS: Record<PendingActionType, string> = {
+  release_nda: "Release NDA",
+  release_cim: "Release CIM",
+};
 
 export default function BrokerDashboard() {
   const router = useRouter();
@@ -39,6 +54,15 @@ export default function BrokerDashboard() {
     page: 0,
     pageSize: 10,
   });
+  const [pendingRowSelectionModel, setPendingRowSelectionModel] = useState<GridRowSelectionModel>({
+    type: "include",
+    ids: new Set(),
+  });
+  const [pendingSortModel, setPendingSortModel] = useState<GridSortModel>([]);
+  const [pendingPaginationModel, setPendingPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 10,
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -50,7 +74,8 @@ export default function BrokerDashboard() {
         if (res.ok) {
           const data = await res.json();
           if (isMounted) {
-            setDeals(data.deals || []);
+            const dealsPayload = data?.deals;
+            setDeals(Array.isArray(dealsPayload) ? dealsPayload : []);
           }
         } else {
           if (isMounted) {
@@ -85,9 +110,14 @@ export default function BrokerDashboard() {
     setPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
   };
 
-  // Preserve legacy KPI behavior from pre-DataGrid dashboard: "Active Deals" intentionally
-  // means "not closed/terminated" and therefore includes drafts.
-  const activeDeals = deals.filter(d => !["terminated", "closed"].includes(d.status));
+  const handlePendingSortModelChange = (model: GridSortModel) => {
+    setPendingSortModel(model);
+    setPendingPaginationModel((prev) => (prev.page === 0 ? prev : { ...prev, page: 0 }));
+  };
+
+  // Preserve current KPI behavior: "Active Deals" excludes drafts and counts only
+  // non-draft deals that are not closed or terminated.
+  const activeDeals = deals.filter(d => !["terminated", "closed", "draft"].includes(d.status));
   const closedDeals = deals.filter(d => d.status === "closed");
   const draftDeals = deals.filter(d => d.status === "draft");
 
@@ -112,6 +142,7 @@ export default function BrokerDashboard() {
         headerName: "Industry",
         flex: 1,
         minWidth: 140,
+        valueGetter: (_, row) => formatIndustryDisplay(row.industry),
         cellClassName: "text-text-secondary row-hover-text",
       },
       {
@@ -185,7 +216,7 @@ export default function BrokerDashboard() {
         case "headline":
           return deal.headline;
         case "industry":
-          return deal.industry;
+          return formatIndustryDisplay(deal.industry);
         case "revenue":
           return deal.revenue_year_3 ?? Number.NEGATIVE_INFINITY;
         case "status":
@@ -226,6 +257,97 @@ export default function BrokerDashboard() {
     return sortedDeals.slice(start, start + paginationModel.pageSize);
   }, [paginationModel.page, paginationModel.pageSize, sortedDeals]);
 
+  const pendingActionsRows = useMemo<PendingActionDeal[]>(() => {
+    return deals
+      .map((deal) => {
+        if (deal.has_pending_actions !== true || deal.pending_action_type == null) {
+          return null;
+        }
+
+        return {
+          id: deal.id,
+          project_name: deal.project_name,
+          headline: deal.headline,
+          action: PENDING_ACTION_LABELS[deal.pending_action_type],
+        };
+      })
+      .filter((deal): deal is PendingActionDeal => deal !== null);
+  }, [deals]);
+
+  const pendingColumns = useMemo<GridColDef<PendingActionDeal>[]>(() => {
+    return [
+      {
+        field: "project_name",
+        headerName: "Project Name",
+        flex: 1.2,
+        minWidth: 180,
+        cellClassName: "font-bold text-primary",
+      },
+      {
+        field: "headline",
+        headerName: "Headline",
+        flex: 1.8,
+        minWidth: 260,
+        cellClassName: "text-text-secondary row-hover-text",
+      },
+      {
+        field: "action",
+        headerName: "Action",
+        flex: 1,
+        minWidth: 160,
+        cellClassName: "text-text-secondary row-hover-text",
+      },
+    ];
+  }, []);
+
+  const sortedPendingActionsRows = useMemo(() => {
+    const activeSort = pendingSortModel[0];
+    if (!activeSort?.field || !activeSort.sort) {
+      return pendingActionsRows;
+    }
+
+    const direction = activeSort.sort === "asc" ? 1 : -1;
+    const getValue = (deal: PendingActionDeal) => {
+      switch (activeSort.field) {
+        case "project_name":
+          return deal.project_name;
+        case "headline":
+          return deal.headline;
+        case "action":
+          return deal.action;
+        default:
+          return "";
+      }
+    };
+
+    return [...pendingActionsRows].sort((a, b) => {
+      const aValue = getValue(a);
+      const bValue = getValue(b);
+
+      return (
+        String(aValue).localeCompare(String(bValue), undefined, {
+          sensitivity: "base",
+          numeric: true,
+        }) * direction
+      );
+    });
+  }, [pendingActionsRows, pendingSortModel]);
+
+  useEffect(() => {
+    const maxPendingPage = Math.max(
+      0,
+      Math.ceil(sortedPendingActionsRows.length / pendingPaginationModel.pageSize) - 1
+    );
+    if (pendingPaginationModel.page > maxPendingPage) {
+      setPendingPaginationModel((prev) => ({ ...prev, page: maxPendingPage }));
+    }
+  }, [pendingPaginationModel.page, pendingPaginationModel.pageSize, sortedPendingActionsRows.length]);
+
+  const pagedPendingActionsRows = useMemo(() => {
+    const start = pendingPaginationModel.page * pendingPaginationModel.pageSize;
+    return sortedPendingActionsRows.slice(start, start + pendingPaginationModel.pageSize);
+  }, [pendingPaginationModel.page, pendingPaginationModel.pageSize, sortedPendingActionsRows]);
+
   if (loading) {
     return (
       <main className="min-h-screen bg-bg-alt p-8">
@@ -263,52 +385,87 @@ export default function BrokerDashboard() {
 
         {/* Analytics Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+          <Link
+            href="/deals"
+            className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
             <p className="text-xs text-text-secondary">Total Deals</p>
             <p className="text-2xl font-bold text-primary">{deals.length}</p>
-          </div>
-          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+          </Link>
+          <Link
+            href="/deals"
+            className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
             <p className="text-xs text-text-secondary">Active Deals</p>
             <p className="text-2xl font-bold text-primary">{activeDeals.length}</p>
-          </div>
-          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+          </Link>
+          <Link
+            href="/deals?status=draft"
+            className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
             <p className="text-xs text-text-secondary">Drafts</p>
             <p className="text-2xl font-bold text-primary">{draftDeals.length}</p>
-          </div>
-          <div className="bg-surface-alt rounded-lg border border-border-color p-4">
+          </Link>
+          <Link
+            href="/deals"
+            className="bg-surface-alt rounded-lg border border-border-color p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
             <p className="text-xs text-text-secondary">Closed</p>
             <p className="text-2xl font-bold text-primary">{closedDeals.length}</p>
-          </div>
+          </Link>
         </div>
 
-        {/* Deal List */}
-        <h2 className="text-lg font-semibold text-primary mb-4">Your Deals</h2>
+        <div className="space-y-8">
+          {/* Deal List */}
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold text-primary">Your Deals</h2>
 
-        {deals.length === 0 ? (
-          <div className="bg-surface-alt rounded-lg border border-border-color p-8 text-center">
-            <p className="text-text-secondary mb-4">Post your first deal</p>
-            <Link
-              href="/deals/new"
-              className="inline-block px-6 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
-            >
-              Create Deal
-            </Link>
-          </div>
-        ) : (
-          <DataGridTable
-            rows={pagedDeals}
-            detailColumns={columns}
-            rowSelectionModel={rowSelectionModel}
-            onRowSelectionModelChange={setRowSelectionModel}
-            sortModel={sortModel}
-            onSortModelChange={handleSortModelChange}
-            onRowClick={(row) => router.push(`/deals/${row.id}`)}
-            sortedCount={sortedDeals.length}
-            paginationModel={paginationModel}
-            onPageChange={(page) => setPaginationModel((prev) => ({ ...prev, page }))}
-            onRowsPerPageChange={(pageSize) => setPaginationModel({ page: 0, pageSize })}
-          />
-        )}
+            {deals.length === 0 ? (
+              <div className="bg-surface-alt rounded-lg border border-border-color p-8 text-center">
+                <p className="text-text-secondary mb-4">Post your first deal</p>
+                <Link
+                  href="/deals/new"
+                  className="inline-block px-6 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-btn-hover transition-colors"
+                >
+                  Create Deal
+                </Link>
+              </div>
+            ) : (
+              <DataGridTable
+                rows={pagedDeals}
+                detailColumns={columns}
+                rowSelectionModel={rowSelectionModel}
+                onRowSelectionModelChange={setRowSelectionModel}
+                sortModel={sortModel}
+                onSortModelChange={handleSortModelChange}
+                onRowClick={(row) => router.push(`/deals/${encodeURIComponent(row.id)}`)}
+                sortedCount={sortedDeals.length}
+                paginationModel={paginationModel}
+                onPageChange={(page) => setPaginationModel((prev) => ({ ...prev, page }))}
+                onRowsPerPageChange={(pageSize) => setPaginationModel({ page: 0, pageSize })}
+              />
+            )}
+          </section>
+
+          {/* Pending Actions */}
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold text-primary">Pending Actions</h2>
+
+            <DataGridTable
+              rows={pagedPendingActionsRows}
+              detailColumns={pendingColumns}
+              rowSelectionModel={pendingRowSelectionModel}
+              onRowSelectionModelChange={setPendingRowSelectionModel}
+              sortModel={pendingSortModel}
+              onSortModelChange={handlePendingSortModelChange}
+              onRowClick={(row) => router.push(`/deals/${encodeURIComponent(row.id)}?tab=pipeline`)}
+              sortedCount={sortedPendingActionsRows.length}
+              paginationModel={pendingPaginationModel}
+              onPageChange={(page) => setPendingPaginationModel((prev) => ({ ...prev, page }))}
+              onRowsPerPageChange={(pageSize) => setPendingPaginationModel({ page: 0, pageSize })}
+            />
+          </section>
+        </div>
       </div>
     </main>
   );

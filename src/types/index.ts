@@ -16,6 +16,7 @@ export type EngagementStage = "pursued" | "nda_pending" | "nda_signed" | "review
 export type NdaStatus = "not_sent" | "pending_review" | "sent" | "signed" | "declined" | "rejected";
 export type VettingStatus = "not_required" | "pending" | "approved" | "rejected";
 export type DocumentAccessLevel = "pre_nda" | "post_nda";
+export type PendingActionType = "release_nda" | "release_cim";
 
 export interface Firm {
   id: string;

@@ -80,6 +80,14 @@ export async function GET(
     return NextResponse.json({ error: "Deal not found" }, { status: 404 });
   }
 
+  // Only increment view count if the user is a buyer
+  if (profile.role === "buyer") {
+    const { error: rpcError } = await supabase.rpc("increment_deal_view_count", { p_deal_id: params.id });
+    if (rpcError) {
+      console.error("Failed to increment deal view count", rpcError);
+    }
+  }
+
   const { data: engagement } = await supabase
     .from("deal_engagements")
     .select("id, stage, nda_status, cim_released")

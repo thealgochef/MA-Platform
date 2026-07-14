@@ -219,6 +219,159 @@ describe("Phase 0: Project Scaffolding & Infrastructure", () => {
       expect(result.success).toBe(false);
     });
 
+    it("should reject broker signup when required string fields are whitespace-only", async () => {
+      const { brokerSignupSchema } = await import("@/lib/validators");
+
+      const validData = {
+        firstName: "John",
+        lastName: "Doe",
+        title: "Managing Director",
+        phoneNumber: "(555) 123-4567",
+        linkedIn: "https://www.linkedin.com/in/johndoe",
+        firmName: "Acme Advisors",
+        firmWebsite: "https://acme.com",
+        location: "New York",
+        licenseCredentials: "Series 79",
+        firmDescription: "M&A advisory firm",
+        dealTypes: "Lower middle market",
+        industryFocus: ["Technology"],
+        membershipAgreementSigned: true as const,
+        signature: "John Doe",
+      };
+
+      const requiredStringFields: Array<
+        | "firstName"
+        | "lastName"
+        | "title"
+        | "phoneNumber"
+        | "firmName"
+        | "location"
+        | "licenseCredentials"
+        | "firmDescription"
+        | "dealTypes"
+        | "signature"
+      > = [
+        "firstName",
+        "lastName",
+        "title",
+        "phoneNumber",
+        "firmName",
+        "location",
+        "licenseCredentials",
+        "firmDescription",
+        "dealTypes",
+        "signature",
+      ];
+
+      for (const field of requiredStringFields) {
+        const result = brokerSignupSchema.safeParse({
+          ...validData,
+          [field]: "   \t   ",
+        });
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.issues.some((issue) => issue.path[0] === field)).toBe(true);
+        }
+      }
+    });
+
+    it("should accept broker signup when required string fields are exactly at max length", async () => {
+      const { brokerSignupSchema } = await import("@/lib/validators");
+
+      const validData = {
+        firstName: "John",
+        lastName: "Doe",
+        title: "Managing Director",
+        phoneNumber: "(555) 123-4567",
+        linkedIn: "https://www.linkedin.com/in/johndoe",
+        firmName: "Acme Advisors",
+        firmWebsite: "https://acme.com",
+        location: "New York",
+        licenseCredentials: "Series 79",
+        firmDescription: "M&A advisory firm",
+        dealTypes: "Lower middle market",
+        industryFocus: ["Technology"],
+        membershipAgreementSigned: true as const,
+        signature: "John Doe",
+      };
+
+      const phoneExtensionPrefix = "+1 (212) 555-7890 ext ";
+      const maxLengthValidPhone = `${phoneExtensionPrefix}${"1".repeat(50 - phoneExtensionPrefix.length)}`;
+
+      const exactMaxCases: Array<{ field: keyof typeof validData; max: number }> = [
+        { field: "firstName", max: 255 },
+        { field: "lastName", max: 255 },
+        { field: "title", max: 255 },
+        { field: "phoneNumber", max: 50 },
+        { field: "firmName", max: 255 },
+        { field: "location", max: 255 },
+        { field: "licenseCredentials", max: 500 },
+        { field: "firmDescription", max: 5000 },
+        { field: "dealTypes", max: 500 },
+        { field: "signature", max: 120 },
+      ];
+
+      for (const { field, max } of exactMaxCases) {
+        const result = brokerSignupSchema.safeParse({
+          ...validData,
+          [field]: field === "phoneNumber" ? maxLengthValidPhone : "x".repeat(max),
+        });
+
+        expect(result.success).toBe(true);
+      }
+    });
+
+    it("should reject broker signup when required string fields exceed max length by 1", async () => {
+      const { brokerSignupSchema } = await import("@/lib/validators");
+
+      const validData = {
+        firstName: "John",
+        lastName: "Doe",
+        title: "Managing Director",
+        phoneNumber: "(555) 123-4567",
+        linkedIn: "https://www.linkedin.com/in/johndoe",
+        firmName: "Acme Advisors",
+        firmWebsite: "https://acme.com",
+        location: "New York",
+        licenseCredentials: "Series 79",
+        firmDescription: "M&A advisory firm",
+        dealTypes: "Lower middle market",
+        industryFocus: ["Technology"],
+        membershipAgreementSigned: true as const,
+        signature: "John Doe",
+      };
+
+      const phoneExtensionPrefix = "+1 (212) 555-7890 ext ";
+      const maxLengthValidPhone = `${phoneExtensionPrefix}${"1".repeat(50 - phoneExtensionPrefix.length)}`;
+      const overMaxLengthValidPhone = `${maxLengthValidPhone}1`;
+
+      const overMaxCases: Array<{ field: keyof typeof validData; max: number }> = [
+        { field: "firstName", max: 255 },
+        { field: "lastName", max: 255 },
+        { field: "title", max: 255 },
+        { field: "phoneNumber", max: 50 },
+        { field: "firmName", max: 255 },
+        { field: "location", max: 255 },
+        { field: "licenseCredentials", max: 500 },
+        { field: "firmDescription", max: 5000 },
+        { field: "dealTypes", max: 500 },
+        { field: "signature", max: 120 },
+      ];
+
+      for (const { field, max } of overMaxCases) {
+        const result = brokerSignupSchema.safeParse({
+          ...validData,
+          [field]: field === "phoneNumber" ? overMaxLengthValidPhone : "x".repeat(max + 1),
+        });
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.issues.some((issue) => issue.path[0] === field)).toBe(true);
+        }
+      }
+    });
+
     it("should validate buyer signup data", async () => {
       const { BUYER_TYPE_VALUES } = await import("@/lib/constants");
       const { buyerSignupSchema } = await import("@/lib/validators");
